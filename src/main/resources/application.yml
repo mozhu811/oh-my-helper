@@ -18,6 +18,8 @@ spring:
       connection-test-query: SELECT 1 FROM DUAL
       read-only: false
 tencent:
+  secret-id:
+  secret-key:
   cls-endpoint: cls.tencentcloudapi.com
   scf-endpoint: scf.tencentcloudapi.com
   region: ap-chengdu
