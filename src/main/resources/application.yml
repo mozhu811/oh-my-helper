@@ -1,0 +1,27 @@
+server:
+  port: 811
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://aliyun:3416/bilibili_helper_hub?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowMultiQueries=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 970811
+    hikari:
+      connection-timeout: 60000
+      validation-timeout: 3000
+      idle-timeout: 30000
+      login-timeout: 5
+      max-lifetime: 60000
+      maximum-pool-size: 500
+      minimum-idle: 20
+      connection-test-query: SELECT 1 FROM DUAL
+      read-only: false
+tencent:
+  cls-endpoint: cls.tencentcloudapi.com
+  scf-endpoint: scf.tencentcloudapi.com
+  region: ap-chengdu
+
+logging:
+  level:
+    io.cruii.bilibili: debug
