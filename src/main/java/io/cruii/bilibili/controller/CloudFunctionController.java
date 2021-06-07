@@ -2,9 +2,10 @@ package io.cruii.bilibili.controller;
 
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import io.cruii.bilibili.dto.BilibiliUserDTO;
-import io.cruii.bilibili.entity.CloudFunctionLog;
 import io.cruii.bilibili.service.CloudFunctionService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -25,12 +26,5 @@ public class CloudFunctionController {
     @GetMapping
     public List<BilibiliUserDTO> listFunctions() throws TencentCloudSDKException {
         return cloudFunctionService.listFunctions();
-    }
-
-    @GetMapping("{username}/log")
-    public List<CloudFunctionLog> listLogs(@PathVariable String username,
-                                           @RequestParam("start") Long startTime,
-                                           @RequestParam("end") Long endTime) throws TencentCloudSDKException {
-        return cloudFunctionService.listLogs(username, startTime, endTime);
     }
 }
