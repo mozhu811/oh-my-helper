@@ -18,6 +18,8 @@ import java.io.Serializable;
 public class BilibiliUserDTO implements Serializable {
     private static final long serialVersionUID = -6073754165745971101L;
 
+    private String dedeuserid;
+
     private String username;
 
     private String avatar;
@@ -26,5 +28,11 @@ public class BilibiliUserDTO implements Serializable {
 
     private Integer level;
 
+    private Integer currentExp;
+
+    private Integer nextExp;
+
     private Integer vipType;
+
+    private String key;
 }
