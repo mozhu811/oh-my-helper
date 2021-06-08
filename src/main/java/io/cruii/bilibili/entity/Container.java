@@ -9,7 +9,7 @@ import lombok.Data;
  * Created on 2021/6/6
  */
 @Data
-public class BilibiliUser {
+public class Container {
     @TableId(type = IdType.AUTO)
     private Long id;
 

@@ -1,7 +1,7 @@
 package io.cruii.bilibili.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.cruii.bilibili.entity.BilibiliUser;
+import io.cruii.bilibili.entity.Container;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -9,5 +9,5 @@ import org.apache.ibatis.annotations.Mapper;
  * Created on 2021/6/6
  */
 @Mapper
-public interface BilibiliUserMapper extends BaseMapper<BilibiliUser> {
+public interface ContainerMapper extends BaseMapper<Container> {
 }

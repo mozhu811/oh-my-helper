@@ -15,10 +15,10 @@ import java.io.Serializable;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class BilibiliUserDTO implements Serializable {
+public class ContainerDTO implements Serializable {
     private static final long serialVersionUID = -6073754165745971101L;
 
-    private String dedeuserid;
+    private String dedeUserId;
 
     private String username;
 
