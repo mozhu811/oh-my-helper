@@ -2,7 +2,7 @@ package io.cruii.bilibili.service;
 
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import io.cruii.bilibili.dto.ContainerDTO;
-import io.cruii.bilibili.entity.CloudFunctionLog;
+import io.cruii.bilibili.dto.CreateContainerDTO;
 
 import java.util.List;
 
@@ -15,5 +15,5 @@ public interface ContainerService {
 
     List<ContainerDTO> listContainers() throws TencentCloudSDKException;
 
-    ContainerDTO createContainer(String dedeUserId, String sessData, String biliJct);
+    ContainerDTO createContainer(CreateContainerDTO createContainerDTO) throws FileNotFoundException;
 }
