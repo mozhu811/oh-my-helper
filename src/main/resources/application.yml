@@ -27,3 +27,6 @@ tencent:
 logging:
   level:
     io.cruii.bilibili: debug
+
+scf:
+  jar-location: /Users/cruii/Downloads/BILIBILI-HELPER-v1.0.2.jar
