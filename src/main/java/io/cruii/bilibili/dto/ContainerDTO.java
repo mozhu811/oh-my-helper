@@ -28,7 +28,7 @@ public class ContainerDTO implements Serializable {
 
     private String avatar;
 
-    private Double coins;
+    private String coins;
 
     private Integer level;
 
@@ -46,7 +46,7 @@ public class ContainerDTO implements Serializable {
     public ContainerCardVO toCardVO() {
         ContainerCardVO cardVO = new ContainerCardVO();
         BeanUtil.copyProperties(this, cardVO);
-        cardVO.setDiffExp(this.nextExp - this.currentExp);
+        cardVO.setDiffExp(this.level == 6 ? 0 : this.nextExp - this.currentExp);
         LocalDateTime dueLocalDateTime = LocalDateTime.ofEpochSecond(this.dueDate / 1000, 0, ZoneOffset.ofHours(9));
         cardVO.setIsVip(dueLocalDateTime.isAfter(LocalDateTime.now()));
         return cardVO;

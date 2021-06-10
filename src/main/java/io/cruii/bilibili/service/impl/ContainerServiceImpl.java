@@ -127,8 +127,7 @@ public class ContainerServiceImpl implements ContainerService {
     private ContainerDTO getContainerInfo(String sessdata, String dedeuserid) {
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         HttpCookie dedeUserID = new HttpCookie("DedeUserID", dedeuserid);
-        sessdataCookie.setDomain("" +
-                ".bilibili.com");
+        sessdataCookie.setDomain(".bilibili.com");
         dedeUserID.setDomain(".bilibili.com");
         String body = HttpRequest.get("https://api.bilibili.com/x/web-interface/nav")
                 .cookie(sessdataCookie)
@@ -148,17 +147,23 @@ public class ContainerServiceImpl implements ContainerService {
         String coinResp = HttpRequest.get("https://account.bilibili.com/site/getCoin")
                 .cookie(sessdataCookie, dedeUserID)
                 .execute().body();
-        Double coins = JSONUtil.parseObj(coinResp).getJSONObject("data").getDouble("money");
+        String coins = null;
+        if (JSONUtil.isJsonObj(coinResp)) {
+            JSONObject coinData = JSONUtil.parseObj(coinResp).getJSONObject("data");
+
+            coins = coinData.getStr("money");
+        }
         JSONObject vip = data.getJSONObject("vip");
         JSONObject levelInfo = data.getJSONObject("level_info");
+        Integer currentLevel = levelInfo.getInt("current_level");
         return ContainerDTO.builder()
                 .dedeUserId(dedeuserid)
                 .username(sb.toString())
                 .avatar("data:image/jpeg;base64," + Base64.encode(avatarStream))
-                .coins(coins)
-                .level(levelInfo.getInt("current_level"))
+                .coins(coins == null ? "——" : coins)
+                .level(currentLevel)
                 .currentExp(levelInfo.getInt("current_exp"))
-                .nextExp(levelInfo.getInt("next_exp"))
+                .nextExp(currentLevel == 6 ? 0 : levelInfo.getInt("next_exp"))
                 .vipType(vip.getInt("type"))
                 .dueDate(vip.getLong("due_date"))
                 .key(SecureUtil.md5(sessdata)).build();

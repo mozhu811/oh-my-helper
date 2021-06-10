@@ -18,7 +18,7 @@ public class ContainerCardVO implements Serializable {
 
     private String avatar;
 
-    private Double coins;
+    private String coins;
 
     private Integer level;
 
