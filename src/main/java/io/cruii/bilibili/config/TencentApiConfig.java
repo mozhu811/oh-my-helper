@@ -18,6 +18,8 @@ public class TencentApiConfig {
 
     private String clsEndpoint;
 
+    private String clsTopicId;
+
     private String scfEndpoint;
 
     private String region;

@@ -1,11 +1,8 @@
 package io.cruii.bilibili.service.impl;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.tencentcloudapi.cls.v20201016.ClsClient;
 import com.tencentcloudapi.cls.v20201016.models.LogInfo;
 import com.tencentcloudapi.cls.v20201016.models.SearchLogRequest;
@@ -14,16 +11,19 @@ import com.tencentcloudapi.common.Credential;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.common.profile.ClientProfile;
 import com.tencentcloudapi.common.profile.HttpProfile;
+import com.tencentcloudapi.scf.v20180416.models.Function;
+import com.tencentcloudapi.scf.v20180416.models.ListFunctionsRequest;
+import com.tencentcloudapi.scf.v20180416.models.ListFunctionsResponse;
 import io.cruii.bilibili.config.TencentApiConfig;
-import io.cruii.bilibili.entity.CloudFunction;
-import io.cruii.bilibili.mapper.CloudFunctionMapper;
 import io.cruii.bilibili.service.ContainerLogService;
+import io.cruii.bilibili.util.ScfClient;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -33,65 +33,53 @@ import java.util.stream.Collectors;
 @Service
 @Log4j2
 public class ContainerLogServiceImpl implements ContainerLogService {
-    static final List<String> IGNORE;
-
-    static {
-        IGNORE = Arrays.asList("版本信息",
-                "当前版本",
-                "版本更新内容",
-                "最后更新日期",
-                "项目开源地址");
-    }
 
     private final TencentApiConfig apiConfig;
 
-    private final CloudFunctionMapper cloudFunctionMapper;
-
-    public ContainerLogServiceImpl(TencentApiConfig apiConfig,
-                                   CloudFunctionMapper cloudFunctionMapper) {
+    public ContainerLogServiceImpl(TencentApiConfig apiConfig) {
         this.apiConfig = apiConfig;
-        this.cloudFunctionMapper = cloudFunctionMapper;
     }
 
     @Override
-    public List<String> listLogs(String dedeuserid, long startTime, long endTime) throws TencentCloudSDKException {
-        // 从数据库获取对应的functionName
-        LambdaQueryWrapper<CloudFunction> lambdaQueryWrapper = Wrappers.lambdaQuery(CloudFunction.class).eq(CloudFunction::getDedeuserid, dedeuserid);
-        CloudFunction cloudFunction = cloudFunctionMapper.selectOne(lambdaQueryWrapper);
-        if (cloudFunction == null) {
-            return CollUtil.newArrayList();
+    public List<String> listLogs(String dedeuserid, long startTime, long endTime) {
+        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
+        ListFunctionsRequest req = new ListFunctionsRequest();
+        ListFunctionsResponse listFunctionsResponse;
+        try {
+            listFunctionsResponse = scfClient.ListFunctions(req);
+        } catch (TencentCloudSDKException e) {
+            throw new RuntimeException("获取容器列表失败", e);
         }
-
-        // 获取函数投递的日志的topicId
-        String topicId = cloudFunction.getTopicId();
+        Optional<Function> function = Arrays.stream(listFunctionsResponse.getFunctions())
+                .filter(f -> f.getDescription().equals(dedeuserid)).findFirst();
+        if (!function.isPresent()) {
+            throw new RuntimeException("该用户未拥有容器");
+        }
 
         String context = null;
         List<JSONObject> jsonObjects = new ArrayList<>();
         while (!"".equals(context)) {
-            SearchLogResponse logResponse = getLog(startTime, endTime, context, cloudFunction.getFunctionName(), topicId);
-
-            jsonObjects
-                    .addAll(Arrays.stream(logResponse.getResults())
-                            .map(LogInfo::getLogJson)
-                            .map(JSONUtil::parseObj)
-                            .collect(Collectors.toList()));
-            context = logResponse.getContext();
-        }
-
-        List<String> scfMessage = jsonObjects.stream()
-                .map(o -> o.getStr("SCF_Message").trim())
-                .filter(CharSequenceUtil::isNotBlank).collect(Collectors.toList());
-        int index = 0;
-        for (int i = 0; i < scfMessage.size(); i++) {
-            if (scfMessage.get(i).contains("DEBUG : 任务启动中")){
-                index = i;
-                break;
+            SearchLogResponse logResponse;
+            try {
+                logResponse = getLog(startTime, endTime, context,
+                        function.get().getFunctionName(), apiConfig.getClsTopicId());
+                jsonObjects
+                        .addAll(Arrays.stream(logResponse.getResults())
+                                .map(LogInfo::getLogJson)
+                                .map(JSONUtil::parseObj)
+                                .collect(Collectors.toList()));
+                context = logResponse.getContext();
+            } catch (TencentCloudSDKException e) {
+                throw new RuntimeException("获取容器日志失败", e);
             }
         }
-        return scfMessage.subList(index, scfMessage.size() - 1);
+
+        return jsonObjects.stream()
+                .map(o -> o.getStr("SCF_Message").trim())
+                .filter(CharSequenceUtil::isNotBlank).collect(Collectors.toList());
     }
 
-    SearchLogResponse getLog(long from, long to, String context, String functionName, String topicId) throws TencentCloudSDKException {
+    private SearchLogResponse getLog(long from, long to, String context, String functionName, String topicId) throws TencentCloudSDKException {
         SearchLogRequest req = new SearchLogRequest();
         req.setTopicId(topicId);
         req.setFrom(from);
