@@ -8,7 +8,7 @@ script: mvn clean package -Dmaven.test.skip=true
 
 branches:
   only:
-  - mater
+  - master
   
 notifications:
   email:
