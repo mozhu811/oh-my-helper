@@ -1,0 +1,15 @@
+language: java
+os: linux
+dist: xenial
+jdk:
+- openjdk8
+
+script: mvn clean package -Dmaven.test.skip=true
+
+branches:
+  only:
+  - mater
+  
+notifications:
+  email:
+  - cruii811@gmail.com
