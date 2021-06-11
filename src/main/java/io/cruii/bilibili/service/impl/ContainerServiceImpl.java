@@ -165,6 +165,10 @@ public class ContainerServiceImpl implements ContainerService {
                 .cookie(sessdataCookie)
                 .execute().body();
         JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
+        if (!data.getBool("isLogin")) {
+            return ContainerDTO.builder()
+                    .username("账号未登录").build();
+        }
         InputStream avatarStream = HttpRequest.get(data.getStr("face"))
                 .execute().bodyStream();
         StringBuilder sb = new StringBuilder();

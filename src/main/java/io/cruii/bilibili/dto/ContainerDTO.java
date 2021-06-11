@@ -46,6 +46,9 @@ public class ContainerDTO implements Serializable {
     public ContainerCardVO toCardVO() {
         ContainerCardVO cardVO = new ContainerCardVO();
         BeanUtil.copyProperties(this, cardVO);
+        if ("账号未登录".equals(this.username)) {
+            return cardVO;
+        }
         cardVO.setDiffExp(this.level == 6 ? 0 : this.nextExp - this.currentExp);
         LocalDateTime dueLocalDateTime = LocalDateTime.ofEpochSecond(this.dueDate / 1000, 0, ZoneOffset.ofHours(9));
         cardVO.setIsVip(dueLocalDateTime.isAfter(LocalDateTime.now()));
