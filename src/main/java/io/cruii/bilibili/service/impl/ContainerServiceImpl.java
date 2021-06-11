@@ -168,4 +168,47 @@ public class ContainerServiceImpl implements ContainerService {
                 .dueDate(vip.getLong("due_date"))
                 .key(SecureUtil.md5(sessdata)).build();
     }
+
+    @Override
+    public void updateTrigger(String containerName, String cronExpression) {
+        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
+        // 绑定触发器
+        try {
+            CreateTriggerRequest createTriggerRequest = new CreateTriggerRequest();
+            createTriggerRequest.setFunctionName(containerName);
+            createTriggerRequest.setTriggerName(containerName + "-trigger");
+            createTriggerRequest.setType("timer");
+            createTriggerRequest.setTriggerDesc(cronExpression);
+            CreateTriggerResponse createTriggerResponse = scfClient.CreateTrigger(createTriggerRequest);
+            log.info("创建触发器返回结果: {}", JSONUtil.toJsonStr(createTriggerResponse.getTriggerInfo()));
+        } catch (TencentCloudSDKException e) {
+            throw new RuntimeException("创建触发器失败", e);
+        }
+    }
+
+    @Override
+    public void removeContainer(String containerName) {
+        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
+        try {
+            DeleteFunctionRequest deleteFunctionRequest = new DeleteFunctionRequest();
+            deleteFunctionRequest.setFunctionName(containerName);
+            scfClient.DeleteFunction(deleteFunctionRequest);
+        } catch (TencentCloudSDKException e) {
+            throw new RuntimeException("删除容器失败", e);
+        }
+    }
+
+
+    private void init(String containerName) {
+        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
+        // 初次创建主动执行
+        try {
+            InvokeRequest invokeRequest = new InvokeRequest();
+            invokeRequest.setFunctionName(containerName);
+            InvokeResponse invokeResponse = scfClient.Invoke(invokeRequest);
+            log.info("容器执行返回结果: {}", JSONUtil.toJsonStr(invokeResponse.getResult()));
+        } catch (TencentCloudSDKException e) {
+            throw new RuntimeException("执行容器失败", e);
+        }
+    }
 }

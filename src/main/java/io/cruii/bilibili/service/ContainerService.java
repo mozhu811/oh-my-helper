@@ -15,4 +15,8 @@ public interface ContainerService {
     List<ContainerDTO> listContainers();
 
     ContainerDTO createContainer(CreateContainerDTO createContainerDTO) throws FileNotFoundException;
+
+    void updateTrigger(String containerName, String cronExpression);
+
+    void removeContainer(String containerName);
 }
