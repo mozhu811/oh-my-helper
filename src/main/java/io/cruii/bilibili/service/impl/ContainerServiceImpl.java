@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.net.HttpCookie;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 /**
@@ -34,12 +35,15 @@ public class ContainerServiceImpl implements ContainerService {
 
     private final TencentApiConfig apiConfig;
 
+    private final Executor bilibiliExecutor;
 
     @Value("${scf.jar-location}")
     private String jarLocation;
 
-    public ContainerServiceImpl(TencentApiConfig apiConfig) {
+    public ContainerServiceImpl(TencentApiConfig apiConfig,
+                                Executor bilibiliExecutor) {
         this.apiConfig = apiConfig;
+        this.bilibiliExecutor = bilibiliExecutor;
     }
 
     @Override
@@ -75,19 +79,27 @@ public class ContainerServiceImpl implements ContainerService {
 
     @Override
     public ContainerDTO createContainer(CreateContainerDTO createContainerDTO) throws FileNotFoundException {
+        log.info("传入参数: {}", createContainerDTO);
         String dedeuserid = createContainerDTO.getDedeuserid();
         String sessdata = createContainerDTO.getSessdata();
         String biliJct = createContainerDTO.getBiliJct();
 
+        boolean created = false;
         // 构建ScfClient
         com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
         CreateFunctionRequest req = new CreateFunctionRequest();
 
         // 设置请求参数
-        req.setFunctionName(createContainerDTO.getContainerName());
+        String containerName = createContainerDTO.getContainerName();
+        req.setFunctionName(containerName);
 
         // 传递jar包的base64编码
-        String encode = Base64.encode(new FileInputStream(jarLocation));
+        String encode;
+        try {
+            encode = Base64.encode(new FileInputStream(jarLocation));
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("找不到jar包", e);
+        }
         Code code = new Code();
         code.setZipFile(encode);
         req.setCode(code);
@@ -115,10 +127,30 @@ public class ContainerServiceImpl implements ContainerService {
 
         try {
             CreateFunctionResponse resp = scfClient.CreateFunction(req);
-            log.info(resp.getRequestId());
+            log.info("创建容器返回结果: {}", resp.getRequestId());
         } catch (TencentCloudSDKException e) {
             throw new RuntimeException("创建容器失败", e);
         }
+
+        while (!created) {
+            try {
+                GetFunctionRequest getFunctionRequest = new GetFunctionRequest();
+                getFunctionRequest.setFunctionName(containerName);
+                GetFunctionResponse getFunctionResponse = scfClient.GetFunction(getFunctionRequest);
+                String status = getFunctionResponse.getStatus();
+                created = "Active".equals(status);
+                if ("CreateFailed".equals(status)) {
+                    removeContainer(containerName);
+                    throw new RuntimeException("创建容器失败");
+                }
+            } catch (TencentCloudSDKException e) {
+                throw new RuntimeException("获取容器详细信息失败", e);
+            }
+        }
+
+        updateTrigger(containerName, "0 10 0 * * * *");
+
+        bilibiliExecutor.execute(() -> init(containerName));
 
         // 获取用户B站数据
         return getContainerInfo(sessdata, dedeuserid);
