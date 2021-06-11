@@ -1,16 +1,16 @@
 language: java
-os: linux
-dist: xenial
+#os: linux
+#dist: xenial
 jdk:
-  - openjdk8
-
-script: mvn clean package -Dmaven.test.skip=true
-
-branches:
-  only:
-    - master
-
-notifications:
-  email:
-    - cruii811@gmail.com
-    - 949953001@qq.com
+  - oraclejdk8
+#
+#script: mvn clean package -Dmaven.test.skip=true
+#
+#branches:
+#  only:
+#    - master
+#
+#notifications:
+#  email:
+#    - cruii811@gmail.com
+#    - 949953001@qq.com
