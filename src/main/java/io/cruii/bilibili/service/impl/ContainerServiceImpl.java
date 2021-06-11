@@ -157,6 +157,7 @@ public class ContainerServiceImpl implements ContainerService {
     }
 
     private ContainerDTO getContainerInfo(String sessdata, String dedeuserid) {
+        log.debug("获取容器信息入参: {}, {}", sessdata, dedeuserid);
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         HttpCookie dedeUserID = new HttpCookie("DedeUserID", dedeuserid);
         sessdataCookie.setDomain(".bilibili.com");
@@ -164,6 +165,7 @@ public class ContainerServiceImpl implements ContainerService {
         String body = HttpRequest.get("https://api.bilibili.com/x/web-interface/nav")
                 .cookie(sessdataCookie)
                 .execute().body();
+        log.info("请求B站用户信息结果: {}", body);
         JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
         if (!data.getBool("isLogin")) {
             return ContainerDTO.builder()
