@@ -8,9 +8,9 @@ script: mvn clean package -Dmaven.test.skip=true
 
 branches:
   only:
-  - master
-  
+    - master
+
 notifications:
   email:
-  - cruii811@gmail.com
-  - 949953001@qq.com
+    - cruii811@gmail.com
+    - 949953001@qq.com
