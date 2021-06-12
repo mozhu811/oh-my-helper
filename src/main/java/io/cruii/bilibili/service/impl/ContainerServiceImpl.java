@@ -167,9 +167,11 @@ public class ContainerServiceImpl implements ContainerService {
                 .execute().body();
         log.info("请求B站用户信息结果: {}", body);
         JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
-        if (!data.getBool("isLogin")) {
+        Boolean isLogin = data.getBool("isLogin");
+        if (Boolean.FALSE.equals(isLogin)) {
             return ContainerDTO.builder()
-                    .username("账号未登录").build();
+                    .dedeUserId(dedeuserid)
+                    .isLogin(false).build();
         }
         InputStream avatarStream = HttpRequest.get(data.getStr("face"))
                 .execute().bodyStream();
@@ -195,6 +197,7 @@ public class ContainerServiceImpl implements ContainerService {
         JSONObject levelInfo = data.getJSONObject("level_info");
         Integer currentLevel = levelInfo.getInt("current_level");
         return ContainerDTO.builder()
+                .isLogin(isLogin)
                 .dedeUserId(dedeuserid)
                 .username(sb.toString())
                 .avatar("data:image/jpeg;base64," + Base64.encode(avatarStream))

@@ -30,4 +30,5 @@ public class ContainerCardVO implements Serializable {
 
     private String key;
 
+    private Boolean isLogin;
 }

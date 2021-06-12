@@ -42,11 +42,12 @@ public class ContainerDTO implements Serializable {
 
     private String key;
 
+    private Boolean isLogin;
 
     public ContainerCardVO toCardVO() {
         ContainerCardVO cardVO = new ContainerCardVO();
         BeanUtil.copyProperties(this, cardVO);
-        if ("账号未登录".equals(this.username)) {
+        if (Boolean.FALSE.equals(this.isLogin)) {
             return cardVO;
         }
         cardVO.setDiffExp(this.level == 6 ? 0 : this.nextExp - this.currentExp);
