@@ -157,6 +157,7 @@ public class ContainerServiceImpl implements ContainerService {
     }
 
     private ContainerDTO getContainerInfo(String sessdata, String dedeuserid) {
+        log.debug("获取容器信息入参: {}, {}", sessdata, dedeuserid);
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         HttpCookie dedeUserID = new HttpCookie("DedeUserID", dedeuserid);
         sessdataCookie.setDomain(".bilibili.com");
@@ -164,7 +165,14 @@ public class ContainerServiceImpl implements ContainerService {
         String body = HttpRequest.get("https://api.bilibili.com/x/web-interface/nav")
                 .cookie(sessdataCookie)
                 .execute().body();
+        log.info("请求B站用户信息结果: {}", body);
         JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
+        Boolean isLogin = data.getBool("isLogin");
+        if (Boolean.FALSE.equals(isLogin)) {
+            return ContainerDTO.builder()
+                    .dedeUserId(dedeuserid)
+                    .isLogin(false).build();
+        }
         InputStream avatarStream = HttpRequest.get(data.getStr("face"))
                 .execute().bodyStream();
         StringBuilder sb = new StringBuilder();
@@ -189,6 +197,7 @@ public class ContainerServiceImpl implements ContainerService {
         JSONObject levelInfo = data.getJSONObject("level_info");
         Integer currentLevel = levelInfo.getInt("current_level");
         return ContainerDTO.builder()
+                .isLogin(isLogin)
                 .dedeUserId(dedeuserid)
                 .username(sb.toString())
                 .avatar("data:image/jpeg;base64," + Base64.encode(avatarStream))

@@ -42,10 +42,14 @@ public class ContainerDTO implements Serializable {
 
     private String key;
 
+    private Boolean isLogin;
 
     public ContainerCardVO toCardVO() {
         ContainerCardVO cardVO = new ContainerCardVO();
         BeanUtil.copyProperties(this, cardVO);
+        if (Boolean.FALSE.equals(this.isLogin)) {
+            return cardVO;
+        }
         cardVO.setDiffExp(this.level == 6 ? 0 : this.nextExp - this.currentExp);
         LocalDateTime dueLocalDateTime = LocalDateTime.ofEpochSecond(this.dueDate / 1000, 0, ZoneOffset.ofHours(9));
         cardVO.setIsVip(dueLocalDateTime.isAfter(LocalDateTime.now()));
