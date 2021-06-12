@@ -4,7 +4,13 @@ dist: xenial
 jdk:
   - openjdk8
 
-script: mvn clean package -Dmaven.test.skip=true
+before_script:
+  - "curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | sudo bash"
+
+script:
+  - mvn clean package -Dmaven.test.skip=true
+  - fossa init
+  - fossa analyze
 
 branches:
   only:
