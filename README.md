@@ -16,9 +16,11 @@
 📺 Bilibili Helper Hub，一个基于[BILIBILI-HELPER](https://github.com/JunzhouLiu/BILIBILI-HELPER) 的集中化平台。
 
 ## Notice
+
 该项目不会在你不知情的情况下存储你提供的Cookie数据以及通过B站官方接口获取的用户数据。
 
 ## Thanks
+
 该项目基于 [JunzhouLiu/BILIBILI-HELPER](https://github.com/JunzhouLiu/BILIBILI-HELPER) 以及[SocialSisterYi/bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 开发
 
 ## License
