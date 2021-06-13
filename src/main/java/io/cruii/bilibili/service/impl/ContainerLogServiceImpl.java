@@ -12,11 +12,10 @@ import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.common.profile.ClientProfile;
 import com.tencentcloudapi.common.profile.HttpProfile;
 import com.tencentcloudapi.scf.v20180416.models.Function;
-import com.tencentcloudapi.scf.v20180416.models.ListFunctionsRequest;
 import com.tencentcloudapi.scf.v20180416.models.ListFunctionsResponse;
 import io.cruii.bilibili.config.TencentApiConfig;
 import io.cruii.bilibili.service.ContainerLogService;
-import io.cruii.bilibili.util.ScfClient;
+import io.cruii.bilibili.util.ScfUtil;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
@@ -42,14 +41,7 @@ public class ContainerLogServiceImpl implements ContainerLogService {
 
     @Override
     public List<String> listLogs(String dedeuserid, long startTime, long endTime) {
-        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
-        ListFunctionsRequest req = new ListFunctionsRequest();
-        ListFunctionsResponse listFunctionsResponse;
-        try {
-            listFunctionsResponse = scfClient.ListFunctions(req);
-        } catch (TencentCloudSDKException e) {
-            throw new RuntimeException("获取容器列表失败", e);
-        }
+        ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
         Optional<Function> function = Arrays.stream(listFunctionsResponse.getFunctions())
                 .filter(f -> f.getDescription().equals(dedeuserid)).findFirst();
         if (!function.isPresent()) {

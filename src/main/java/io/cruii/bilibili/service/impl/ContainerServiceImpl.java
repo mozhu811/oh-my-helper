@@ -5,18 +5,19 @@ import cn.hutool.crypto.SecureUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.tencentcloudapi.common.exception.TencentCloudSDKException;
-import com.tencentcloudapi.scf.v20180416.models.*;
+import com.tencentcloudapi.scf.v20180416.models.Environment;
+import com.tencentcloudapi.scf.v20180416.models.GetFunctionResponse;
+import com.tencentcloudapi.scf.v20180416.models.ListFunctionsResponse;
+import com.tencentcloudapi.scf.v20180416.models.Variable;
 import io.cruii.bilibili.config.TencentApiConfig;
 import io.cruii.bilibili.dto.ContainerDTO;
 import io.cruii.bilibili.dto.CreateContainerDTO;
 import io.cruii.bilibili.service.ContainerService;
-import io.cruii.bilibili.util.ScfClient;
+import io.cruii.bilibili.util.ScfUtil;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.net.HttpCookie;
@@ -48,30 +49,18 @@ public class ContainerServiceImpl implements ContainerService {
 
     @Override
     public List<ContainerDTO> listContainers() {
-        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
-        ListFunctionsRequest req = new ListFunctionsRequest();
-        ListFunctionsResponse resp;
-        try {
-            resp = scfClient.ListFunctions(req);
-        } catch (TencentCloudSDKException e) {
-            throw new RuntimeException("获取容器列表失败", e);
-        }
+        ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
 
-        GetFunctionRequest getFunctionRequest = new GetFunctionRequest();
-
-        return Arrays.stream(resp.getFunctions()).map(f -> {
-            getFunctionRequest.setFunctionName(f.getFunctionName());
-            try {
-                GetFunctionResponse getFunctionResponse = scfClient.GetFunction(getFunctionRequest);
-                Environment environment = getFunctionResponse.getEnvironment();
-                Variable[] variables = environment.getVariables();
-                return Arrays.stream(variables)
-                        .map(Variable::getValue)
-                        .filter(JSONUtil::isJsonObj)
-                        .map(JSONUtil::parseObj).findFirst().orElseThrow(IllegalArgumentException::new);
-            } catch (TencentCloudSDKException | IllegalArgumentException e) {
-                throw new RuntimeException("获取容器详细信息失败: " + f.getFunctionName(), e);
-            }
+        return Arrays.stream(listFunctionsResponse.getFunctions()).map(f -> {
+            GetFunctionResponse getFunctionResponse = ScfUtil.getFunction(apiConfig, f.getFunctionName());
+            Environment environment = getFunctionResponse.getEnvironment();
+            Variable[] variables = environment.getVariables();
+            return Arrays.stream(variables)
+                    .map(Variable::getValue)
+                    .filter(JSONUtil::isJsonObj)
+                    .map(JSONUtil::parseObj)
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("无法获取该容器配置, name: " + f.getFunctionName()));
         }).map(config ->
                 getContainerInfo(config.getStr("sessdata"), config.getStr("dedeuserid")))
                 .collect(Collectors.toList());
@@ -80,80 +69,26 @@ public class ContainerServiceImpl implements ContainerService {
     @Override
     public ContainerDTO createContainer(CreateContainerDTO createContainerDTO) throws FileNotFoundException {
         log.info("传入参数: {}", createContainerDTO);
-        String dedeuserid = createContainerDTO.getDedeuserid();
-        String sessdata = createContainerDTO.getSessdata();
-        String biliJct = createContainerDTO.getBiliJct();
-
-        boolean created = false;
-        // 构建ScfClient
-        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
-        CreateFunctionRequest req = new CreateFunctionRequest();
-
-        // 设置请求参数
+        ScfUtil.createFunction(apiConfig, createContainerDTO, jarLocation);
         String containerName = createContainerDTO.getContainerName();
-        req.setFunctionName(containerName);
-
-        // 传递jar包的base64编码
-        String encode;
-        try {
-            encode = Base64.encode(new FileInputStream(jarLocation));
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException("找不到jar包", e);
-        }
-        Code code = new Code();
-        code.setZipFile(encode);
-        req.setCode(code);
-
-        req.setDescription(createContainerDTO.getDescription());
-        req.setTimeout(200L);
-        req.setRuntime("Java8");
-        req.setHandler("top.misec.BiliMain::mainHandler");
-
-        JSONObject jsonConfig = JSONUtil.parseObj(createContainerDTO.getConfig());
-        jsonConfig.set("dedeuserid", dedeuserid);
-        jsonConfig.set("sessdata", sessdata);
-        jsonConfig.set("biliJct", biliJct);
-
-        Environment environment = new Environment();
-        Variable v1 = new Variable();
-        Variable v2 = new Variable();
-        v1.setKey("scfFlag");
-        v1.setValue("true");
-        v2.setKey("config");
-        v2.setValue(jsonConfig.toJSONString(0));
-        Variable[] variables = new Variable[]{v1, v2};
-        environment.setVariables(variables);
-        req.setEnvironment(environment);
-
-        try {
-            CreateFunctionResponse resp = scfClient.CreateFunction(req);
-            log.info("创建容器返回结果: {}", resp.getRequestId());
-        } catch (TencentCloudSDKException e) {
-            throw new RuntimeException("创建容器失败", e);
-        }
-
+        boolean created = false;
         while (!created) {
-            try {
-                GetFunctionRequest getFunctionRequest = new GetFunctionRequest();
-                getFunctionRequest.setFunctionName(containerName);
-                GetFunctionResponse getFunctionResponse = scfClient.GetFunction(getFunctionRequest);
-                String status = getFunctionResponse.getStatus();
-                created = "Active".equals(status);
-                if ("CreateFailed".equals(status)) {
-                    removeContainer(containerName);
-                    throw new RuntimeException("创建容器失败");
-                }
-            } catch (TencentCloudSDKException e) {
-                throw new RuntimeException("获取容器详细信息失败", e);
+            GetFunctionResponse getFunctionResponse = ScfUtil.getFunction(apiConfig, containerName);
+            String status = getFunctionResponse.getStatus();
+            created = "Active".equals(status);
+            if ("CreateFailed".equals(status)) {
+                removeContainer(containerName);
+                throw new RuntimeException("创建容器失败");
             }
         }
 
-        updateTrigger(containerName, "0 10 0 * * * *");
+        ScfUtil.createTrigger(apiConfig, containerName, "0 10 0 * * * *");
 
-        bilibiliExecutor.execute(() -> init(containerName));
+        bilibiliExecutor.execute(() -> ScfUtil.executeFunction(apiConfig, containerName));
 
         // 获取用户B站数据
-        return getContainerInfo(sessdata, dedeuserid);
+        return getContainerInfo(createContainerDTO.getSessdata(),
+                createContainerDTO.getDedeuserid());
     }
 
     private ContainerDTO getContainerInfo(String sessdata, String dedeuserid) {
@@ -212,31 +147,12 @@ public class ContainerServiceImpl implements ContainerService {
 
     @Override
     public void updateTrigger(String containerName, String cronExpression) {
-        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
-        // 绑定触发器
-        try {
-            CreateTriggerRequest createTriggerRequest = new CreateTriggerRequest();
-            createTriggerRequest.setFunctionName(containerName);
-            createTriggerRequest.setTriggerName(containerName + "-trigger");
-            createTriggerRequest.setType("timer");
-            createTriggerRequest.setTriggerDesc(cronExpression);
-            CreateTriggerResponse createTriggerResponse = scfClient.CreateTrigger(createTriggerRequest);
-            log.info("创建触发器返回结果: {}", JSONUtil.toJsonStr(createTriggerResponse.getTriggerInfo()));
-        } catch (TencentCloudSDKException e) {
-            throw new RuntimeException("创建触发器失败", e);
-        }
+        ScfUtil.createTrigger(apiConfig, containerName, cronExpression);
     }
 
     @Override
     public void removeContainer(String containerName) {
-        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
-        try {
-            DeleteFunctionRequest deleteFunctionRequest = new DeleteFunctionRequest();
-            deleteFunctionRequest.setFunctionName(containerName);
-            scfClient.DeleteFunction(deleteFunctionRequest);
-        } catch (TencentCloudSDKException e) {
-            throw new RuntimeException("删除容器失败", e);
-        }
+        ScfUtil.deleteFunction(apiConfig, containerName);
     }
 
 
