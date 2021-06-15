@@ -39,7 +39,7 @@ public class GameBettor {
 
     public static final int REQUEST_COINS = 10;
 
-    @Scheduled(cron = "0 10 0 * * * *")
+    @Scheduled(cron = "0 10 0 * * ?")
     public void bet() throws InterruptedException {
         // 获取所有用户提交的cookie
         ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
