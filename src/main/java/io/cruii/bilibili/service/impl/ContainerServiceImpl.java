@@ -154,28 +154,4 @@ public class ContainerServiceImpl implements ContainerService {
     public void removeContainer(String containerName) {
         ScfUtil.deleteFunction(apiConfig, containerName);
     }
-
-
-    private void init(String containerName) {
-        com.tencentcloudapi.scf.v20180416.ScfClient scfClient = new ScfClient.Builder(apiConfig).build();
-        // 初次创建主动执行
-        try {
-            InvokeRequest invokeRequest = new InvokeRequest();
-            invokeRequest.setFunctionName(containerName);
-            InvokeResponse invokeResponse = scfClient.Invoke(invokeRequest);
-            log.info("容器执行返回结果: {}", JSONUtil.toJsonStr(invokeResponse.getResult()));
-        } catch (TencentCloudSDKException e) {
-            throw new RuntimeException("执行容器失败", e);
-        }
-    }
-
-    /**
-     * 赛事预测
-     * @param dedeuserid    B站用户ID
-     * @param sessdata      cookie中的SESSDATA
-     * @param biliJct       cookie中的bili_jct
-     */
-    private void predictGame(String dedeuserid, String sessdata, String biliJct) {
-
-    }
 }
