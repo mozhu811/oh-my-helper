@@ -43,7 +43,7 @@ public class ContainerLogServiceImpl implements ContainerLogService {
     public List<String> listLogs(String dedeuserid, long startTime, long endTime) {
         ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
         Optional<Function> function = Arrays.stream(listFunctionsResponse.getFunctions())
-                .filter(f -> f.getDescription().equals(dedeuserid)).findFirst();
+                .filter(f -> f.getDescription().split(";")[0].equals(dedeuserid)).findFirst();
         if (!function.isPresent()) {
             throw new RuntimeException("该用户未拥有容器");
         }
