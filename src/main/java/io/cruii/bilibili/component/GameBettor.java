@@ -15,7 +15,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import javax.annotation.Resource;
 import java.net.HttpCookie;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -32,8 +31,11 @@ import java.util.stream.Collectors;
 @Component
 public class GameBettor {
 
-    @Resource
     public TencentApiConfig apiConfig;
+
+    public GameBettor(TencentApiConfig apiConfig) {
+        this.apiConfig = apiConfig;
+    }
 
     public static final String QUESTIONS_API = "https://api.bilibili.com/x/esports/guess/collection/question";
 
@@ -44,8 +46,26 @@ public class GameBettor {
         // 获取所有用户提交的cookie
         ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
         List<String[]> cookies = Arrays.stream(listFunctionsResponse.getFunctions())
+                .parallel()
                 .map(Function::getDescription)
-                .map(s -> s.split(";")).collect(Collectors.toList());
+                .map(s -> s.split(";"))
+                .filter(cookie -> {
+                    HttpCookie sessdataCookie = new HttpCookie("SESSDATA", cookie[1]);
+                    HttpCookie dedeUserID = new HttpCookie("DedeUserID", cookie[0]);
+                    String coinResp = HttpRequest.get("https://account.bilibili.com/site/getCoin")
+                            .cookie(sessdataCookie, dedeUserID)
+                            .execute().body();
+                    Double coins = null;
+                    if (JSONUtil.isJsonObj(coinResp)) {
+                        JSONObject coinData = JSONUtil.parseObj(coinResp).getJSONObject("data");
+
+                        coins = coinData.getDouble("money");
+                        if (coins < 300d) {
+                            log.info("用户[{}]硬币不足300，将不执行赛事预测", cookie[0]);
+                        }
+                    }
+                    return coins != null && coins > 300d;
+                }).collect(Collectors.toList());
 
         // 登录
         login(cookies);
