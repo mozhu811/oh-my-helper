@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 @Component
 public class GameBettor {
 
-    public TencentApiConfig apiConfig;
+    private final TencentApiConfig apiConfig;
 
     public GameBettor(TencentApiConfig apiConfig) {
         this.apiConfig = apiConfig;
@@ -87,6 +87,9 @@ public class GameBettor {
             int questionId = question.getInt("id");
             String title = question.getStr("title");
             String seasonName = contest.getByPath("season.title", String.class);
+            if (!seasonName.contains("LPL")) {
+                continue;
+            }
             log.info(seasonName + " " + contestGameStage + ":" + title);
 
             JSONObject blueTeam = JSONUtil.parseObj(question.getJSONArray("details").get(0));
