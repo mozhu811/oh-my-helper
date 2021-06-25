@@ -14,4 +14,4 @@ logging:
     io.cruii.bilibili: debug
 
 scf:
-  jar-location: /opt/BILIBILI-HELPER-v1.0.2.jar
+  jar-location: /opt/BILIBILI-HELPER-v1.0.3.jar
