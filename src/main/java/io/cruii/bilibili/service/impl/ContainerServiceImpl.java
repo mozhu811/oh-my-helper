@@ -18,7 +18,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.net.HttpCookie;
 import java.util.Arrays;
@@ -62,12 +61,12 @@ public class ContainerServiceImpl implements ContainerService {
                     .findFirst()
                     .orElseThrow(() -> new RuntimeException("无法获取该容器配置, name: " + f.getFunctionName()));
         }).map(config ->
-                getContainerInfo(config.getStr("sessdata"), config.getStr("dedeuserid")))
+                getContainerInfo(config.getStr("sessdata"), config.getInt("dedeuserid")))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public ContainerDTO createContainer(CreateContainerDTO createContainerDTO) throws FileNotFoundException {
+    public ContainerDTO createContainer(CreateContainerDTO createContainerDTO) {
         log.info("传入参数: {}", createContainerDTO);
         ScfUtil.createFunction(apiConfig, createContainerDTO, jarLocation);
         String containerName = createContainerDTO.getContainerName();
@@ -87,14 +86,14 @@ public class ContainerServiceImpl implements ContainerService {
         bilibiliExecutor.execute(() -> ScfUtil.executeFunction(apiConfig, containerName));
 
         // 获取用户B站数据
-        return getContainerInfo(createContainerDTO.getSessdata(),
-                createContainerDTO.getDedeuserid());
+        return getContainerInfo(createContainerDTO.getConfig().getSessdata(),
+                createContainerDTO.getConfig().getDedeuserid());
     }
 
-    private ContainerDTO getContainerInfo(String sessdata, String dedeuserid) {
+    private ContainerDTO getContainerInfo(String sessdata, Integer dedeuserid) {
         log.debug("获取容器信息入参: {}, {}", sessdata, dedeuserid);
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
-        HttpCookie dedeUserID = new HttpCookie("DedeUserID", dedeuserid);
+        HttpCookie dedeUserID = new HttpCookie("DedeUserID", String.valueOf(dedeuserid));
         sessdataCookie.setDomain(".bilibili.com");
         dedeUserID.setDomain(".bilibili.com");
         String body = HttpRequest.get("https://api.bilibili.com/x/web-interface/nav")
@@ -153,5 +152,15 @@ public class ContainerServiceImpl implements ContainerService {
     @Override
     public void removeContainer(String containerName) {
         ScfUtil.deleteFunction(apiConfig, containerName);
+    }
+
+    @Override
+    public ContainerDTO updateCookies(Integer dedeuserid, String sessdata, String biliJct) {
+        ScfUtil.updateFunction(apiConfig, dedeuserid, sessdata, biliJct);
+
+        GetFunctionResponse function = ScfUtil.getFunction(apiConfig, dedeuserid);
+        bilibiliExecutor.execute(() -> ScfUtil.executeFunction(apiConfig, function.getFunctionName()));
+        // 获取用户B站数据
+        return getContainerInfo(sessdata, dedeuserid);
     }
 }

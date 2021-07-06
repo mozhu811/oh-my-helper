@@ -19,4 +19,6 @@ public interface ContainerService {
     void updateTrigger(String containerName, String cronExpression);
 
     void removeContainer(String containerName);
+
+    ContainerDTO updateCookies(Integer dedeuserid, String sessdata, String biliJct);
 }

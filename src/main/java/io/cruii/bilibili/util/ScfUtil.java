@@ -14,6 +14,8 @@ import io.cruii.bilibili.dto.CreateContainerDTO;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * @author cruii
@@ -84,7 +86,7 @@ public class ScfUtil {
         req.setEnvironment(environment);
 
         try {
-            return scfClient.CreateFunction(req);
+            scfClient.CreateFunction(req);
         } catch (TencentCloudSDKException e) {
             throw new RuntimeException("创建容器失败", e);
         }
@@ -129,6 +131,46 @@ public class ScfUtil {
         } catch (TencentCloudSDKException e) {
             throw new RuntimeException("执行容器失败", e);
         }
+    }
+
+    public static void updateFunction(TencentApiConfig apiConfig, Integer dedeuserid, String sessdata, String biliJct) {
+        ScfClient scfClient = buildClient(apiConfig);
+        UpdateFunctionConfigurationRequest updateFunctionConfigurationRequest = new UpdateFunctionConfigurationRequest();
+        GetFunctionResponse functionResponse = getFunction(apiConfig, dedeuserid);
+        String functionName = functionResponse.getFunctionName();
+
+        // 设置参数
+        updateFunctionConfigurationRequest.setFunctionName(functionName);
+        String newDesc = dedeuserid + ";" + sessdata + ";" + biliJct;
+        updateFunctionConfigurationRequest.setDescription(newDesc);
+
+        // 获取原有环境变量
+        Environment environment = functionResponse.getEnvironment();
+        Variable[] variables = environment.getVariables();
+        for (Variable variable : variables) {
+            if ("config".equals(variable.getKey())) {
+                // 替换config配置
+                JSONObject configObj = JSONUtil.parseObj(variable.getValue());
+                configObj.set("dedeuserid", dedeuserid).set("sessdata", sessdata).set("biliJct", biliJct);
+                variable.setValue(configObj.toJSONString(0));
+            }
+        }
+        environment.setVariables(variables);
+        updateFunctionConfigurationRequest.setEnvironment(environment);
+        try {
+            scfClient.UpdateFunctionConfiguration(updateFunctionConfigurationRequest);
+        } catch (TencentCloudSDKException e) {
+            throw new RuntimeException("更新容器失败", e);
+        }
+    }
+
+    public static GetFunctionResponse getFunction(TencentApiConfig apiConfig, Integer dedeuserid) {
+        ListFunctionsResponse listFunctionsResponse = listFunctions(apiConfig);
+        Optional<Function> functionOptional = Arrays.stream(listFunctionsResponse.getFunctions())
+                .filter(function -> dedeuserid.equals(Integer.parseInt(function.getDescription().split(";")[0]))).findFirst();
+
+        Function function = functionOptional.orElseThrow(() -> new RuntimeException("容器不存在"));
+        return getFunction(apiConfig, function.getFunctionName());
     }
 
     private static ScfClient buildClient(TencentApiConfig apiConfig) {

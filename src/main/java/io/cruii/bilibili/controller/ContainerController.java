@@ -5,6 +5,8 @@ import io.cruii.bilibili.dto.CreateContainerDTO;
 import io.cruii.bilibili.service.ContainerService;
 import io.cruii.bilibili.vo.ContainerCardVO;
 import io.cruii.bilibili.vo.CreateContainerVO;
+import io.cruii.bilibili.vo.ContainerCookieVO;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
  * Created on 2021/6/6
  */
 @RestController
+@Log4j2
 @RequestMapping("containers")
 public class ContainerController {
 
@@ -36,17 +39,18 @@ public class ContainerController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ContainerCardVO createContainer(@CookieValue String dedeUserId,
-                                           @CookieValue String sessData,
-                                           @CookieValue String biliJct,
-                                           @RequestBody CreateContainerVO createContainerVO) throws FileNotFoundException {
+    public ContainerCardVO createContainer(@RequestBody CreateContainerVO createContainerVO) throws FileNotFoundException {
         CreateContainerDTO createContainerDTO = createContainerVO.toDto();
-        createContainerDTO.setDedeuserid(dedeUserId);
-        createContainerDTO.setSessdata(sessData);
-        createContainerDTO.setBiliJct(biliJct);
 
         ContainerDTO container = containerService.createContainer(createContainerDTO);
         return container.toCardVO();
     }
 
+    @PutMapping("cookies")
+    public ContainerCardVO updateContainer(@RequestBody ContainerCookieVO containerCookieVO) {
+        log.debug("更新Cookie: {}", containerCookieVO);
+        return containerService.updateCookies(containerCookieVO.getDedeuserid(),
+                containerCookieVO.getSessdata(),
+                containerCookieVO.getBiliJct()).toCardVO();
+    }
 }
