@@ -14,11 +14,5 @@ public class CreateContainerDTO {
 
     private String description;
 
-    private String dedeuserid;
-
-    private String sessdata;
-
-    private String biliJct;
-
     private ContainerConfig config;
 }
