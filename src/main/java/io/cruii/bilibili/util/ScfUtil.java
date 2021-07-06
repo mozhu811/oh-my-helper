@@ -91,8 +91,8 @@ public class ScfUtil {
     }
 
     public static void createTrigger(TencentApiConfig apiConfig,
-                                                      String containerName,
-                                                      String cron) {
+                                     String containerName,
+                                     String cron) {
         ScfClient scfClient = buildClient(apiConfig);
         try {
             CreateTriggerRequest createTriggerRequest = new CreateTriggerRequest();
@@ -119,7 +119,7 @@ public class ScfUtil {
     }
 
     public static void executeFunction(TencentApiConfig apiConfig,
-                             String containerName) {
+                                       String containerName) {
         ScfClient scfClient = buildClient(apiConfig);
         // 初次创建主动执行
         try {
