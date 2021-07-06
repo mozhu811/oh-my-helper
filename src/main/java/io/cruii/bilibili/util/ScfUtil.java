@@ -43,12 +43,9 @@ public class ScfUtil {
         }
     }
 
-    public static CreateFunctionResponse createFunction(TencentApiConfig apiConfig,
-                                                        CreateContainerDTO createContainerDTO,
-                                                        String jarLocation) {
-        String dedeuserid = createContainerDTO.getDedeuserid();
-        String sessdata = createContainerDTO.getSessdata();
-        String biliJct = createContainerDTO.getBiliJct();
+    public static void createFunction(TencentApiConfig apiConfig,
+                                      CreateContainerDTO createContainerDTO,
+                                      String jarLocation) {
 
         ScfClient scfClient = buildClient(apiConfig);
         CreateFunctionRequest req = new CreateFunctionRequest();
@@ -74,9 +71,6 @@ public class ScfUtil {
         req.setHandler("top.misec.BiliMain::mainHandler");
 
         JSONObject jsonConfig = JSONUtil.parseObj(createContainerDTO.getConfig());
-        jsonConfig.set("dedeuserid", dedeuserid);
-        jsonConfig.set("sessdata", sessdata);
-        jsonConfig.set("biliJct", biliJct);
 
         Environment environment = new Environment();
         Variable v1 = new Variable();
