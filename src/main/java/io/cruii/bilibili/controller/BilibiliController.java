@@ -20,17 +20,17 @@ import java.net.HttpCookie;
 @Log4j2
 public class BilibiliController {
 
-    @GetMapping("{dedeUserId}")
-    public BilibiliUserVO getBilibiliUser(@PathVariable Integer dedeUserId,
-                                  @CookieValue String sessData) {
-        HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessData);
+    @GetMapping("{dedeuserid}")
+    public BilibiliUserVO getBilibiliUser(@PathVariable Integer dedeuserid,
+                                  @CookieValue String sessdata) {
+        HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         sessdataCookie.setDomain(".bilibili.com");
         String body = HttpRequest.get("https://api.bilibili.com/x/web-interface/nav")
                 .cookie(sessdataCookie)
                 .execute().body();
         JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
         Integer mid = data.getInt("mid");
-        if (mid == null || !mid.equals(dedeUserId)) {
+        if (mid == null || !mid.equals(dedeuserid)) {
             throw new RuntimeException("获取B站信息异常");
         }
         InputStream avatarStream = HttpRequest.get(data.getStr("face"))

@@ -22,7 +22,7 @@ import java.time.ZoneOffset;
 public class ContainerDTO implements Serializable {
     private static final long serialVersionUID = -6073754165745971101L;
 
-    private String dedeUserId;
+    private Integer dedeuserid;
 
     private String username;
 

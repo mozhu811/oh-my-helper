@@ -105,7 +105,7 @@ public class ContainerServiceImpl implements ContainerService {
         Boolean isLogin = data.getBool("isLogin");
         if (Boolean.FALSE.equals(isLogin)) {
             return ContainerDTO.builder()
-                    .dedeUserId(dedeuserid)
+                    .dedeuserid(dedeuserid)
                     .isLogin(false).build();
         }
         InputStream avatarStream = HttpRequest.get(data.getStr("face"))
@@ -133,7 +133,7 @@ public class ContainerServiceImpl implements ContainerService {
         Integer currentLevel = levelInfo.getInt("current_level");
         return ContainerDTO.builder()
                 .isLogin(isLogin)
-                .dedeUserId(dedeuserid)
+                .dedeuserid(dedeuserid)
                 .username(sb.toString())
                 .avatar("data:image/jpeg;base64," + Base64.encode(avatarStream))
                 .coins(coins == null ? "——" : coins)
