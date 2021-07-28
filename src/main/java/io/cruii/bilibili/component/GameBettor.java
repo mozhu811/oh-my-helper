@@ -7,6 +7,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.tencentcloudapi.scf.v20180416.models.Function;
 import com.tencentcloudapi.scf.v20180416.models.ListFunctionsResponse;
+import com.tencentcloudapi.scf.v20180416.models.Variable;
 import io.cruii.bilibili.config.TencentApiConfig;
 import io.cruii.bilibili.util.ScfUtil;
 import lombok.extern.log4j.Log4j2;
@@ -20,6 +21,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -45,28 +47,42 @@ public class GameBettor {
     public void bet() throws InterruptedException {
         // 获取所有用户提交的cookie
         ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
+//        List<String[]> cookies = Arrays.stream(listFunctionsResponse.getFunctions())
+//                .parallel()
+//                .map(Function::getDescription)
+//                .map(s -> s.split(";"))
+//                .filter(cookie -> {
+//                    HttpCookie sessdataCookie = new HttpCookie("SESSDATA", cookie[1]);
+//                    HttpCookie dedeUserID = new HttpCookie("DedeUserID", cookie[0]);
+//                    String coinResp = HttpRequest.get("https://account.bilibili.com/site/getCoin")
+//                            .cookie(sessdataCookie, dedeUserID)
+//                            .execute().body();
+//                    Double coins = null;
+//                    if (JSONUtil.isJsonObj(coinResp)) {
+//                        JSONObject coinData = JSONUtil.parseObj(coinResp).getJSONObject("data");
+//
+//                        coins = coinData.getDouble("money");
+//                        if (coins < 300d) {
+//                            log.info("用户[{}]硬币不足300，将不执行赛事预测", cookie[0]);
+//                        }
+//                    }
+//                    return coins != null && coins > 300d;
+//                }).collect(Collectors.toList());
+
         List<String[]> cookies = Arrays.stream(listFunctionsResponse.getFunctions())
                 .parallel()
-                .map(Function::getDescription)
-                .map(s -> s.split(";"))
-                .filter(cookie -> {
-                    HttpCookie sessdataCookie = new HttpCookie("SESSDATA", cookie[1]);
-                    HttpCookie dedeUserID = new HttpCookie("DedeUserID", cookie[0]);
-                    String coinResp = HttpRequest.get("https://account.bilibili.com/site/getCoin")
-                            .cookie(sessdataCookie, dedeUserID)
-                            .execute().body();
-                    Double coins = null;
-                    if (JSONUtil.isJsonObj(coinResp)) {
-                        JSONObject coinData = JSONUtil.parseObj(coinResp).getJSONObject("data");
-
-                        coins = coinData.getDouble("money");
-                        if (coins < 300d) {
-                            log.info("用户[{}]硬币不足300，将不执行赛事预测", cookie[0]);
-                        }
+                .map(function -> ScfUtil.getFunction(apiConfig, function.getFunctionName()))
+                .filter(response -> {
+                    Optional<Variable> variableOptional = Arrays.stream(response.getEnvironment().getVariables())
+                            .filter(variable -> "config".equalsIgnoreCase(variable.getKey())).findFirst();
+                    if (variableOptional.isPresent()) {
+                        Variable variable = variableOptional.get();
+                        JSONObject config = JSONUtil.parseObj(variable.getValue());
+                        return config.getBool("bet");
                     }
-                    return coins != null && coins > 300d;
-                }).collect(Collectors.toList());
-
+                    return false;
+                })
+                .map(response -> response.getDescription().split(";")).collect(Collectors.toList());
         // 登录
         login(cookies);
 
