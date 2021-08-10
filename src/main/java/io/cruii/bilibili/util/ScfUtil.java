@@ -71,6 +71,7 @@ public class ScfUtil {
         req.setTimeout(200L);
         req.setRuntime("Java8");
         req.setHandler("top.misec.BiliMain::mainHandler");
+        req.setMemorySize(256L);
 
         JSONObject jsonConfig = JSONUtil.parseObj(createContainerDTO.getConfig());
 
