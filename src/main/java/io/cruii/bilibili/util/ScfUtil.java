@@ -168,7 +168,13 @@ public class ScfUtil {
     public static GetFunctionResponse getFunction(TencentApiConfig apiConfig, Integer dedeuserid) {
         ListFunctionsResponse listFunctionsResponse = listFunctions(apiConfig);
         Optional<Function> functionOptional = Arrays.stream(listFunctionsResponse.getFunctions())
-                .filter(function -> dedeuserid.equals(Integer.parseInt(function.getDescription().split(";")[0]))).findFirst();
+                .filter(function -> {
+                    String[] cookies = function.getDescription().split(";");
+                    if (cookies.length>1) {
+                        return dedeuserid.equals(Integer.parseInt(cookies[0]));
+                    }
+                    return false;
+                }).findFirst();
 
         Function function = functionOptional.orElseThrow(() -> new RuntimeException("容器不存在"));
         return getFunction(apiConfig, function.getFunctionName());
