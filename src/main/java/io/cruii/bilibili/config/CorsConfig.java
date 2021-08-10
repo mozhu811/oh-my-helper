@@ -19,7 +19,7 @@ public class CorsConfig {
         corsConfiguration.addAllowedMethod("*");
         corsConfiguration.addExposedHeader("Content-Disposition");
         corsConfiguration.setAllowCredentials(true);
-        corsConfiguration.addAllowedOriginPattern("*");
+        corsConfiguration.addAllowedOrigin("*");
         return corsConfiguration;
     }
 
