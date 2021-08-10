@@ -106,4 +106,9 @@ public class ContainerConfig implements Serializable {
      * Server酱推送Key
      */
     private String serverpushkey;
+
+    /**
+     * 电子邮箱
+     */
+    private String email;
 }
