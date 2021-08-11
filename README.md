@@ -23,6 +23,11 @@
 
 该项目基于 [JunzhouLiu/BILIBILI-HELPER](https://github.com/JunzhouLiu/BILIBILI-HELPER) 以及[SocialSisterYi/bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 开发
 
+
+感谢 JetBrains 对本项目的支持。
+
+[![JetBrains](jetbrains.svg)](https://www.jetbrains.com/?from=BILIBILI-HELPER)
+
 ## License
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FCruii%2Fbilibili-helper-hub.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FCruii%2Fbilibili-helper-hub?ref=badge_large)
