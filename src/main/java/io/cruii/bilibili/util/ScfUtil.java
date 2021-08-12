@@ -28,6 +28,11 @@ public class ScfUtil {
         try {
             ScfClient scfClient = buildClient(apiConfig);
             ListFunctionsRequest listFunctionsRequest = new ListFunctionsRequest();
+            /*
+            接口默认值limit为20
+            导致无法获取20个以后的数据
+             */
+            listFunctionsRequest.setLimit(10000L);
             return scfClient.ListFunctions(listFunctionsRequest);
         } catch (TencentCloudSDKException e) {
             throw new RuntimeException("获取容器列表失败", e);
