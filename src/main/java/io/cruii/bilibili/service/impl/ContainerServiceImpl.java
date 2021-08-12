@@ -111,12 +111,16 @@ public class ContainerServiceImpl implements ContainerService {
                 .execute().bodyStream();
         StringBuilder sb = new StringBuilder();
         String username = data.getStr("uname");
-        for (int i = 0; i < username.length(); i++) {
-            if (i > 0 && i < username.length() - 1) {
-                sb.append("*");
-            } else {
-                sb.append(username.charAt(i));
+        if (username.length() > 2) {
+            for (int i = 0; i < username.length(); i++) {
+                if (i > 0 && i < username.length() - 1) {
+                    sb.append("*");
+                } else {
+                    sb.append(username.charAt(i));
+                }
             }
+        } else {
+            sb.append(username.charAt(0)).append("*");
         }
         String coinResp = HttpRequest.get("https://account.bilibili.com/site/getCoin")
                 .cookie(sessdataCookie, dedeUserID)
