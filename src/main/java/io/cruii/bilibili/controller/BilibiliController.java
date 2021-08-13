@@ -42,4 +42,9 @@ public class BilibiliController {
                         .getInt("current_level"))
                 .build();
     }
+
+    @GetMapping("qrCode")
+    public String getLoginQrCode() {
+        return null;
+    }
 }
