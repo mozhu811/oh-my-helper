@@ -9,13 +9,24 @@ import java.io.Serializable;
  * Created on 2021/7/6
  */
 @Data
-public class ContainerCookieVO implements Serializable {
+public class BilibiliLoginVO implements Serializable {
     private static final long serialVersionUID = 4526030632788216062L;
+
+    /**
+     * B站官方扫码登录返回的状态码
+     */
+    private Integer code;
 
     private Integer dedeuserid;
 
     private String sessdata;
 
     private String biliJct;
+
+//    private String username;
+//
+//    private String avatar;
+//
+//    private Integer level;
 
 }
