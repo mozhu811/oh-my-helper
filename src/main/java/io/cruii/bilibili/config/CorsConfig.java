@@ -20,6 +20,7 @@ public class CorsConfig {
         corsConfiguration.addExposedHeader("Content-Disposition");
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.addAllowedOrigin("*");
+        corsConfiguration.setMaxAge(3600L);
         return corsConfiguration;
     }
 
