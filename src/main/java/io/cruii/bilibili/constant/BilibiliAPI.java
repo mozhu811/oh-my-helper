@@ -5,7 +5,7 @@ package io.cruii.bilibili.constant;
  * Created on 2021/08/13
  */
 public interface BilibiliAPI {
-    String GET_QR_CODE_LOGIN_URL = "http://passport.bilibili.com/qrcode/getLoginUrl";
+    String GET_QR_CODE_LOGIN_URL = "https://passport.bilibili.com/qrcode/getLoginUrl";
 
-    String GET_QR_CODE_LOGIN_INFO_URL = "http://passport.bilibili.com/qrcode/getLoginInfo";
+    String GET_QR_CODE_LOGIN_INFO_URL = "https://passport.bilibili.com/qrcode/getLoginInfo";
 }
