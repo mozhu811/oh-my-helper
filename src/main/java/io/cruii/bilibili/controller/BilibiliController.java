@@ -99,29 +99,6 @@ public class BilibiliController {
             bilibiliLoginVO.setSessdata(sessdata);
             bilibiliLoginVO.setCode(0);
 
-//            HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
-//            HttpCookie dedeUserID = new HttpCookie("DedeUserID", dedeuserid);
-//            sessdataCookie.setDomain(".bilibili.com");
-//            dedeUserID.setDomain(".bilibili.com");
-//            String body = HttpRequest.get("https://api.bilibili.com/x/web-interface/nav")
-//                    .cookie(sessdataCookie)
-//                    .execute().body();
-//            JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
-//            Boolean isLogin = data.getBool("isLogin");
-//            if (Boolean.FALSE.equals(isLogin)) {
-//                throw new RuntimeException("用户Cookie已失效 [" + dedeuserid + "]");
-//            }
-//            InputStream avatarStream = HttpRequest.get(data.getStr("face"))
-//                    .execute().bodyStream();
-//            String username = data.getStr("uname");
-//            String avatar = "data:image/jpeg;base64," + Base64.encode(avatarStream);
-//
-//            JSONObject levelInfo = data.getJSONObject("level_info");
-//            Integer currentLevel = levelInfo.getInt("current_level");
-//
-//            bilibiliLoginVO.setAvatar(avatar);
-//            bilibiliLoginVO.setLevel(currentLevel);
-//            bilibiliLoginVO.setUsername(username);
             return bilibiliLoginVO;
         }
 
