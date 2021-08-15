@@ -7,7 +7,7 @@ tencent:
   cls-endpoint: cls.tencentcloudapi.com
   cls-topic-id: 528e8742-4b04-43c2-a605-2c37d0597a9e
   scf-endpoint: scf.tencentcloudapi.com
-  region: ap-chengdu
+  region: ap-hongkong
 
 logging:
   level:
