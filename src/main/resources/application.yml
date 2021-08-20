@@ -5,7 +5,7 @@ tencent:
   secret-id:
   secret-key:
   cls-endpoint: cls.tencentcloudapi.com
-  cls-topic-id: 528e8742-4b04-43c2-a605-2c37d0597a9e
+  cls-topic-id:
   scf-endpoint: scf.tencentcloudapi.com
   region: ap-hongkong
 
