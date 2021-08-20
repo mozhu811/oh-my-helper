@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.net.HttpCookie;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -46,23 +47,44 @@ public class ContainerServiceImpl implements ContainerService {
         this.bilibiliExecutor = bilibiliExecutor;
     }
 
+    /**
+     * 本地缓存
+     */
+    private static final List<ContainerDTO> CONTAINER_CACHE = new ArrayList<>();
+
+    /**
+     * 锁对象
+     */
+    private final Object lock = new Object();
+
     @Override
     public List<ContainerDTO> listContainers() {
-        ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
+        synchronized (lock) {
+            if (!CONTAINER_CACHE.isEmpty()) {
+                return CONTAINER_CACHE;
+            }
 
-        return Arrays.stream(listFunctionsResponse.getFunctions()).map(f -> {
-            GetFunctionResponse getFunctionResponse = ScfUtil.getFunction(apiConfig, f.getFunctionName());
-            Environment environment = getFunctionResponse.getEnvironment();
-            Variable[] variables = environment.getVariables();
-            return Arrays.stream(variables)
-                    .map(Variable::getValue)
-                    .filter(JSONUtil::isJsonObj)
-                    .map(JSONUtil::parseObj)
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("无法获取该容器配置, name: " + f.getFunctionName()));
-        }).map(config ->
-                getContainerInfo(config.getStr("sessdata"), config.getInt("dedeuserid")))
-                .collect(Collectors.toList());
+            ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
+
+            List<ContainerDTO> dtos = Arrays.stream(listFunctionsResponse.getFunctions()).map(f -> {
+                        GetFunctionResponse getFunctionResponse = ScfUtil.getFunction(apiConfig, f.getFunctionName());
+                        Environment environment = getFunctionResponse.getEnvironment();
+                        Variable[] variables = environment.getVariables();
+                        return Arrays.stream(variables)
+                                .map(Variable::getValue)
+                                .filter(JSONUtil::isJsonObj)
+                                .map(JSONUtil::parseObj)
+                                .findFirst()
+                                .orElseThrow(() -> new RuntimeException("无法获取该容器配置, name: " + f.getFunctionName()));
+                    }).map(config ->
+                            getContainerInfo(config.getStr("sessdata"), config.getInt("dedeuserid")))
+                    .collect(Collectors.toList());
+
+            // 将容器信息缓存
+            CONTAINER_CACHE.addAll(dtos);
+
+            return CONTAINER_CACHE;
+        }
     }
 
     @Override
@@ -84,6 +106,9 @@ public class ContainerServiceImpl implements ContainerService {
         ScfUtil.createTrigger(apiConfig, containerName, "0 10 0 * * * *");
 
         bilibiliExecutor.execute(() -> ScfUtil.executeFunction(apiConfig, containerName));
+
+        // 清除缓存
+        CONTAINER_CACHE.clear();
 
         // 获取用户B站数据
         return getContainerInfo(createContainerDTO.getConfig().getSessdata(),
@@ -156,6 +181,7 @@ public class ContainerServiceImpl implements ContainerService {
     @Override
     public void removeContainer(String containerName) {
         ScfUtil.deleteFunction(apiConfig, containerName);
+        CONTAINER_CACHE.clear();
     }
 
     @Override
