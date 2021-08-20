@@ -23,6 +23,7 @@ import java.net.HttpCookie;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -78,6 +79,19 @@ public class ContainerServiceImpl implements ContainerService {
                                 .orElseThrow(() -> new RuntimeException("无法获取该容器配置, name: " + f.getFunctionName()));
                     }).map(config ->
                             getContainerInfo(config.getStr("sessdata"), config.getInt("dedeuserid")))
+                    .sorted((o1, o2) -> {
+                        if (Objects.equals(o1.getLevel(), o2.getLevel())) {
+                            return o2.getCurrentExp() - o1.getCurrentExp();
+                        } else {
+                            if (o1.getLevel() == null) {
+                                return 1;
+                            } else if (o2.getLevel() == null) {
+                                return -1;
+                            } else {
+                                return o2.getLevel() - o1.getLevel();
+                            }
+                        }
+                    })
                     .collect(Collectors.toList());
 
             // 将容器信息缓存
