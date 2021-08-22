@@ -184,7 +184,7 @@ public class ContainerServiceImpl implements ContainerService {
                 .nextExp(currentLevel == 6 ? 0 : levelInfo.getInt("next_exp"))
                 .vipType(vip.getInt("type"))
                 .dueDate(vip.getLong("due_date"))
-                .key(SecureUtil.md5(sessdata)).build();
+                .key(SecureUtil.md5(String.valueOf(dedeuserid))).build();
     }
 
     @Override

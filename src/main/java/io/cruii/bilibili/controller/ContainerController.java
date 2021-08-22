@@ -53,4 +53,9 @@ public class ContainerController {
                 bilibiliLoginVO.getSessdata(),
                 bilibiliLoginVO.getBiliJct()).toCardVO();
     }
+
+    @DeleteMapping("{dedeuserid}")
+    public void deleteContainer(@PathVariable Integer dedeuserid) {
+        log.debug(dedeuserid);
+    }
 }
