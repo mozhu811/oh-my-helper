@@ -5,10 +5,7 @@ import cn.hutool.crypto.SecureUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.tencentcloudapi.scf.v20180416.models.Environment;
-import com.tencentcloudapi.scf.v20180416.models.GetFunctionResponse;
-import com.tencentcloudapi.scf.v20180416.models.ListFunctionsResponse;
-import com.tencentcloudapi.scf.v20180416.models.Variable;
+import com.tencentcloudapi.scf.v20180416.models.*;
 import io.cruii.bilibili.config.TencentApiConfig;
 import io.cruii.bilibili.dto.ContainerDTO;
 import io.cruii.bilibili.dto.CreateContainerDTO;
@@ -25,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -76,11 +74,12 @@ public class ContainerServiceImpl implements ContainerService {
                                 .filter(JSONUtil::isJsonObj)
                                 .map(JSONUtil::parseObj)
                                 .findFirst()
-                                .orElseThrow(() -> new RuntimeException("无法获取该容器配置, name: " + f.getFunctionName()));
-                    }).map(config ->
-                            getContainerInfo(config.getStr("sessdata"), config.getInt("dedeuserid")))
+                                .orElseThrow(() -> new RuntimeException("无法获取该容器配置, name: " + f.getFunctionName()))
+                                .set("containerName", f.getFunctionName());
+                    }).map(config -> getContainerInfo(config.getStr("sessdata"),
+                            config.getInt("dedeuserid")))
                     .sorted((o1, o2) -> {
-                        if (Objects.equals(o1.getLevel(), o2.getLevel())) {
+                        if (o1.getLevel() != null && o2.getLevel() != null && Objects.equals(o1.getLevel(), o2.getLevel())) {
                             return o2.getCurrentExp() - o1.getCurrentExp();
                         } else {
                             if (o1.getLevel() == null) {
@@ -139,6 +138,10 @@ public class ContainerServiceImpl implements ContainerService {
                 .cookie(sessdataCookie)
                 .execute().body();
         log.info("请求B站用户信息结果: {}", body);
+        Integer code = JSONUtil.parseObj(body).getInt("code");
+        if (code == -101) {
+            log.error("账号Cookie已失效, {}, {}", sessdata, dedeuserid);
+        }
         JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
         Boolean isLogin = data.getBool("isLogin");
         if (Boolean.FALSE.equals(isLogin)) {
@@ -195,6 +198,30 @@ public class ContainerServiceImpl implements ContainerService {
     @Override
     public void removeContainer(String containerName) {
         ScfUtil.deleteFunction(apiConfig, containerName);
+        CONTAINER_CACHE.clear();
+    }
+
+    @Override
+    public void removeContainer(Integer dedeuserid) {
+        AtomicBoolean success = new AtomicBoolean(false);
+        CONTAINER_CACHE.stream()
+                .filter(c -> c.getDedeuserid().equals(dedeuserid))
+                .forEach(container -> {
+                    String containerName = container.getContainerName();
+                    ScfUtil.deleteFunction(apiConfig, containerName);
+                    success.set(true);
+                    log.info("删除容器[{} - {}]成功", dedeuserid, containerName);
+                });
+        if (!success.get()) {
+            ListFunctionsResponse listFunctionsResponse = ScfUtil.listFunctions(apiConfig);
+            String containerName = Arrays.stream(listFunctionsResponse.getFunctions()).filter(function -> {
+                String description = function.getDescription();
+                String[] cookies = description.split(";");
+                return Integer.valueOf(cookies[0]).equals(dedeuserid);
+            }).map(Function::getFunctionName).findFirst().orElseThrow(() -> new RuntimeException("容器不存在"));
+            ScfUtil.deleteFunction(apiConfig, containerName);
+            log.info("删除容器[{} - {}]成功", dedeuserid, containerName);
+        }
         CONTAINER_CACHE.clear();
     }
 
