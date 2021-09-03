@@ -22,5 +22,5 @@ public interface ContainerService {
 
     void removeContainer(Integer dedeuserid);
 
-    ContainerDTO updateCookies(Integer dedeuserid, String sessdata, String biliJct);
+    void updateCookies(Integer dedeuserid, String sessdata, String biliJct);
 }

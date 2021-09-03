@@ -226,12 +226,8 @@ public class ContainerServiceImpl implements ContainerService {
     }
 
     @Override
-    public ContainerDTO updateCookies(Integer dedeuserid, String sessdata, String biliJct) {
+    public void updateCookies(Integer dedeuserid, String sessdata, String biliJct) {
         ScfUtil.updateFunction(apiConfig, dedeuserid, sessdata, biliJct);
-
-        GetFunctionResponse function = ScfUtil.getFunction(apiConfig, dedeuserid);
-        bilibiliExecutor.execute(() -> ScfUtil.executeFunction(apiConfig, function.getFunctionName()));
-        // 获取用户B站数据
-        return getContainerInfo(sessdata, dedeuserid);
+        CONTAINER_CACHE.clear();
     }
 }
