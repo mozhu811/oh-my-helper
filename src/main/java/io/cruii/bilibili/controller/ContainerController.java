@@ -8,7 +8,6 @@ import io.cruii.bilibili.dto.CreateContainerDTO;
 import io.cruii.bilibili.service.ContainerService;
 import io.cruii.bilibili.vo.ContainerCardVO;
 import io.cruii.bilibili.vo.CreateContainerVO;
-import io.cruii.bilibili.vo.BilibiliLoginVO;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -48,14 +47,6 @@ public class ContainerController {
 
         ContainerDTO container = containerService.createContainer(createContainerDTO);
         return container.toCardVO();
-    }
-
-    @PutMapping("cookies")
-    public ContainerCardVO updateContainer(@RequestBody BilibiliLoginVO bilibiliLoginVO) {
-        log.debug("更新Cookie: {}", bilibiliLoginVO);
-        return containerService.updateCookies(bilibiliLoginVO.getDedeuserid(),
-                bilibiliLoginVO.getSessdata(),
-                bilibiliLoginVO.getBiliJct()).toCardVO();
     }
 
     @DeleteMapping("{dedeuserid}")
