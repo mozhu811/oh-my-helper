@@ -13,13 +13,13 @@ public class ContainerConfig implements Serializable {
 
     private static final long serialVersionUID = 6151419899088396002L;
 
+    private String containerName;
+
     private Integer dedeuserid;
 
     private String sessdata;
 
     private String biliJct;
-
-    private Boolean bet;
 
     /**
      * 任务之间的执行间隔,默认10秒,云函数用户不建议调整的太长，注意免费时长。

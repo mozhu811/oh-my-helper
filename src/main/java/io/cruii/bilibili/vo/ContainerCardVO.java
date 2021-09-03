@@ -12,6 +12,8 @@ import java.io.Serializable;
 public class ContainerCardVO implements Serializable {
     private static final long serialVersionUID = 2174825591123340862L;
 
+    private String containerName;
+
     private String dedeuserid;
 
     private String username;

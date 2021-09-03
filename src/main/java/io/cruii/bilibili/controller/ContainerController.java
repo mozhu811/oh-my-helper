@@ -1,16 +1,19 @@
 package io.cruii.bilibili.controller;
 
+import cn.hutool.http.HttpRequest;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import io.cruii.bilibili.dto.ContainerDTO;
 import io.cruii.bilibili.dto.CreateContainerDTO;
 import io.cruii.bilibili.service.ContainerService;
 import io.cruii.bilibili.vo.ContainerCardVO;
 import io.cruii.bilibili.vo.CreateContainerVO;
-import io.cruii.bilibili.vo.BilibiliLoginVO;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.FileNotFoundException;
+import java.net.HttpCookie;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,11 +49,20 @@ public class ContainerController {
         return container.toCardVO();
     }
 
-    @PutMapping("cookies")
-    public ContainerCardVO updateContainer(@RequestBody BilibiliLoginVO bilibiliLoginVO) {
-        log.debug("更新Cookie: {}", bilibiliLoginVO);
-        return containerService.updateCookies(bilibiliLoginVO.getDedeuserid(),
-                bilibiliLoginVO.getSessdata(),
-                bilibiliLoginVO.getBiliJct()).toCardVO();
+    @DeleteMapping("{dedeuserid}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteContainer(@PathVariable Integer dedeuserid,
+                                @CookieValue String sessdata) {
+        HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
+        sessdataCookie.setDomain(".bilibili.com");
+        String body = HttpRequest.get("https://api.bilibili.com/x/web-interface/nav")
+                .cookie(sessdataCookie)
+                .execute().body();
+        JSONObject data = JSONUtil.parseObj(body);
+        Integer code = data.getInt("code");
+        if (code == 0) {
+            log.info("用户信息验证成功");
+            containerService.removeContainer(dedeuserid);
+        }
     }
 }
