@@ -173,7 +173,7 @@ public class ContainerServiceImpl implements ContainerService {
             InputStream avatarStream = HttpRequest.get(baseInfo.getStr("face"))
                     .execute().bodyStream();
             StringBuilder sb = new StringBuilder();
-            String username = baseInfo.getStr("uname");
+            String username = baseInfo.getStr("name");
             if (username.length() > 2) {
                 for (int i = 0; i < username.length(); i++) {
                     if (i > 0 && i < username.length() - 1) {
