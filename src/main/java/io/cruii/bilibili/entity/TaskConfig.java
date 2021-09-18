@@ -1,6 +1,8 @@
 package io.cruii.bilibili.entity;
 
 import lombok.Data;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.MongoId;
 
 import java.io.Serializable;
 
@@ -9,13 +11,13 @@ import java.io.Serializable;
  * Created on 2021/6/8
  */
 @Data
-public class ContainerConfig implements Serializable {
+@Document("task_config")
+public class TaskConfig implements Serializable {
 
     private static final long serialVersionUID = 6151419899088396002L;
 
-    private String containerName;
-
-    private Integer dedeuserid;
+    @MongoId
+    private String dedeuserid;
 
     private String sessdata;
 
