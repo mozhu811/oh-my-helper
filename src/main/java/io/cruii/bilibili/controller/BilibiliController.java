@@ -7,7 +7,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.google.zxing.WriterException;
 import io.cruii.bilibili.constant.BilibiliAPI;
-import io.cruii.bilibili.service.ContainerService;
+import io.cruii.bilibili.service.TaskService;
 import io.cruii.bilibili.util.QrCodeGenerator;
 import io.cruii.bilibili.vo.BilibiliLoginVO;
 import io.cruii.bilibili.vo.BilibiliUserVO;
@@ -28,10 +28,10 @@ import java.net.HttpCookie;
 @Log4j2
 public class BilibiliController {
 
-    private final ContainerService containerService;
+    private final TaskService taskService;
 
-    public BilibiliController(ContainerService containerService) {
-        this.containerService = containerService;
+    public BilibiliController(TaskService taskService) {
+        this.taskService = taskService;
     }
 
     @GetMapping("user")
@@ -101,7 +101,8 @@ public class BilibiliController {
             String dedeuserid = response.getCookieValue("DedeUserID");
             String sessdata = response.getCookieValue("SESSDATA");
 
-            containerService.updateCookies(Integer.parseInt(dedeuserid), sessdata, biliJct);
+
+            // todo 更新cookie
 
             bilibiliLoginVO.setBiliJct(biliJct);
             bilibiliLoginVO.setDedeuserid(Integer.parseInt(dedeuserid));
