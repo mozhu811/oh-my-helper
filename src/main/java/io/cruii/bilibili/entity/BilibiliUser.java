@@ -15,7 +15,7 @@ import java.io.Serializable;
  */
 @Data
 @Document("bilibili_user")
-public class BilibiliUserInfo implements Serializable {
+public class BilibiliUser implements Serializable {
     private static final long serialVersionUID = -52229197213938647L;
 
     @MongoId
@@ -36,6 +36,8 @@ public class BilibiliUserInfo implements Serializable {
     private Integer vipType;
 
     private Long dueDate;
+
+    private Integer vipStatus;
 
     private Boolean isLogin;
 }
