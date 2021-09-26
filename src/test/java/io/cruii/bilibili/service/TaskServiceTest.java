@@ -1,9 +1,7 @@
 package io.cruii.bilibili.service;
 
 import io.cruii.bilibili.dto.TaskConfigDTO;
-import io.cruii.bilibili.entity.BilibiliUserInfo;
 import lombok.extern.log4j.Log4j2;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
@@ -26,16 +24,16 @@ class TaskServiceTest {
     @Test
     void createNewTask() throws InterruptedException {
         TaskConfigDTO config = new TaskConfigDTO();
-        config.setDedeuserid("287969457");
-        config.setSessdata("6d8c75a8%2C1646443725%2Ca2892%2A91");
-        config.setBiliJct("85cce5987f4036d1d1d66af3e94f9504");
+        config.setDedeuserid("");
+        config.setSessdata("");
+        config.setBiliJct("");
         config.setTaskIntervalTime(10);
         config.setNumberOfCoins(5);
         config.setReserveCoins(50);
         config.setSelectLike(1);
         config.setMonthEndAutoCharge(true);
         config.setGiveGift(true);
-        config.setUpLive("287969457");
+        config.setUpLive("");
         config.setChargeForLove("0");
         config.setDevicePlatform("ios");
         config.setCoinAddPriority(1);
