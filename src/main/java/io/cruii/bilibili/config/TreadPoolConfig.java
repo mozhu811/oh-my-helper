@@ -1,5 +1,6 @@
 package io.cruii.bilibili.config;
 
+import io.cruii.bilibili.component.BilibiliTaskThreadPoolExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -17,7 +18,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class TreadPoolConfig {
     @Bean
     public Executor bilibiliExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        ThreadPoolTaskExecutor executor = new BilibiliTaskThreadPoolExecutor();
         // 核心线程数：线程池创建时候初始化的线程数
         executor.setCorePoolSize(10);
         // 最大线程数：线程池最大的线程数，只有在缓冲队列满了之后才会申请超过核心线程数的线程

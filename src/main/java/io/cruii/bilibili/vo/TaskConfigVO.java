@@ -1,4 +1,4 @@
-package io.cruii.bilibili.entity;
+package io.cruii.bilibili.vo;
 
 import lombok.Data;
 
@@ -6,16 +6,14 @@ import java.io.Serializable;
 
 /**
  * @author cruii
- * Created on 2021/6/8
+ * Created on 2021/9/14
  */
 @Data
-public class ContainerConfig implements Serializable {
+public class TaskConfigVO implements Serializable {
+    private static final long serialVersionUID = 4344616448330555244L;
 
-    private static final long serialVersionUID = 6151419899088396002L;
 
-    private String containerName;
-
-    private Integer dedeuserid;
+    private String dedeuserid;
 
     private String sessdata;
 

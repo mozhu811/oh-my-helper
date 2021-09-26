@@ -1,9 +1,7 @@
 package io.cruii.bilibili.vo;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 
@@ -11,10 +9,8 @@ import java.io.Serializable;
  * @author cruii
  * Created on 2021/6/10
  */
-@Builder
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Accessors(chain = true)
 public class BilibiliUserVO implements Serializable {
     private static final long serialVersionUID = -4960479906705315906L;
 
@@ -23,4 +19,16 @@ public class BilibiliUserVO implements Serializable {
     private String avatar;
 
     private Integer level;
+
+    private String dedeuserid;
+
+    private String coins;
+
+    private Integer currentExp;
+
+    private Integer diffExp;
+
+    private Integer vipStatus;
+
+    private Boolean isLogin;
 }

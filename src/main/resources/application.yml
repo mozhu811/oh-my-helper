@@ -1,17 +1,10 @@
 server:
   port: 811
 
-tencent:
-  secret-id:
-  secret-key:
-  cls-endpoint: cls.tencentcloudapi.com
-  cls-topic-id:
-  scf-endpoint: scf.tencentcloudapi.com
-  region: ap-hongkong
+spring:
+  data:
+    mongodb:
+      uri: mongodb://cruii:970811@aliyun:27017/helperhub
 
 logging:
-  level:
-    io.cruii.bilibili: debug
-
-scf:
-  jar-location: /opt/BILIBILI-HELPER-v1.0.3.jar
+  config: classpath:logback-spring.xml

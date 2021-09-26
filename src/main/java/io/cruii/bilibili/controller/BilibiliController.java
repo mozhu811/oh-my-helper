@@ -7,17 +7,23 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.google.zxing.WriterException;
 import io.cruii.bilibili.constant.BilibiliAPI;
-import io.cruii.bilibili.service.ContainerService;
+import io.cruii.bilibili.exception.BilibiliCookieExpiredException;
+import io.cruii.bilibili.exception.BilibiliUserNotFoundException;
+import io.cruii.bilibili.service.BilibiliUserService;
 import io.cruii.bilibili.util.QrCodeGenerator;
 import io.cruii.bilibili.vo.BilibiliLoginVO;
 import io.cruii.bilibili.vo.BilibiliUserVO;
 import io.cruii.bilibili.vo.QrCodeVO;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpCookie;
+import java.util.List;
 
 /**
  * @author cruii
@@ -28,33 +34,45 @@ import java.net.HttpCookie;
 @Log4j2
 public class BilibiliController {
 
-    private final ContainerService containerService;
+    private final BilibiliUserService userService;
 
-    public BilibiliController(ContainerService containerService) {
-        this.containerService = containerService;
+    public BilibiliController(BilibiliUserService userService) {
+        this.userService = userService;
     }
 
     @GetMapping("user")
-    public BilibiliUserVO getBilibiliUser(@RequestParam Integer dedeuserid,
+    public BilibiliUserVO getBilibiliUser(@RequestParam String dedeuserid,
                                           @RequestParam String sessdata) {
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         sessdataCookie.setDomain(".bilibili.com");
-        String body = HttpRequest.get("https://api.bilibili.com/x/web-interface/nav")
+        String body = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV)
                 .cookie(sessdataCookie)
                 .execute().body();
-        JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
-        Integer mid = data.getInt("mid");
-        if (mid == null || !mid.equals(dedeuserid)) {
-            throw new RuntimeException("获取B站信息异常");
+        JSONObject resp = JSONUtil.parseObj(body);
+        if (resp.getInt("code") == -101) {
+            throw new BilibiliCookieExpiredException(dedeuserid);
         }
+
+        JSONObject data = resp.getJSONObject("data");
+        String mid = data.getStr("mid");
+
+        // 找不到用户
+        if (mid == null || !mid.equals(dedeuserid)) {
+            throw new BilibiliUserNotFoundException(dedeuserid);
+        }
+
         InputStream avatarStream = HttpRequest.get(data.getStr("face"))
                 .execute().bodyStream();
-        return BilibiliUserVO.builder()
-                .avatar("data:image/jpeg;base64," + Base64.encode(avatarStream))
-                .username(data.getStr("uname"))
-                .level(data.getJSONObject("level_info")
-                        .getInt("current_level"))
-                .build();
+        return new BilibiliUserVO()
+                .setAvatar("data:image/jpeg;base64," + Base64.encode(avatarStream))
+                .setUsername(data.getStr("uname"))
+                .setLevel(data.getJSONObject("level_info")
+                        .getInt("current_level"));
+    }
+
+    @GetMapping("users")
+    public List<BilibiliUserVO> listUsers() {
+        return userService.list();
     }
 
     @GetMapping("qrCode")
@@ -101,7 +119,15 @@ public class BilibiliController {
             String dedeuserid = response.getCookieValue("DedeUserID");
             String sessdata = response.getCookieValue("SESSDATA");
 
-            containerService.updateCookies(Integer.parseInt(dedeuserid), sessdata, biliJct);
+            /*
+            如果在新用户没有创建任务时就保存信息，则造成前端会显示未创建任务的用户信息
+            这样不符合逻辑。
+            所以，只有在老用户登录时才更新cookie，新用户直接返回即可。
+             */
+            if (userService.isExist(dedeuserid)) {
+                // 存在用户时更新cookie
+                userService.save(dedeuserid, sessdata, biliJct);
+            }
 
             bilibiliLoginVO.setBiliJct(biliJct);
             bilibiliLoginVO.setDedeuserid(Integer.parseInt(dedeuserid));
