@@ -38,8 +38,12 @@ public class DonateGiftTask extends AbstractTask {
 
         JSONObject resp = delegate.listGifts();
         if (resp.getInt(CODE) == 0) {
-            JSONArray gifts = resp.getJSONObject("data").getJSONArray("list");
-            List<JSONObject> expireGifts = gifts.stream().map(JSONUtil::parseObj)
+            String gifts = resp.getByPath("data.list", String.class);
+            if (gifts == null) {
+                log.info("背包无礼物，停止执行此任务");
+                return;
+            }
+            List<JSONObject> expireGifts = new JSONArray(gifts).stream().map(JSONUtil::parseObj)
                     .filter(gift -> {
                         Long expireAt = gift.getLong("expire_at");
                         long now = System.currentTimeMillis() / 1000;
