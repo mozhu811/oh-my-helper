@@ -4,8 +4,8 @@ package io.cruii.bilibili.exception;
  * @author cruii
  * Created on 2021/9/15
  */
-public class BilibiliUserNotFoundException extends RuntimeException {
+public class BilibiliUserNotFoundException extends BaseException {
     public BilibiliUserNotFoundException(String dedeuserid) {
-        super("用户[" + dedeuserid + "]不存在");
+        super(ErrorCode.B_USER_NOT_FOUND, "用户[" + dedeuserid + "]不存在");
     }
 }
