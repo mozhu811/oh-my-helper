@@ -7,5 +7,4 @@ spring:
       uri: mongodb://cruii:970811@aliyun:27017/helperhub
 
 logging:
-  level:
-    io.cruii.bilibili: debug
+  config: classpath:logback-spring.xml
