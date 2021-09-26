@@ -2,12 +2,12 @@ package io.cruii.bilibili.service.impl;
 
 import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.dto.TaskConfigDTO;
-import io.cruii.bilibili.entity.BilibiliUserInfo;
+import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
-import io.cruii.bilibili.repository.BilibiliUserInfoRepository;
+import io.cruii.bilibili.repository.BilibiliUserRepository;
 import io.cruii.bilibili.repository.TaskConfigRepository;
 import io.cruii.bilibili.service.TaskService;
-import io.cruii.bilibili.task.BilibiliTaskExecutor;
+import io.cruii.bilibili.component.BilibiliTaskExecutor;
 import lombok.extern.log4j.Log4j2;
 import ma.glasnost.orika.MapperFactory;
 import org.springframework.stereotype.Service;
@@ -27,32 +27,27 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskConfigRepository taskConfigRepository;
 
-    private final BilibiliUserInfoRepository bilibiliUserInfoRepository;
+    private final BilibiliUserRepository bilibiliUserRepository;
 
     private final MapperFactory mapperFactory;
 
     public TaskServiceImpl(Executor bilibiliExecutor,
                            TaskConfigRepository taskConfigRepository,
-                           BilibiliUserInfoRepository bilibiliUserInfoRepository,
+                           BilibiliUserRepository bilibiliUserRepository,
                            MapperFactory mapperFactory) {
         this.bilibiliExecutor = bilibiliExecutor;
         this.taskConfigRepository = taskConfigRepository;
-        this.bilibiliUserInfoRepository = bilibiliUserInfoRepository;
+        this.bilibiliUserRepository = bilibiliUserRepository;
         this.mapperFactory = mapperFactory;
     }
-
-    /**
-     * 锁对象
-     */
-    private final Object lock = new Object();
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean createNewTask(TaskConfigDTO taskConfig) {
         TaskConfig config = mapperFactory.getMapperFacade().map(taskConfig, TaskConfig.class);
-        BilibiliDelegate bilibiliDelegate = new BilibiliDelegate(config);
+        BilibiliDelegate delegate = new BilibiliDelegate(config);
         // 验证并获取用户B站信息
-        BilibiliUserInfo user = bilibiliDelegate.getUser();
+        BilibiliUser user = delegate.getUser();
 
         if (Boolean.TRUE.equals(user.getIsLogin())) {
             // 用户Cookie有效
@@ -60,7 +55,7 @@ public class TaskServiceImpl implements TaskService {
             taskConfigRepository.save(config);
 
             // 持久化用户信息
-            bilibiliUserInfoRepository.save(user);
+            bilibiliUserRepository.save(user);
 
             // 初次执行任务
             bilibiliExecutor.execute(() -> new BilibiliTaskExecutor(config).execute());
