@@ -8,9 +8,8 @@ import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.bilibili.constant.BilibiliAPI;
-import io.cruii.bilibili.entity.BilibiliUserInfo;
+import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
-import io.cruii.bilibili.exception.BilibiliUserNotFoundException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
@@ -36,9 +35,9 @@ public class BilibiliDelegate {
     /**
      * 获取用户B站导航栏状态信息
      *
-     * @return B站用户信息 {@link BilibiliUserInfo}
+     * @return B站用户信息 {@link BilibiliUser}
      */
-    public BilibiliUserInfo getUser() {
+    public BilibiliUser getUser() {
         JSONObject resp = doGet(BilibiliAPI.GET_USER_INFO_NAV, null);
 
         // 解析响应信息
@@ -55,10 +54,8 @@ public class BilibiliDelegate {
         }
 
         // 登录成功，获取详细信息
-        log.info("======账号Cookie有效=======");
         InputStream avatarStream = getAvatarStream(data.getStr("face"));
         String coveredUsername = coverUsername(data.getStr("uname"));
-        log.info("用户名：{}", coveredUsername);
         // 获取硬币数
         String coins = data.getStr("money");
 
@@ -68,7 +65,7 @@ public class BilibiliDelegate {
         // 获取等级信息
         JSONObject levelInfo = data.getJSONObject("level_info");
         Integer currentLevel = levelInfo.getInt("current_level");
-        BilibiliUserInfo info = new BilibiliUserInfo();
+        BilibiliUser info = new BilibiliUser();
         info.setDedeuserid(config.getDedeuserid());
         info.setUsername(coveredUsername);
         info.setAvatar("data:image/jpeg;base64," + Base64.encode(avatarStream));
@@ -77,7 +74,7 @@ public class BilibiliDelegate {
         info.setCurrentExp(levelInfo.getInt("current_exp"));
         info.setNextExp(currentLevel == 6 ? 0 : levelInfo.getInt("next_exp"));
         info.setVipType(vip.getInt("type"));
-        info.setDueDate(vip.getLong("due_date"));
+        info.setVipStatus(vip.getInt("status"));
         info.setIsLogin(true);
 
         return info;
@@ -86,22 +83,23 @@ public class BilibiliDelegate {
     /**
      * 当Cookie过期时获取用户的部分信息
      *
-     * @param dedeuserid B站uid
-     * @return B站用户信息 {@link BilibiliUserInfo}
+     * @param userId B站uid
+     * @return B站用户信息 {@link BilibiliUser}
      */
-    private BilibiliUserInfo getUser(String dedeuserid) {
-        String body = HttpRequest.get(BilibiliAPI.GET_USER_SPACE_INFO + "?mid=" + dedeuserid).execute().body();
+    public BilibiliUser getUser(String userId) {
+        String body = HttpRequest.get(BilibiliAPI.GET_USER_SPACE_INFO + "?mid=" + userId).execute().body();
 
         JSONObject resp = JSONUtil.parseObj(body);
-        if (resp.getInt("code") == -404) {
-            throw new BilibiliUserNotFoundException(dedeuserid);
-        }
         JSONObject baseInfo = resp.getJSONObject("data");
+        if (resp.getInt("code") == -404 || baseInfo == null) {
+            log.error("用户[{}]不存在", userId);
+            return null;
+        }
         InputStream avatarStream = getAvatarStream(baseInfo.getStr("face"));
         String coveredUsername = coverUsername(baseInfo.getStr("name"));
 
-        BilibiliUserInfo info = new BilibiliUserInfo();
-        info.setDedeuserid(dedeuserid);
+        BilibiliUser info = new BilibiliUser();
+        info.setDedeuserid(userId);
         info.setUsername(coveredUsername);
         info.setAvatar("data:image/jpeg;base64," + Base64.encode(avatarStream));
         info.setLevel(baseInfo.getInt("level"));
@@ -357,6 +355,100 @@ public class BilibiliDelegate {
         String requestBody = HttpUtil.toParams(params);
 
         return doPost(BilibiliAPI.SEND_GIFT, requestBody);
+    }
+
+    /**
+     * 获取充电信息
+     *
+     * @return 解析后的JSON对象 {@link JSONObject}
+     */
+    public JSONObject getChargeInfo() {
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.put("mid", CollUtil.newArrayList(config.getDedeuserid()));
+
+        return doGet(BilibiliAPI.GET_CHARGE_INFO, params);
+    }
+
+    /**
+     * 充电
+     *
+     * @param couponBalance B币券金额
+     * @param upUserId      充电对象的userId
+     * @return 解析后的JSON对象 {@link JSONObject}
+     */
+    public JSONObject doCharge(int couponBalance, String upUserId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("bp_num", couponBalance);
+        params.put("is_bp_remains_prior", true);
+        params.put("up_mid", upUserId);
+        params.put("otype", "up");
+        params.put("oid", config.getDedeuserid());
+        params.put("csrf", config.getBiliJct());
+
+        String requestBody = HttpUtil.toParams(params);
+
+        return doPost(BilibiliAPI.CHARGE, requestBody);
+    }
+
+    /**
+     * 提交充电留言
+     *
+     * @param orderNo 充电订单号
+     * @return 解析后的JSON对象 {@link JSONObject}
+     */
+    public JSONObject doChargeComment(String orderNo) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("order_id", orderNo);
+        params.put("message", "up的作品很棒");
+        params.put("csrf", config.getBiliJct());
+
+        String requestBody = HttpUtil.toParams(params);
+
+        return doPost(BilibiliAPI.COMMIT_CHARGE_COMMENT, requestBody);
+    }
+
+    /**
+     * 获取大会员漫画权益
+     *
+     * @return 解析后的JSON对象 {@link JSONObject}
+     */
+    public JSONObject getMangaVipReward() {
+        Map<String, Object> params = new HashMap<>();
+        params.put("reason_id", 1);
+
+        String requestBody = JSONUtil.parseObj(params).toJSONString(0);
+        return doPost(BilibiliAPI.GET_MANGA_VIP_REWARD, requestBody);
+    }
+
+    /**
+     * 领取大会员权益
+     *
+     * @param type 1 = B币券  2 = 会员购优惠券
+     * @return 解析后的JSON对象 {@link JSONObject}
+     */
+    public JSONObject getVipReward(int type) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("type", type);
+        params.put("csrf", config.getBiliJct());
+
+        String requestBody = HttpUtil.toParams(params);
+        return doPost(BilibiliAPI.GET_VIP_REWARD, requestBody);
+    }
+
+    /**
+     * 阅读漫画
+     *
+     * @return 解析后的JSON对象 {@link JSONObject}
+     */
+    public JSONObject readManga() {
+        Map<String, String> params = new HashMap<>(4);
+        params.put("device", "pc");
+        params.put("platform", "web");
+        params.put("comic_id", "26009");
+        params.put("ep_id", "300318");
+
+        String requestBody = JSONUtil.parseObj(params).toJSONString(0);
+        return doPost(BilibiliAPI.READ_MANGA, requestBody);
     }
 
     /**
