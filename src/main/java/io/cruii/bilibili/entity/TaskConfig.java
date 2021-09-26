@@ -109,6 +109,14 @@ public class TaskConfig implements Serializable {
      */
     private String serverpushkey;
 
+    private String corpId;
+
+    private String agentId;
+
+    private String corpSecret;
+
+    private String mediaId;
+
     /**
      * 电子邮箱
      */
