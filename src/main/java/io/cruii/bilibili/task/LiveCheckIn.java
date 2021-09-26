@@ -20,8 +20,8 @@ public class LiveCheckIn extends AbstractTask {
         if (resp.getInt(CODE) == 0) {
             log.info("直播签到成功，本次获得{},{}", resp.getByPath("data.text", String.class),
                     resp.getByPath("data.specialText", String.class));
-        } else {
-            log.debug("直播签到失败: {}", resp.getStr(MESSAGE));
+        } else if (resp.getInt(CODE) == 1011040){
+            log.info(resp.getStr(MESSAGE));
         }
     }
 

@@ -28,9 +28,7 @@ public class CheckCookieTask extends AbstractTask {
         if (resp.getInt("code") == 0 &&
                 Boolean.TRUE.equals(resp.getByPath("data.isLogin"))) {
             log.info("账号[{}]登陆成功", config.getDedeuserid());
-//            log.info("硬币余额：{}", resp.getByPath("data.money"));
         } else {
-            log.debug(resp);
             throw new BilibiliCookieExpiredException(config.getDedeuserid());
         }
     }
