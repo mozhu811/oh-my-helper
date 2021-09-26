@@ -113,4 +113,35 @@ public interface BilibiliAPI {
      * 送出直播间礼物
      */
     String SEND_GIFT = "https://api.live.bilibili.com/gift/v2/live/bag_send";
+
+    /**
+     * 充电
+     */
+    String CHARGE = "https://api.bilibili.com/x/ugcpay/web/v2/trade/elec/pay/quick";
+
+    /**
+     * 获取充电信息
+     */
+    String GET_CHARGE_INFO = "https://api.bilibili.com/x/ugcpay/web/v2/trade/elec/panel";
+
+    /**
+     * 充电留言.
+     */
+    String COMMIT_CHARGE_COMMENT = "https://api.bilibili.com/x/ugcpay/trade/elec/message";
+
+    /**
+     * 领取大会员权益
+     */
+    String GET_VIP_REWARD = "https://api.bilibili.com/x/vip/privilege/receive";
+
+    /**
+     * 领取大会员漫画奖励
+     */
+    String GET_MANGA_VIP_REWARD = "https://manga.bilibili.com/twirp/user.v1.User/GetVipReward";
+
+    /**
+     * 阅读漫画
+     */
+    String READ_MANGA = "https://manga.bilibili.com/twirp/bookshelf.v1.Bookshelf/AddHistory?device=pc&platform=web";
+
 }
