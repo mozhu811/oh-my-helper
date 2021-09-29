@@ -15,4 +15,12 @@ public interface TaskService {
      * @return 配置是否有效
      */
     boolean createNewTask(TaskConfigDTO taskConfig);
+
+    /**
+     * 是否存在任务配置
+     *
+     * @param dedeuserid 用户ID
+     * @return 是否存在
+     */
+    boolean isExist(String dedeuserid);
 }

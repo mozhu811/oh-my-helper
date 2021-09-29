@@ -7,7 +7,7 @@ import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.repository.BilibiliUserRepository;
 import io.cruii.bilibili.repository.TaskConfigRepository;
 import io.cruii.bilibili.service.TaskService;
-import io.cruii.bilibili.component.BilibiliTaskExecutor;
+import io.cruii.bilibili.component.TaskExecutor;
 import lombok.extern.log4j.Log4j2;
 import ma.glasnost.orika.MapperFactory;
 import org.springframework.stereotype.Service;
@@ -58,9 +58,14 @@ public class TaskServiceImpl implements TaskService {
             bilibiliUserRepository.save(user);
 
             // 初次执行任务
-            bilibiliExecutor.execute(() -> new BilibiliTaskExecutor(config).execute());
+            bilibiliExecutor.execute(() -> new TaskExecutor(config).execute());
         }
 
         return user.getIsLogin();
+    }
+
+    @Override
+    public boolean isExist(String dedeuserid) {
+        return taskConfigRepository.findById(dedeuserid).isPresent();
     }
 }
