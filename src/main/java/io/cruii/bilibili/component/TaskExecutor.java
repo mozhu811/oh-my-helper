@@ -8,7 +8,9 @@ import lombok.extern.log4j.Log4j2;
 import org.slf4j.MDC;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author cruii
@@ -22,8 +24,6 @@ public class TaskExecutor {
 
     public TaskExecutor(TaskConfig config) {
         this.config = config;
-        taskList.add(new CheckCookieTask(config));
-        taskList.add(new GetCoinChangeLogTask(config));
         taskList.add(new WatchVideoTask(config));
         taskList.add(new MangaTask(config));
         taskList.add(new DonateCoinTask(config));
@@ -36,12 +36,20 @@ public class TaskExecutor {
     }
 
     public void execute() {
+        Collections.shuffle(taskList);
+        taskList.add(new CheckCookieTask(config));
+        Collections.reverse(taskList);
         taskList.forEach(task -> {
-            log.info("----执行[{}]开始----", task.getName());
+            log.info("[{}]", task.getName());
             task.run();
-            log.info("----执行[{}]结束----", task.getName());
+            try {
+                TimeUnit.SECONDS.sleep(5L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                Thread.currentThread().interrupt();
+            }
         });
-        log.info("----[所有任务已执行完成]----");
+        log.info("[所有任务已执行完成]");
         calExp();
         try {
             TaskRunner.FINISH_QUEUE.put(MDC.get("traceId"));
@@ -54,12 +62,12 @@ public class TaskExecutor {
     private void calExp() {
         BilibiliDelegate delegate = new BilibiliDelegate(config);
         JSONObject coinExpToday = delegate.getCoinExpToday();
-        Integer exp = coinExpToday.getInt("data");
-        log.info("今日已获得[{}]点经验", 15 + exp);
+        int exp = coinExpToday.getInt("data") + 15;
+        log.info("今日已获得[{}]点经验",  exp);
         BilibiliUser user = delegate.getUser();
         if (user.getLevel() < 6) {
-            log.info("按照当前进度，升级到Lv{}还需要: {}天", user.getLevel() + 1,
-                    (user.getNextExp() - user.getCurrentExp()) / exp);
+            int upgradeDays = (user.getNextExp() - user.getCurrentExp()) / exp;
+            log.info("按照当前进度，升级到Lv{}还需要: {}天", user.getLevel() + 1, upgradeDays);
         } else {
             log.info("当前等级Lv6，经验值为：{}", user.getCurrentExp());
         }
