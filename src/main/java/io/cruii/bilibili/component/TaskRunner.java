@@ -5,6 +5,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.push.QyWechatPusher;
 import io.cruii.bilibili.repository.TaskConfigRepository;
+import io.cruii.bilibili.service.BilibiliUserService;
 import lombok.extern.log4j.Log4j2;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
@@ -31,11 +32,13 @@ public class TaskRunner {
     protected static final BlockingQueue<String> FINISH_QUEUE = new LinkedBlockingDeque<>();
     private final TaskConfigRepository taskConfigRepository;
     private final Executor bilibiliExecutor;
+    private final BilibiliUserService userService;
 
     public TaskRunner(TaskConfigRepository taskConfigRepository,
-                      Executor bilibiliExecutor) {
+                      Executor bilibiliExecutor, BilibiliUserService userService) {
         this.taskConfigRepository = taskConfigRepository;
         this.bilibiliExecutor = bilibiliExecutor;
+        this.userService = userService;
     }
 
     public void run() {
@@ -51,11 +54,13 @@ public class TaskRunner {
 
                     TaskConfig taskConfig = CACHE.get(traceId);
 
+                    userService.save(taskConfig.getDedeuserid(), taskConfig.getSessdata(), taskConfig.getBiliJct());
                     String corpId = taskConfig.getCorpId();
                     String corpSecret = taskConfig.getCorpSecret();
                     String agentId = taskConfig.getAgentId();
-                    if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId)) {
-                        QyWechatPusher pusher = new QyWechatPusher(corpId, corpSecret, agentId);
+                    String mediaId = taskConfig.getMediaId();
+                    if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId, mediaId)) {
+                        QyWechatPusher pusher = new QyWechatPusher(corpId, corpSecret, agentId, mediaId);
                         pusher.push(content);
                     }
                 }
@@ -70,7 +75,7 @@ public class TaskRunner {
                 .forEach(config -> bilibiliExecutor.execute(() -> {
                     String traceId = MDC.getCopyOfContextMap().get("traceId");
                     CACHE.put(traceId, config);
-                    new BilibiliTaskExecutor(config).execute();
+                    new TaskExecutor(config).execute();
                 }));
     }
 }
