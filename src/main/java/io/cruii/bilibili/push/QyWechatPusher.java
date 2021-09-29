@@ -1,6 +1,5 @@
 package io.cruii.bilibili.push;
 
-import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -18,12 +17,13 @@ public class QyWechatPusher implements Pusher {
     private final String corpId;
     private final String corpSecret;
     private final String agentId;
-    private String mediaId;
+    private final String mediaId;
 
-    public QyWechatPusher(String corpId, String corpSecret, String agentId) {
+    public QyWechatPusher(String corpId, String corpSecret, String agentId, String mediaId) {
         this.corpId = corpId;
         this.corpSecret = corpSecret;
         this.agentId = agentId;
+        this.mediaId = mediaId;
     }
 
     @Override
@@ -37,7 +37,7 @@ public class QyWechatPusher implements Pusher {
                 .set("mpnews", JSONUtil.createObj()
                         .set("articles", JSONUtil.createArray()
                                 .put(JSONUtil.createObj().set("title", "Bilibili Helper Hub任务日志")
-                                        .set("thumb_media_id", CharSequenceUtil.isBlank(mediaId) ? "2yHcLBLWB4udLpbIFZ-VTrg_1PIOiCv09c2UHWJKc9G4" : mediaId)
+                                        .set("thumb_media_id", mediaId)
                                         .set("author", "Bilibili Helper Hub")
                                         .set("content", content)
                                         .set("digest", Arrays.stream(content.split("<br>"))
