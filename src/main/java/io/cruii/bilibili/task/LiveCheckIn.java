@@ -18,10 +18,10 @@ public class LiveCheckIn extends AbstractTask {
     public void run() {
         JSONObject resp = delegate.liveCheckIn();
         if (resp.getInt(CODE) == 0) {
-            log.info("直播签到成功，本次获得{},{}", resp.getByPath("data.text", String.class),
+            log.info("直播签到成功，本次获得{},{} ✔️", resp.getByPath("data.text", String.class),
                     resp.getByPath("data.specialText", String.class));
         } else if (resp.getInt(CODE) == 1011040){
-            log.info(resp.getStr(MESSAGE));
+            log.info("直播签到失败： {} ❌", resp.getStr(MESSAGE));
         }
     }
 

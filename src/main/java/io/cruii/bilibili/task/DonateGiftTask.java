@@ -28,8 +28,8 @@ public class DonateGiftTask extends AbstractTask {
 
     @Override
     public void run() {
-        if (!Boolean.TRUE.equals(config.getGiveGift())) {
-            log.info("未启用赠送即将过期礼物");
+        if (!Boolean.TRUE.equals(config.getDonateGift())) {
+            log.info("未启用赠送即将过期礼物 ❌");
             return;
         }
 
@@ -40,7 +40,7 @@ public class DonateGiftTask extends AbstractTask {
         if (resp.getInt(CODE) == 0) {
             String gifts = resp.getByPath("data.list", String.class);
             if (gifts == null) {
-                log.info("背包无礼物，停止执行此任务");
+                log.info("背包无礼物，停止执行此任务 ❌");
                 return;
             }
             List<JSONObject> expireGifts = new JSONArray(gifts).stream().map(JSONUtil::parseObj)
@@ -52,7 +52,7 @@ public class DonateGiftTask extends AbstractTask {
                     }).collect(Collectors.toList());
 
             if (expireGifts.isEmpty()) {
-                log.info("背包中没有即将过期礼物");
+                log.info("背包中没有即将过期礼物 ✔️");
                 return;
             }
 
@@ -64,24 +64,22 @@ public class DonateGiftTask extends AbstractTask {
                 if (respDonate.getInt(CODE) == 0) {
                     String giftName = respDonate.getByPath("data.gift_name", String.class);
                     String giftNum = respDonate.getByPath("data.gift_num", String.class);
-                    log.info("给直播间[{}]赠送了[{}]个[{}]", roomId, giftNum, giftName);
+                    log.info("给直播间[{}]赠送了[{}]个[{}] ✔️", roomId, giftNum, giftName);
                 } else {
-                    log.error("给直播间[{}]赠送礼物失败：{}", roomId, respDonate.getStr(MESSAGE));
+                    log.error("给直播间[{}]赠送礼物失败：{} ❌", roomId, respDonate.getStr(MESSAGE));
                 }
             });
 
         } else {
-            log.error("无法获取礼物背包");
+            log.error("无法获取礼物背包 ❌");
         }
     }
 
     /**
      * 获取直播间ID
-     *
-     * @return 直播间ID
      */
     private void init() {
-        userId = config.getUpLive();
+        userId = config.getDonateGiftTarget();
         if ("0".equals(userId)) {
             userId = AUTHOR_MID;
         }

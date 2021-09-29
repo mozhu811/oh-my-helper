@@ -56,9 +56,9 @@ public class Silver2CoinTask extends AbstractTask {
     private void doExchange() {
         JSONObject resp = delegate.silver2Coin();
         if (resp.getInt(CODE) == 0) {
-            log.info("兑换成功");
+            log.info("兑换硬币成功 ✔️");
         } else {
-            log.error("兑换失败：{}", resp.getStr(MESSAGE));
+            log.error("兑换失败：{} ❌", resp.getStr(MESSAGE));
         }
     }
 

@@ -23,15 +23,14 @@ public class WatchVideoTask extends VideoTask {
 
         if (Boolean.FALSE.equals(resp.getByPath("data.watch", Boolean.class))) {
             playVideo(bvid);
+        } else {
+            log.info("今日观看视频任务已完成 ✔️");
         }
 
         if (Boolean.FALSE.equals(resp.getByPath("data.share", Boolean.class))) {
             shareVideo(bvid);
+            log.info("今日分享视频任务已完成 ✔️");
         }
-
-        // TODO 测试用
-        playVideo(bvid);
-        shareVideo(bvid);
     }
 
     @Override
@@ -47,9 +46,9 @@ public class WatchVideoTask extends VideoTask {
         JSONObject resp = delegate.playVideo(bvid, playedTime);
         if (resp.getInt(CODE) == 0) {
             String title = getVideoTitle(bvid);
-            log.info("播放视频[{}]成功,已观看至{}秒", title, playedTime);
+            log.info("播放视频[{}]成功,已观看至{}秒 ✔️", title, playedTime);
         } else {
-            log.error("播放视频[{}]出错：{}", bvid, resp.getStr(MESSAGE));
+            log.error("播放视频[{}]出错：{} ❌", bvid, resp.getStr(MESSAGE));
         }
     }
 
@@ -63,9 +62,9 @@ public class WatchVideoTask extends VideoTask {
         JSONObject resp = delegate.shareVideo(bvid);
         String title = getVideoTitle(bvid);
         if (resp.getInt(CODE) == 0) {
-            log.info("分享视频[{}]成功", title);
+            log.info("分享视频[{}]成功 ✔️", title);
         } else {
-            log.error("分享视频[{}]失败：{}", title, resp.getStr(MESSAGE));
+            log.error("分享视频[{}]失败：{} ❌", title, resp.getStr(MESSAGE));
         }
     }
 }

@@ -18,9 +18,9 @@ public class ReadMangaTask extends AbstractTask {
     public void run() {
         JSONObject resp = delegate.readManga();
         if (resp.getInt(CODE) == 0) {
-            log.info("阅读成功");
+            log.info("完成漫画阅读 ✔️");
         } else {
-            log.info("阅读失败：{}", resp);
+            log.info("阅读失败：{} ❌", resp);
         }
     }
 

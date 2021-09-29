@@ -25,7 +25,7 @@ public class DonateCoinTask extends VideoTask {
     public void run() {
         int actual = calDiff();
         if (actual <= 0) {
-            log.info("今日投币任务已完成");
+            log.info("今日投币任务已完成 ✔️");
             return;
         } else {
             log.info("距完成任务还需投币{}个", actual);
@@ -35,12 +35,12 @@ public class DonateCoinTask extends VideoTask {
         log.info("当前账户余额：{}", current);
         if (current <= config.getReserveCoins() ||
                 actual > current) {
-            log.info("当前余额不足或触发硬币保护阈值，不继续执行投币任务。");
+            log.info("当前余额不足或触发硬币保护阈值，取消执行投币任务。❌");
             return;
         }
 
         // 获取投币策略
-        Integer donatePriority = config.getCoinAddPriority();
+        Integer donatePriority = config.getDonateCoinStrategy();
         List<String> bvidList;
         if (donatePriority == 1) {
             // 热榜投币
@@ -57,6 +57,8 @@ public class DonateCoinTask extends VideoTask {
         // 若为完成当日任务重复执行
         if (!done) {
             run();
+        } else {
+            log.info("今日投币任务已完成 ✔️");
         }
     }
 
@@ -73,7 +75,7 @@ public class DonateCoinTask extends VideoTask {
     private int calDiff() {
         JSONObject coinExpToday = delegate.getCoinExpToday();
         Integer data = coinExpToday.getInt("data");
-        return config.getNumberOfCoins() - data / 10;
+        return config.getDonateCoins() - data / 10;
     }
 
     /**
@@ -84,11 +86,11 @@ public class DonateCoinTask extends VideoTask {
     private int getCoin() {
         JSONObject resp = delegate.getCoin();
         if (resp.getInt(CODE) == 0) {
-            Object coin = resp.getByPath("data.money");
+            BigDecimal coin = resp.getByPath("data.money", BigDecimal.class);
             if (coin == null) {
                 return 0;
             }
-            return ((BigDecimal) coin).intValue();
+            return coin.intValue();
         }
         return 0;
     }
@@ -111,12 +113,12 @@ public class DonateCoinTask extends VideoTask {
                     return true;
                 })
                 .forEach(bvid -> {
-                    JSONObject resp = delegate.donateCoin(bvid, 1, config.getSelectLike());
+                    JSONObject resp = delegate.donateCoin(bvid, 1, 1);
                     String videoTitle = getVideoTitle(bvid);
                     if (resp.getInt(CODE) == 0) {
-                        log.info("为视频[{}]投币成功", videoTitle);
+                        log.info("为视频[{}]投币成功 ✔️", videoTitle);
                     } else {
-                        log.error("为视频[{}]投币失败", resp.getStr(MESSAGE));
+                        log.error("为视频[{}]投币失败 ❌", resp.getStr(MESSAGE));
                     }
                 });
 
