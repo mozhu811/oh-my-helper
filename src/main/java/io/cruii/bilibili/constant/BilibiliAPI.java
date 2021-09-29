@@ -144,4 +144,8 @@ public interface BilibiliAPI {
      */
     String READ_MANGA = "https://manga.bilibili.com/twirp/bookshelf.v1.Bookshelf/AddHistory?device=pc&platform=web";
 
+    /**
+     * 获取勋章墙
+     */
+    String GET_MEDAL_WALL = "https://api.live.bilibili.com/xlive/web-ucenter/user/MedalWall";
 }

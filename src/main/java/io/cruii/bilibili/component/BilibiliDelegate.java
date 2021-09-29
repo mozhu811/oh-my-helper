@@ -10,6 +10,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.entity.BilibiliUser;
+import io.cruii.bilibili.entity.Medal;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.MediaType;
@@ -19,8 +20,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author cruii
@@ -71,14 +75,34 @@ public class BilibiliDelegate {
         // 获取等级信息
         JSONObject levelInfo = data.getJSONObject("level_info");
         Integer currentLevel = levelInfo.getInt("current_level");
+
+        // 获取勋章墙
+        JSONObject medalWallResp = getMedalWall();
+        List<Medal> medals = medalWallResp.getJSONObject("data")
+                .getJSONArray("list")
+                .stream()
+                .map(JSONUtil::parseObj)
+                .map(medalObj -> {
+                    Medal medal = new Medal();
+                    medal.setName(medalObj.getByPath("medal_info.medal_name", String.class));
+                    medal.setLevel(medalObj.getByPath("medal_info.level", Integer.class));
+                    medal.setColorStart(medalObj.getByPath("medal_info.medal_color_start", Integer.class));
+                    medal.setColorEnd(medalObj.getByPath("medal_info.medal_color_end", Integer.class));
+                    medal.setColorBorder(medalObj.getByPath("medal_info.medal_color_border", Integer.class));
+                    return medal;
+                })
+                .sorted(Comparator.comparingInt(Medal::getLevel).reversed())
+                .limit(2L)
+                .collect(Collectors.toList());
         BilibiliUser info = new BilibiliUser();
         info.setDedeuserid(config.getDedeuserid());
-        info.setUsername(coveredUsername);
-        info.setAvatar("data:image/jpeg;base64," + Base64.encode(avatarStream));
+        info.setUsername(uname);
+        info.setAvatar(avatarFile.getAbsolutePath());
         info.setCoins(coins);
         info.setLevel(currentLevel);
         info.setCurrentExp(levelInfo.getInt("current_exp"));
         info.setNextExp(currentLevel == 6 ? 0 : levelInfo.getInt("next_exp"));
+        info.setMedals(medals);
         info.setVipType(vip.getInt("type"));
         info.setVipStatus(vip.getInt("status"));
         info.setIsLogin(true);
@@ -102,16 +126,28 @@ public class BilibiliDelegate {
             return null;
         }
         InputStream avatarStream = getAvatarStream(baseInfo.getStr("face"));
-        String coveredUsername = coverUsername(baseInfo.getStr("name"));
+//        String coveredUsername = coverUsername(baseInfo.getStr("name"));
+        String uname = coverUsername(baseInfo.getStr("name"));
 
         BilibiliUser info = new BilibiliUser();
         info.setDedeuserid(userId);
-        info.setUsername(coveredUsername);
+        info.setUsername(uname);
         info.setAvatar("data:image/jpeg;base64," + Base64.encode(avatarStream));
         info.setLevel(baseInfo.getInt("level"));
         info.setIsLogin(false);
 
         return info;
+    }
+
+    /**
+     * 获取勋章墙
+     *
+     * @return 解析后的JSON对象 {@link JSONObject}
+     */
+    public JSONObject getMedalWall() {
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.put("target_id", CollUtil.newArrayList(config.getDedeuserid()));
+        return doGet(BilibiliAPI.GET_MEDAL_WALL, params);
     }
 
     /**
@@ -206,7 +242,7 @@ public class BilibiliDelegate {
      *
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject mangaClockIn() {
+    public JSONObject mangaCheckIn() {
         Map<String, Object> params = new HashMap<>();
         params.put("platform", config.getDevicePlatform());
         String requestBody = HttpUtil.toParams(params);
