@@ -2,6 +2,7 @@ package io.cruii.bilibili.component;
 
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.Header;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpUtil;
@@ -16,6 +17,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -55,7 +57,11 @@ public class BilibiliDelegate {
 
         // 登录成功，获取详细信息
         InputStream avatarStream = getAvatarStream(data.getStr("face"));
-        String coveredUsername = coverUsername(data.getStr("uname"));
+        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
+        File avatarFile = new File(path);
+        FileUtil.writeFromStream(avatarStream, avatarFile);
+
+        String uname = data.getStr("uname");
         // 获取硬币数
         String coins = data.getStr("money");
 
