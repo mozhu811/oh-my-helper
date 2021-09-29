@@ -15,12 +15,12 @@ import java.util.List;
  * Created on 2021/9/15
  */
 @Log4j2
-public class BilibiliTaskExecutor {
+public class TaskExecutor {
 
     private final List<Task> taskList = new ArrayList<>();
     private final TaskConfig config;
 
-    public BilibiliTaskExecutor(TaskConfig config) {
+    public TaskExecutor(TaskConfig config) {
         this.config = config;
         taskList.add(new CheckCookieTask(config));
         taskList.add(new GetCoinChangeLogTask(config));
