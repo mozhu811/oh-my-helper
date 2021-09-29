@@ -31,11 +31,6 @@
 
     <!-- 控制台输出 -->
     <appender name="stdOut" class="ch.qos.logback.core.ConsoleAppender">
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>info</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
-        </filter>
         <encoder>
             <pattern>${patternLayout}</pattern>
             <charset>UTF-8</charset>
@@ -131,7 +126,7 @@
     </appender>
 
     <!--     日志输出级别 -->
-    <root level="debug">
+    <root level="root">
         <appender-ref ref="stdOut"/>
         <appender-ref ref="debugDayFile"/>
         <appender-ref ref="infoDayFile"/>
@@ -139,11 +134,12 @@
         <appender-ref ref="allDayFile"/>
     </root>
 
-    <!--可以控制具体的包或者类打印到特定的日志里-->
-<!--    <logger name="io.cruii.bilibili" level="debug" additivity="true">-->
-<!--        <appender-ref ref="debugDayFile"/>-->
-<!--        <appender-ref ref="infoDayFile"/>-->
-<!--        <appender-ref ref="errorDayFile"/>-->
-<!--    </logger>-->
+<!--    可以控制具体的包或者类打印到特定的日志里-->
+    <logger name="org.mongodb.driver" level="info" additivity="true">
+        <appender-ref ref="stdOut"/>
+        <appender-ref ref="debugDayFile"/>
+        <appender-ref ref="infoDayFile"/>
+        <appender-ref ref="errorDayFile"/>
+    </logger>
 
 </configuration>
