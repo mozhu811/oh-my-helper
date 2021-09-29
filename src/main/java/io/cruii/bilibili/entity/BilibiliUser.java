@@ -5,8 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.MongoId;
 
 import java.io.Serializable;
-
-
+import java.util.List;
 
 
 /**
@@ -32,6 +31,8 @@ public class BilibiliUser implements Serializable {
     private Integer currentExp;
 
     private Integer nextExp;
+
+    private List<Medal> medals;
 
     private Integer vipType;
 

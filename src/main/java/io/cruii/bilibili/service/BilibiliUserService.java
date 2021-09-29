@@ -2,6 +2,7 @@ package io.cruii.bilibili.service;
 
 import io.cruii.bilibili.vo.BilibiliUserVO;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
@@ -13,5 +14,6 @@ public interface BilibiliUserService {
 
     boolean isExist(String dedeuserid);
 
-    List<BilibiliUserVO> list();
+    List<BilibiliUserVO> list(HttpServletRequest request);
+
 }

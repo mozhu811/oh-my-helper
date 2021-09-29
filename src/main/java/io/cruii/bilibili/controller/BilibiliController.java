@@ -10,6 +10,7 @@ import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.exception.BilibiliCookieExpiredException;
 import io.cruii.bilibili.exception.BilibiliUserNotFoundException;
 import io.cruii.bilibili.service.BilibiliUserService;
+import io.cruii.bilibili.service.TaskService;
 import io.cruii.bilibili.util.QrCodeGenerator;
 import io.cruii.bilibili.vo.BilibiliLoginVO;
 import io.cruii.bilibili.vo.BilibiliUserVO;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpCookie;
@@ -35,9 +37,12 @@ import java.util.List;
 public class BilibiliController {
 
     private final BilibiliUserService userService;
+    private final TaskService taskService;
 
-    public BilibiliController(BilibiliUserService userService) {
+    public BilibiliController(BilibiliUserService userService,
+                              TaskService taskService) {
         this.userService = userService;
+        this.taskService = taskService;
     }
 
     @GetMapping("user")
@@ -71,8 +76,8 @@ public class BilibiliController {
     }
 
     @GetMapping("users")
-    public List<BilibiliUserVO> listUsers() {
-        return userService.list();
+    public List<BilibiliUserVO> listUsers(HttpServletRequest request) {
+        return userService.list(request);
     }
 
     @GetMapping("qrCode")
@@ -124,7 +129,7 @@ public class BilibiliController {
             这样不符合逻辑。
             所以，只有在老用户登录时才更新cookie，新用户直接返回即可。
              */
-            if (userService.isExist(dedeuserid)) {
+            if (taskService.isExist(dedeuserid)) {
                 // 存在用户时更新cookie
                 userService.save(dedeuserid, sessdata, biliJct);
             }

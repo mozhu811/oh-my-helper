@@ -1,9 +1,11 @@
 package io.cruii.bilibili.vo;
 
+import io.cruii.bilibili.entity.Medal;
 import lombok.*;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * @author cruii
@@ -27,6 +29,10 @@ public class BilibiliUserVO implements Serializable {
     private Integer currentExp;
 
     private Integer diffExp;
+
+    private Integer upgradeDays;
+
+    private List<Medal> medals;
 
     private Integer vipStatus;
 
