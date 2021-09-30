@@ -131,7 +131,7 @@ public class BilibiliController {
              */
             if (taskService.isExist(dedeuserid)) {
                 // 存在用户时更新cookie
-                userService.save(dedeuserid, sessdata, biliJct);
+                userService.saveAndUpdate(dedeuserid, sessdata, biliJct);
             }
 
             bilibiliLoginVO.setBiliJct(biliJct);

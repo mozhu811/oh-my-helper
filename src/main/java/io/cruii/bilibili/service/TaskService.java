@@ -14,7 +14,7 @@ public interface TaskService {
      * @param taskConfig 任务配置
      * @return 配置是否有效
      */
-    boolean createNewTask(TaskConfigDTO taskConfig);
+    boolean createTask(TaskConfigDTO taskConfig);
 
     /**
      * 是否存在任务配置

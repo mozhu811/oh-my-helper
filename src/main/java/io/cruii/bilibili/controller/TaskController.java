@@ -27,10 +27,9 @@ public class TaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Object createContainer(@RequestBody TaskConfigVO taskConfigVO) {
+    public void createTask(@RequestBody TaskConfigVO taskConfigVO) {
         TaskConfigDTO taskConfig = mapperFactory.getMapperFacade()
                 .map(taskConfigVO, TaskConfigDTO.class);
-        taskService.createNewTask(taskConfig);
-        return null;
+        taskService.createTask(taskConfig);
     }
 }

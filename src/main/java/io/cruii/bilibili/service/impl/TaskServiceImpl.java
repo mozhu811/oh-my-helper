@@ -43,7 +43,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean createNewTask(TaskConfigDTO taskConfig) {
+    public boolean createTask(TaskConfigDTO taskConfig) {
         TaskConfig config = mapperFactory.getMapperFacade().map(taskConfig, TaskConfig.class);
         BilibiliDelegate delegate = new BilibiliDelegate(config);
         // 验证并获取用户B站信息

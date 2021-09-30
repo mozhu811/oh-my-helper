@@ -1,7 +1,7 @@
 package io.cruii.bilibili.service.impl;
 
-import cn.hutool.json.JSONObject;
 import io.cruii.bilibili.component.BilibiliDelegate;
+import io.cruii.bilibili.dto.BilibiliUserDTO;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.repository.BilibiliUserRepository;
@@ -27,17 +27,16 @@ import java.util.stream.Collectors;
 public class BilibiliUserServiceImpl implements BilibiliUserService {
     private final BilibiliUserRepository bilibiliUserRepository;
     private final MapperFactory mapperFactory;
-    private final TaskConfigRepository taskConfigRepository;
+
     public BilibiliUserServiceImpl(BilibiliUserRepository bilibiliUserRepository,
                                    MapperFactory mapperFactory,
                                    TaskConfigRepository taskConfigRepository) {
         this.bilibiliUserRepository = bilibiliUserRepository;
         this.mapperFactory = mapperFactory;
-        this.taskConfigRepository = taskConfigRepository;
     }
 
     @Override
-    public void save(String dedeuserid, String sessdata, String biliJct) {
+    public void saveAndUpdate(String dedeuserid, String sessdata, String biliJct) {
 
         TaskConfig config = new TaskConfig();
         config.setDedeuserid(dedeuserid);
@@ -47,6 +46,12 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
         BilibiliDelegate delegate = new BilibiliDelegate(config);
         BilibiliUser user = delegate.getUser();
         bilibiliUserRepository.save(user);
+    }
+
+    @Override
+    public void saveAndUpdate(BilibiliUserDTO user) {
+        BilibiliUser bilibiliUser = mapperFactory.getMapperFacade().map(user, BilibiliUser.class);
+        bilibiliUserRepository.save(bilibiliUser);
     }
 
     @Override
@@ -63,14 +68,6 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
                     BilibiliUserVO userVO = mapperFactory.getMapperFacade().map(user, BilibiliUserVO.class);
                     if (user.getLevel() < 6) {
                         userVO.setDiffExp(user.getNextExp() - user.getCurrentExp());
-                        taskConfigRepository
-                                .findById(user.getDedeuserid())
-                                .ifPresent(config -> {
-                                    BilibiliDelegate delegate = new BilibiliDelegate(config);
-                                    int coinExpToday = delegate.getCoinExpToday().getInt("data") + 15;
-                                    int upgradeDays = (user.getNextExp() - user.getCurrentExp()) / coinExpToday;
-                                    userVO.setUpgradeDays(upgradeDays);
-                                });
                     }
 
                     String host = request.getRequestURL().toString().split(request.getRequestURI())[0];
