@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!--
+    使用方式说明：
+        1. 可以修改日志格式：调整property标签
+        2. 可以修改root的日志级别
+        3. 如果想将特定的包或者类的日志打印到具体的日志文件：
+            （1）拷贝debugDayFile 的 appender
+            （2）修改name
+            （3）修改filter的level
+            （4）修改FileNamePattern的日志文件路径
+        4. 增加logger标签：
+            <logger name="com.ydj" level="info" additivity="true">
+                <appender-ref ref="debugDayFile"/>
+            </logger>
+    -->
+    <!--定义日志文件的存储地址 -->
+    <property name="LOG_HOME" value="logs"/>
+
+    <!--日志格式 可选择：-->
+    <!--只打印信息：    %msg%n -->
+    <!--打印日期和信息：  %d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n-->
+    <!--打印日期，日志级别，线程，类名，行数，信息：  %d{yyyy-MM-dd HH:mm:ss.SSS} %level [%thread] %class line %line: %msg%n-->
+    <property name="patternLayout"
+              value="%clr(%d{${LOG_DATEFORMAT_PATTERN:-yyyy-MM-dd HH:mm:ss.SSS}}){faint} [%X{traceId}] %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+
+    <property name="fileLayout"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId}] [%thread] %-5level %logger{50} || %msg%n"/>
+
+    <!-- 控制台输出 -->
+    <appender name="stdOut" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${patternLayout}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 按照每天生成日志文件。存储事件日志 -->
+    <appender name="allDayFile"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名 -->
+            <FileNamePattern>${LOG_HOME}/all-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <!--日志文件保留天数 -->
+            <MaxHistory>30</MaxHistory>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>${fileLayout}</pattern>
+        </encoder>
+        <!--日志文件最大的大小 -->
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>1GB</MaxFileSize>
+        </triggeringPolicy>
+    </appender>
+
+    <!-- 按照每天生成日志文件。存储事件日志 -->
+    <appender name="debugDayFile"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>debug</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名 -->
+            <FileNamePattern>${LOG_HOME}/debug-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <!--日志文件保留天数 -->
+            <MaxHistory>30</MaxHistory>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>${fileLayout}</pattern>
+        </encoder>
+        <!--日志文件最大的大小 -->
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>1GB</MaxFileSize>
+        </triggeringPolicy>
+    </appender>
+
+    <!-- 按照每天生成日志文件。存储事件日志 -->
+    <appender name="infoDayFile"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>info</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名 -->
+            <FileNamePattern>${LOG_HOME}/info-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <!--日志文件保留天数 -->
+            <MaxHistory>30</MaxHistory>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>${fileLayout}</pattern>
+        </encoder>
+        <!--日志文件最大的大小 -->
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>1GB</MaxFileSize>
+        </triggeringPolicy>
+    </appender>
+
+    <!-- 按照每天生成日志文件。存储事件日志 -->
+    <appender name="errorDayFile"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>error</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名 -->
+            <FileNamePattern>${LOG_HOME}/error-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <!--日志文件保留天数 -->
+            <MaxHistory>30</MaxHistory>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>${fileLayout}</pattern>
+        </encoder>
+        <!--日志文件最大的大小 -->
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>1GB</MaxFileSize>
+        </triggeringPolicy>
+    </appender>
+
+    <!--     日志输出级别 -->
+    <root level="root">
+        <appender-ref ref="stdOut"/>
+        <appender-ref ref="debugDayFile"/>
+        <appender-ref ref="infoDayFile"/>
+        <appender-ref ref="errorDayFile"/>
+        <appender-ref ref="allDayFile"/>
+    </root>
+
+    <!--可以控制具体的包或者类打印到特定的日志里-->
+    <logger name="org.mongodb.driver" level="info" additivity="true">
+        <appender-ref ref="stdOut"/>
+        <appender-ref ref="debugDayFile"/>
+        <appender-ref ref="infoDayFile"/>
+        <appender-ref ref="errorDayFile"/>
+    </logger>
+
+</configuration>
