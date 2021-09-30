@@ -126,7 +126,6 @@ public class BilibiliDelegate {
             return null;
         }
         InputStream avatarStream = getAvatarStream(baseInfo.getStr("face"));
-//        String coveredUsername = coverUsername(baseInfo.getStr("name"));
         String uname = coverUsername(baseInfo.getStr("name"));
 
         BilibiliUser info = new BilibiliUser();
@@ -165,7 +164,7 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getCoinChangeLog() {
-        return doGet(BilibiliAPI.GET_COIN_CHANGE_LOG, null);
+        return doGet(BilibiliAPI.GET_COIN_CHANGE_LOG);
     }
 
     /**
@@ -174,7 +173,7 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getExpRewardStatus() {
-        return doGet(BilibiliAPI.GET_EXP_REWARD_STATUS, null);
+        return doGet(BilibiliAPI.GET_EXP_REWARD_STATUS);
     }
 
     /**
