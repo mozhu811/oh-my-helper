@@ -32,6 +32,8 @@ public class BilibiliUser implements Serializable {
 
     private Integer nextExp;
 
+    private Integer upgradeDays;
+
     private List<Medal> medals;
 
     private Integer vipType;
