@@ -23,6 +23,8 @@ public class DonateCoinTask extends VideoTask {
 
     @Override
     public void run() {
+        Integer donateCoins = config.getDonateCoins();
+        log.info("配置投币数为：{}", donateCoins);
         int actual = calDiff();
         if (actual <= 0) {
             log.info("今日投币任务已完成 ✔️");
