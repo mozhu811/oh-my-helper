@@ -21,18 +21,19 @@ public class TaskExecutor {
 
     private final List<Task> taskList = new ArrayList<>();
     private final TaskConfig config;
-
+    private final BilibiliDelegate delegate;
     public TaskExecutor(TaskConfig config) {
+        delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct(), config.getUserAgent());
         this.config = config;
-        taskList.add(new WatchVideoTask(config));
-        taskList.add(new MangaTask(config));
-        taskList.add(new DonateCoinTask(config));
-        taskList.add(new Silver2CoinTask(config));
-        taskList.add(new LiveCheckIn(config));
-        taskList.add(new DonateGiftTask(config));
-        taskList.add(new ChargeTask(config));
-        taskList.add(new GetVipPrivilegeTask(config));
-        taskList.add(new ReadMangaTask(config));
+//        taskList.add(new WatchVideoTask(config));
+//        taskList.add(new MangaTask(config));
+//        taskList.add(new DonateCoinTask(config));
+//        taskList.add(new Silver2CoinTask(config));
+//        taskList.add(new LiveCheckIn(config));
+//        taskList.add(new DonateGiftTask(config));
+//        taskList.add(new ChargeTask(config));
+//        taskList.add(new GetVipPrivilegeTask(config));
+//        taskList.add(new ReadMangaTask(config));
     }
 
     public void execute() {
@@ -60,14 +61,13 @@ public class TaskExecutor {
     }
 
     private void calExp() {
-        BilibiliDelegate delegate = new BilibiliDelegate(config);
         JSONObject coinExpToday = delegate.getCoinExpToday();
         int exp = coinExpToday.getInt("data") + 15;
         log.info("今日已获得[{}]点经验",  exp);
         BilibiliUser user = delegate.getUser();
         if (user.getLevel() < 6) {
             int upgradeDays = (user.getNextExp() - user.getCurrentExp()) / exp;
-            log.info("按照当前进度，升级到Lv{}还需要: {}天", user.getLevel() + 1, upgradeDays);
+            log.info("按照当前进度，升级到Lv{}还需要: {}天", user.getLevel() + 1, upgradeDays + 1);
         } else {
             log.info("当前等级Lv6，经验值为：{}", user.getCurrentExp());
         }

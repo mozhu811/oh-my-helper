@@ -20,6 +20,6 @@ public abstract class AbstractTask implements Task {
 
     AbstractTask(TaskConfig config) {
         this.config = config;
-        this.delegate = new BilibiliDelegate(config);
+        this.delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct(), config.getUserAgent());
     }
 }

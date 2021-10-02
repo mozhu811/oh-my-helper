@@ -3,6 +3,7 @@ package io.cruii.bilibili.component;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.http.Header;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpUtil;
@@ -10,8 +11,6 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.entity.BilibiliUser;
-import io.cruii.bilibili.entity.Medal;
-import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
@@ -20,7 +19,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
 import java.io.InputStream;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +30,30 @@ import java.util.stream.Collectors;
  */
 @Log4j2
 public class BilibiliDelegate {
-    private final TaskConfig config;
 
-    public BilibiliDelegate(TaskConfig config) {
-        this.config = config;
+    private final String dedeuserid;
+    private final String sessdata;
+    private final String biliJct;
+    private final String userAgent;
+
+    public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct, String userAgent) {
+        this.dedeuserid = dedeuserid;
+        this.sessdata = sessdata;
+        this.biliJct = biliJct;
+        if (CharSequenceUtil.isBlank(userAgent)) {
+            this.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
+        } else {
+            this.userAgent = userAgent;
+        }
     }
+
+    public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct) {
+        this.dedeuserid = dedeuserid;
+        this.sessdata = sessdata;
+        this.biliJct = biliJct;
+        this.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
+    }
+
 
     /**
      * 获取用户B站导航栏状态信息
@@ -44,7 +61,7 @@ public class BilibiliDelegate {
      * @return B站用户信息 {@link BilibiliUser}
      */
     public BilibiliUser getUser() {
-        JSONObject resp = doGet(BilibiliAPI.GET_USER_INFO_NAV, null);
+        JSONObject resp = doGet(BilibiliAPI.GET_USER_INFO_NAV);
 
         // 解析响应信息
         JSONObject data = resp.getJSONObject("data");
@@ -52,18 +69,19 @@ public class BilibiliDelegate {
         Boolean isLogin = data.getBool("isLogin");
 
         if (Boolean.FALSE.equals(isLogin)) {
-            log.warn("账号Cookie已失效, {}, {}", config.getDedeuserid(),
-                    config.getSessdata());
+            log.warn("账号Cookie已失效, {}, {}", dedeuserid, sessdata);
 
             // 如果没有登录成功，则返回简要信息
-            return getUser(config.getDedeuserid());
+            return getUser(dedeuserid);
         }
 
         // 登录成功，获取详细信息
         InputStream avatarStream = getAvatarStream(data.getStr("face"));
-        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
+        String path = "avatars" + File.separator + dedeuserid + ".png";
         File avatarFile = new File(path);
-        FileUtil.writeFromStream(avatarStream, avatarFile);
+        if (!avatarFile.exists()) {
+            FileUtil.writeFromStream(avatarStream, avatarFile);
+        }
 
         String uname = data.getStr("uname");
         // 获取硬币数
@@ -78,31 +96,31 @@ public class BilibiliDelegate {
 
         // 获取勋章墙
         JSONObject medalWallResp = getMedalWall();
-        List<Medal> medals = medalWallResp.getJSONObject("data")
+        List<JSONObject> medals = medalWallResp.getJSONObject("data")
                 .getJSONArray("list")
                 .stream()
                 .map(JSONUtil::parseObj)
                 .map(medalObj -> {
-                    Medal medal = new Medal();
-                    medal.setName(medalObj.getByPath("medal_info.medal_name", String.class));
-                    medal.setLevel(medalObj.getByPath("medal_info.level", Integer.class));
-                    medal.setColorStart(medalObj.getByPath("medal_info.medal_color_start", Integer.class));
-                    medal.setColorEnd(medalObj.getByPath("medal_info.medal_color_end", Integer.class));
-                    medal.setColorBorder(medalObj.getByPath("medal_info.medal_color_border", Integer.class));
+                    JSONObject medal = JSONUtil.createObj();
+                    medal.set("name", medalObj.getByPath("medal_info.medal_name", String.class));
+                    medal.set("level", medalObj.getByPath("medal_info.level", Integer.class));
+                    medal.set("colorStart", medalObj.getByPath("medal_info.medal_color_start", Integer.class));
+                    medal.set("colorEnd", medalObj.getByPath("medal_info.medal_color_end", Integer.class));
+                    medal.set("colorBorder", medalObj.getByPath("medal_info.medal_color_border", Integer.class));
                     return medal;
                 })
-                .sorted(Comparator.comparingInt(Medal::getLevel).reversed())
+                .sorted((o1, o2) -> o2.getInt("level") - o1.getInt("level"))
                 .limit(2L)
                 .collect(Collectors.toList());
+
         BilibiliUser info = new BilibiliUser();
-        info.setDedeuserid(config.getDedeuserid());
+        info.setDedeuserid(dedeuserid);
         info.setUsername(uname);
-        info.setAvatar(avatarFile.getAbsolutePath());
         info.setCoins(coins);
         info.setLevel(currentLevel);
         info.setCurrentExp(levelInfo.getInt("current_exp"));
         info.setNextExp(currentLevel == 6 ? 0 : levelInfo.getInt("next_exp"));
-        info.setMedals(medals);
+        info.setMedals(JSONUtil.toJsonStr(medals));
         info.setVipType(vip.getInt("type"));
         info.setVipStatus(vip.getInt("status"));
         info.setIsLogin(true);
@@ -126,12 +144,16 @@ public class BilibiliDelegate {
             return null;
         }
         InputStream avatarStream = getAvatarStream(baseInfo.getStr("face"));
+        String path = "avatars" + File.separator + dedeuserid + ".png";
+        File avatarFile = new File(path);
+        if (!avatarFile.exists()) {
+            FileUtil.writeFromStream(avatarStream, avatarFile);
+        }
         String uname = coverUsername(baseInfo.getStr("name"));
 
         BilibiliUser info = new BilibiliUser();
         info.setDedeuserid(userId);
         info.setUsername(uname);
-        info.setAvatar("data:image/jpeg;base64," + Base64.encode(avatarStream));
         info.setLevel(baseInfo.getInt("level"));
         info.setIsLogin(false);
 
@@ -145,7 +167,7 @@ public class BilibiliDelegate {
      */
     public JSONObject getMedalWall() {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("target_id", CollUtil.newArrayList(config.getDedeuserid()));
+        params.put("target_id", CollUtil.newArrayList(dedeuserid));
         return doGet(BilibiliAPI.GET_MEDAL_WALL, params);
     }
 
@@ -183,7 +205,7 @@ public class BilibiliDelegate {
      */
     public JSONObject getFollowedUpPostVideo() {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("uid", CollUtil.newArrayList(config.getDedeuserid()));
+        params.put("uid", CollUtil.newArrayList(dedeuserid));
         params.put("type_list", CollUtil.newArrayList("8"));
         params.put("from", CollUtil.newArrayList());
         params.put("platform", CollUtil.newArrayList("web"));
@@ -229,7 +251,7 @@ public class BilibiliDelegate {
     public JSONObject shareVideo(String bvid) {
         Map<String, Object> params = new HashMap<>();
         params.put("bvid", bvid);
-        params.put("csrf", config.getBiliJct());
+        params.put("csrf", biliJct);
         String requestBody = HttpUtil.toParams(params);
 
         return doPost(BilibiliAPI.SHARE_VIDEO, requestBody);
@@ -241,9 +263,9 @@ public class BilibiliDelegate {
      *
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject mangaCheckIn() {
+    public JSONObject mangaCheckIn(String platform) {
         Map<String, Object> params = new HashMap<>();
-        params.put("platform", config.getDevicePlatform());
+        params.put("platform", platform);
         String requestBody = HttpUtil.toParams(params);
         return doPost(BilibiliAPI.MANGA_SIGN, requestBody);
     }
@@ -304,7 +326,7 @@ public class BilibiliDelegate {
         params.put("multiply", numCoin);
         params.put("select_like", isLike);
         params.put("cross_domain", true);
-        params.put("csrf", config.getBiliJct());
+        params.put("csrf", biliJct);
         String requestBody = HttpUtil.toParams(params);
 
         Map<String, String> headers = new HashMap<>();
@@ -330,8 +352,8 @@ public class BilibiliDelegate {
      */
     public JSONObject silver2Coin() {
         Map<String, Object> params = new HashMap<>();
-        params.put("csrf_token", config.getBiliJct());
-        params.put("csrf", config.getBiliJct());
+        params.put("csrf_token", biliJct);
+        params.put("csrf", biliJct);
         String requestBody = HttpUtil.toParams(params);
 
         return doPost(BilibiliAPI.SILVER_2_COIN, requestBody);
@@ -386,8 +408,8 @@ public class BilibiliDelegate {
         params.put("gift_id", giftId);
         params.put("bag_id", bagId);
         params.put("gift_num", giftNum);
-        params.put("uid", config.getDedeuserid());
-        params.put("csrf", config.getBiliJct());
+        params.put("uid", dedeuserid);
+        params.put("csrf", biliJct);
         params.put("send_ruid", 0);
         params.put("storm_beat_id", 0);
         params.put("price", 0);
@@ -405,7 +427,7 @@ public class BilibiliDelegate {
      */
     public JSONObject getChargeInfo() {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("mid", CollUtil.newArrayList(config.getDedeuserid()));
+        params.put("mid", CollUtil.newArrayList(dedeuserid));
 
         return doGet(BilibiliAPI.GET_CHARGE_INFO, params);
     }
@@ -423,8 +445,8 @@ public class BilibiliDelegate {
         params.put("is_bp_remains_prior", true);
         params.put("up_mid", upUserId);
         params.put("otype", "up");
-        params.put("oid", config.getDedeuserid());
-        params.put("csrf", config.getBiliJct());
+        params.put("oid", dedeuserid);
+        params.put("csrf", biliJct);
 
         String requestBody = HttpUtil.toParams(params);
 
@@ -441,7 +463,7 @@ public class BilibiliDelegate {
         Map<String, Object> params = new HashMap<>();
         params.put("order_id", orderNo);
         params.put("message", "up的作品很棒");
-        params.put("csrf", config.getBiliJct());
+        params.put("csrf", biliJct);
 
         String requestBody = HttpUtil.toParams(params);
 
@@ -470,7 +492,7 @@ public class BilibiliDelegate {
     public JSONObject getVipReward(int type) {
         Map<String, Object> params = new HashMap<>();
         params.put("type", type);
-        params.put("csrf", config.getBiliJct());
+        params.put("csrf", biliJct);
 
         String requestBody = HttpUtil.toParams(params);
         return doPost(BilibiliAPI.GET_VIP_REWARD, requestBody);
@@ -492,6 +514,24 @@ public class BilibiliDelegate {
         return doPost(BilibiliAPI.READ_MANGA, requestBody);
     }
 
+    public JSONObject followUser(String uid) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("fid", uid);
+        params.put("act", 1);
+        params.put("re_src", 11);
+        params.put("csrf", biliJct);
+
+        String requestBody = HttpUtil.toParams(params);
+        return doPost(BilibiliAPI.RELATION_MODIFY, requestBody);
+    }
+
+    public String getAvatar() {
+        JSONObject resp = doGet(BilibiliAPI.GET_USER_INFO_NAV);
+        // 解析响应信息
+        JSONObject data = resp.getJSONObject("data");
+        InputStream avatarStream = getAvatarStream(data.getStr("face"));
+        return Base64.encode(avatarStream);
+    }
     /**
      * 获取B站用户头像文件流
      *
@@ -547,10 +587,10 @@ public class BilibiliDelegate {
                 .build().toUriString();
         String body = HttpRequest.get(url)
                 .header(Header.CONNECTION, "keep-alive")
-                .header(Header.USER_AGENT, config.getUserAgent())
-                .cookie("bili_jct=" + config.getBiliJct() +
-                        ";SESSDATA=" + config.getSessdata() +
-                        ";DedeUserID=" + config.getDedeuserid() + ";")
+                .header(Header.USER_AGENT, userAgent)
+                .cookie("bili_jct=" + biliJct +
+                        ";SESSDATA=" + sessdata +
+                        ";DedeUserID=" + dedeuserid + ";")
                 .execute().body();
         return JSONUtil.parseObj(body);
     }
@@ -564,12 +604,12 @@ public class BilibiliDelegate {
                 .header(Header.CONTENT_TYPE, JSONUtil.isJson(requestBody) ?
                         MediaType.APPLICATION_JSON_VALUE : MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .header(Header.CONNECTION, "keep-alive")
-                .header(Header.USER_AGENT, config.getUserAgent())
+                .header(Header.USER_AGENT, userAgent)
                 .header(Header.REFERER, "https://www.bilibili.com/")
                 .addHeaders(headers)
-                .cookie("bili_jct=" + config.getBiliJct() +
-                        ";SESSDATA=" + config.getSessdata() +
-                        ";DedeUserID=" + config.getDedeuserid() + ";")
+                .cookie("bili_jct=" + biliJct +
+                        ";SESSDATA=" + sessdata +
+                        ";DedeUserID=" + dedeuserid + ";")
                 .body(requestBody).execute().body();
         return JSONUtil.parseObj(body);
     }

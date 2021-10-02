@@ -22,7 +22,7 @@ public class Silver2CoinTask extends AbstractTask {
             doExchange();
             log.info("当前银瓜子余额为：{}", getNumOfSilver());
         } else {
-            log.info("银瓜子余额为[{}]，不足[{}]，无法执行兑换", getNumOfSilver(), THRESHOLD);
+            log.info("银瓜子余额为[{}]，不足[{}]，无法执行兑换 ❌", getNumOfSilver(), THRESHOLD);
         }
     }
 
