@@ -76,4 +76,16 @@ public class TaskServiceImpl implements TaskService {
     public boolean isExist(String dedeuserid) {
         return taskConfigRepository.findOne(dedeuserid).isPresent();
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeTask(String dedeuserid) {
+        taskConfigRepository
+                .findOne(dedeuserid)
+                .ifPresent(taskConfigRepository::delete);
+
+        bilibiliUserRepository
+                .findOne(dedeuserid)
+                .ifPresent(bilibiliUserRepository::delete);
+    }
 }

@@ -23,4 +23,6 @@ public interface TaskService {
      * @return 是否存在
      */
     boolean isExist(String dedeuserid);
+
+    void removeTask(String dedeuserid);
 }

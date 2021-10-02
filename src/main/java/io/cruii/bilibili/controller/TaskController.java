@@ -1,14 +1,14 @@
 package io.cruii.bilibili.controller;
 
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.dto.TaskConfigDTO;
+import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.service.TaskService;
 import io.cruii.bilibili.vo.TaskConfigVO;
 import lombok.extern.log4j.Log4j2;
 import ma.glasnost.orika.MapperFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author cruii
@@ -42,5 +42,18 @@ public class TaskController {
 
         log.debug(taskConfig);
         taskService.createTask(taskConfig);
+    }
+
+    @DeleteMapping()
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeTask(@CookieValue("dedeuserid") String dedeuserId,
+                           @CookieValue("sessdata") String sessdata,
+                           @CookieValue("biliJct") String biliJct) {
+        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserId, sessdata, biliJct);
+        BilibiliUser user = delegate.getUser();
+        log.debug(user);
+        if (Boolean.TRUE.equals(user.getIsLogin())) {
+            taskService.removeTask(dedeuserId);
+        }
     }
 }
