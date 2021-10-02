@@ -148,4 +148,9 @@ public interface BilibiliAPI {
      * 获取勋章墙
      */
     String GET_MEDAL_WALL = "https://api.live.bilibili.com/xlive/web-ucenter/user/MedalWall";
+
+    /**
+     * 操作用户关系
+     */
+    String RELATION_MODIFY = "https://api.bilibili.com/x/relation/modify";
 }
