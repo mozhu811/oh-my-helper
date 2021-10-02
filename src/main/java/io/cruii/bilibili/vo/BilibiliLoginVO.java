@@ -23,10 +23,4 @@ public class BilibiliLoginVO implements Serializable {
 
     private String biliJct;
 
-//    private String username;
-//
-//    private String avatar;
-//
-//    private Integer level;
-
 }

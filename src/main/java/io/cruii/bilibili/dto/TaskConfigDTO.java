@@ -120,4 +120,9 @@ public class TaskConfigDTO {
      * B站推送
      */
     private Boolean biliPush;
+
+    /**
+     * 关注开发者
+     */
+    private Boolean followDeveloper;
 }

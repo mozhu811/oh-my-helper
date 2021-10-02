@@ -1,11 +1,10 @@
 package io.cruii.bilibili.vo;
 
-import io.cruii.bilibili.entity.Medal;
-import lombok.*;
+import cn.hutool.json.JSONArray;
+import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * @author cruii
@@ -16,13 +15,13 @@ import java.util.List;
 public class BilibiliUserVO implements Serializable {
     private static final long serialVersionUID = -4960479906705315906L;
 
-    private String username;
+    private String dedeuserid;
 
-    private String avatar;
+    private String username;
 
     private Integer level;
 
-    private String dedeuserid;
+    private String avatar;
 
     private String coins;
 
@@ -32,7 +31,7 @@ public class BilibiliUserVO implements Serializable {
 
     private Integer upgradeDays;
 
-    private List<Medal> medals;
+    private JSONArray medals;
 
     private Integer vipStatus;
 

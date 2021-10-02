@@ -1,9 +1,6 @@
 package io.cruii.bilibili.dto;
 
-import io.cruii.bilibili.entity.Medal;
 import lombok.Data;
-
-import java.util.List;
 
 /**
  * @author cruii
@@ -11,13 +8,12 @@ import java.util.List;
  */
 @Data
 public class BilibiliUserDTO {
-    private String username;
-
-    private String avatar;
-
-    private Integer level;
 
     private String dedeuserid;
+
+    private String username;
+
+    private Integer level;
 
     private String coins;
 
@@ -27,7 +23,7 @@ public class BilibiliUserDTO {
 
     private Integer upgradeDays;
 
-    private List<Medal> medals;
+    private String medals;
 
     private Integer vipStatus;
 

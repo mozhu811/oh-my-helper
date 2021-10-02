@@ -12,22 +12,6 @@ import java.io.Serializable;
 public class TaskConfigVO implements Serializable {
     private static final long serialVersionUID = 4344616448330555244L;
 
-
-    /**
-     * B站uid
-     */
-    private String dedeuserid;
-
-    /**
-     * 会话标识
-     */
-    private String sessdata;
-
-    /**
-     * csrf校验
-     */
-    private String biliJct;
-
     /**
      * 每日投币数量,默认 5 ,为 0 时则不投币
      * 范围: [0, 5]
@@ -124,4 +108,9 @@ public class TaskConfigVO implements Serializable {
      * B站推送
      */
     private Boolean biliPush;
+
+    /**
+     * 关注开发者
+     */
+    private Boolean followDeveloper;
 }
