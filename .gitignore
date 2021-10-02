@@ -29,3 +29,4 @@ build/
 .vscode/
 logs/
 avatars/
+*.db
