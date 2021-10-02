@@ -66,10 +66,13 @@ public class BilibiliController {
             throw new BilibiliUserNotFoundException(dedeuserid);
         }
 
-        InputStream avatarStream = HttpRequest.get(data.getStr("face"))
+        String face = data.getStr("face");
+
+        InputStream inputStream = HttpRequest
+                .get(face)
                 .execute().bodyStream();
         return new BilibiliUserVO()
-                .setAvatar("data:image/jpeg;base64," + Base64.encode(avatarStream))
+                .setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream))
                 .setUsername(data.getStr("uname"))
                 .setLevel(data.getJSONObject("level_info")
                         .getInt("current_level"));
@@ -118,6 +121,7 @@ public class BilibiliController {
 
         JSONObject bodyJson = JSONUtil.parseObj(response.body());
         Boolean status = bodyJson.getBool("status");
+
         BilibiliLoginVO bilibiliLoginVO = new BilibiliLoginVO();
         if (Boolean.TRUE.equals(status)) {
             String biliJct = response.getCookieValue("bili_jct");
@@ -131,7 +135,7 @@ public class BilibiliController {
              */
             if (taskService.isExist(dedeuserid)) {
                 // 存在用户时更新cookie
-                userService.saveAndUpdate(dedeuserid, sessdata, biliJct);
+                userService.save(dedeuserid, sessdata, biliJct);
             }
 
             bilibiliLoginVO.setBiliJct(biliJct);

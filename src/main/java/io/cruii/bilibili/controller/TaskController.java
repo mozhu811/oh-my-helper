@@ -8,6 +8,8 @@ import ma.glasnost.orika.MapperFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author cruii
  * Created on 2021/6/6
@@ -27,9 +29,18 @@ public class TaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void createTask(@RequestBody TaskConfigVO taskConfigVO) {
+    public void createTask(@CookieValue("dedeuserid") String dedeuserId,
+                           @CookieValue("sessdata") String sessdata,
+                           @CookieValue("biliJct") String biliJct,
+                           @RequestBody TaskConfigVO taskConfigVO) throws InterruptedException {
         TaskConfigDTO taskConfig = mapperFactory.getMapperFacade()
                 .map(taskConfigVO, TaskConfigDTO.class);
+
+        taskConfig.setDedeuserid(dedeuserId);
+        taskConfig.setSessdata(sessdata);
+        taskConfig.setBiliJct(biliJct);
+
+        log.debug(taskConfig);
         taskService.createTask(taskConfig);
     }
 }

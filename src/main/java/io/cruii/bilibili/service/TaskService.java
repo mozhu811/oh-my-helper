@@ -14,7 +14,7 @@ public interface TaskService {
      * @param taskConfig 任务配置
      * @return 配置是否有效
      */
-    boolean createTask(TaskConfigDTO taskConfig);
+    boolean createTask(TaskConfigDTO taskConfig) throws InterruptedException;
 
     /**
      * 是否存在任务配置

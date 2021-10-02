@@ -11,9 +11,9 @@ import java.util.List;
  * Created on 2021/9/22
  */
 public interface BilibiliUserService {
-    void saveAndUpdate(String dedeuserid, String sessdata, String biliJct);
+    void save(String dedeuserid, String sessdata, String biliJct);
 
-    void saveAndUpdate(BilibiliUserDTO user);
+    void save(BilibiliUserDTO user);
 
     boolean isExist(String dedeuserid);
 

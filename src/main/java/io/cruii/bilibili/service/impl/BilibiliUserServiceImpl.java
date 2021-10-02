@@ -1,21 +1,20 @@
 package io.cruii.bilibili.service.impl;
 
 import io.cruii.bilibili.component.BilibiliDelegate;
+import io.cruii.bilibili.dao.BilibiliUserRepository;
 import io.cruii.bilibili.dto.BilibiliUserDTO;
 import io.cruii.bilibili.entity.BilibiliUser;
-import io.cruii.bilibili.entity.TaskConfig;
-import io.cruii.bilibili.repository.BilibiliUserRepository;
-import io.cruii.bilibili.repository.TaskConfigRepository;
 import io.cruii.bilibili.service.BilibiliUserService;
 import io.cruii.bilibili.vo.BilibiliUserVO;
 import lombok.extern.log4j.Log4j2;
+import ma.glasnost.orika.MapperFacade;
 import ma.glasnost.orika.MapperFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -29,34 +28,32 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
     private final MapperFactory mapperFactory;
 
     public BilibiliUserServiceImpl(BilibiliUserRepository bilibiliUserRepository,
-                                   MapperFactory mapperFactory,
-                                   TaskConfigRepository taskConfigRepository) {
+                                   MapperFactory mapperFactory) {
         this.bilibiliUserRepository = bilibiliUserRepository;
         this.mapperFactory = mapperFactory;
     }
 
     @Override
-    public void saveAndUpdate(String dedeuserid, String sessdata, String biliJct) {
+    public void save(String dedeuserid, String sessdata, String biliJct) {
 
-        TaskConfig config = new TaskConfig();
-        config.setDedeuserid(dedeuserid);
-        config.setSessdata(sessdata);
-        config.setBiliJct(biliJct);
-
-        BilibiliDelegate delegate = new BilibiliDelegate(config);
+        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
         BilibiliUser user = delegate.getUser();
-        bilibiliUserRepository.save(user);
+
+        Optional<BilibiliUser> exist = bilibiliUserRepository
+                .findOne(dedeuserid);
+        exist.ifPresent(bilibiliUser -> user.setId(bilibiliUser.getId()));
+        bilibiliUserRepository.saveAndFlush(user);
     }
 
     @Override
-    public void saveAndUpdate(BilibiliUserDTO user) {
+    public void save(BilibiliUserDTO user) {
         BilibiliUser bilibiliUser = mapperFactory.getMapperFacade().map(user, BilibiliUser.class);
-        bilibiliUserRepository.save(bilibiliUser);
+        bilibiliUserRepository.saveAndFlush(bilibiliUser);
     }
 
     @Override
     public boolean isExist(String dedeuserid) {
-        return bilibiliUserRepository.findById(dedeuserid).isPresent();
+        return bilibiliUserRepository.findOne(dedeuserid).isPresent();
     }
 
     @Override
@@ -65,15 +62,12 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
                 .stream()
                 .sorted(Comparator.comparingInt(BilibiliUser::getCurrentExp).reversed())
                 .map(user -> {
-                    BilibiliUserVO userVO = mapperFactory.getMapperFacade().map(user, BilibiliUserVO.class);
+                    MapperFacade mapper = mapperFactory.getMapperFacade();
+                    BilibiliUserVO userVO = mapper.map(user, BilibiliUserVO.class);
+
                     if (user.getLevel() < 6) {
                         userVO.setDiffExp(user.getNextExp() - user.getCurrentExp());
                     }
-
-                    String host = request.getRequestURL().toString().split(request.getRequestURI())[0];
-                    String avatarPath = UriComponentsBuilder.fromHttpUrl(host)
-                            .path("/avatars/{id}.png").build(userVO.getDedeuserid()).toString();
-                    userVO.setAvatar(avatarPath);
                     return userVO;
                 })
                 .collect(Collectors.toList());
