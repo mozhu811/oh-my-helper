@@ -2,9 +2,6 @@ server:
   port: 811
 
 spring:
-  data:
-    mongodb:
-      uri: mongodb://cruii:970811@aliyun:27017/helperhub
   datasource:
     url: jdbc:h2:file:./db/db_helper_hub;auto_server=true;db_close_on_exit=false
     username:
