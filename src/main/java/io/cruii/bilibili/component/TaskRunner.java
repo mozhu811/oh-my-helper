@@ -6,8 +6,10 @@ import io.cruii.bilibili.dao.BilibiliUserRepository;
 import io.cruii.bilibili.dao.TaskConfigRepository;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.push.QyWechatPusher;
+import io.cruii.bilibili.push.TelegramBotPusher;
 import lombok.extern.log4j.Log4j2;
 import org.slf4j.MDC;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -83,7 +85,7 @@ public class TaskRunner {
                             .stream()
                             .filter(line -> line.contains(traceId))
                             .map(line -> line.split("\\|\\|")[1])
-                            .collect(Collectors.joining("<br>"));
+                            .collect(Collectors.joining("\n"));
 
                     bilibiliUserRepository
                             .findOne(taskConfig.getDedeuserid())
@@ -105,6 +107,14 @@ public class TaskRunner {
                     if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId, mediaId)) {
 
                         QyWechatPusher pusher = new QyWechatPusher(corpId, corpSecret, agentId, mediaId);
+                        pusher.push(content.replace("\n", "<br>"));
+                    }
+
+                    String tgBotToken = taskConfig.getTgBotToken();
+                    String tgBotChatId = taskConfig.getTgBotChatId();
+
+                    if (!CharSequenceUtil.hasBlank(tgBotToken, tgBotChatId)) {
+                        TelegramBotPusher pusher = new TelegramBotPusher(tgBotToken, tgBotChatId);
                         pusher.push(content);
                     }
                 }
@@ -115,6 +125,7 @@ public class TaskRunner {
         }, "message-push").start();
     }
 
+    @Scheduled(cron = "30 10 15 * * ?")
     public void run() {
         taskConfigRepository
                 .findAll()

@@ -25,15 +25,15 @@ public class TaskExecutor {
     public TaskExecutor(TaskConfig config) {
         delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct(), config.getUserAgent());
         this.config = config;
-//        taskList.add(new WatchVideoTask(config));
-//        taskList.add(new MangaTask(config));
-//        taskList.add(new DonateCoinTask(config));
-//        taskList.add(new Silver2CoinTask(config));
-//        taskList.add(new LiveCheckIn(config));
-//        taskList.add(new DonateGiftTask(config));
-//        taskList.add(new ChargeTask(config));
-//        taskList.add(new GetVipPrivilegeTask(config));
-//        taskList.add(new ReadMangaTask(config));
+        taskList.add(new WatchVideoTask(config));
+        taskList.add(new MangaTask(config));
+        taskList.add(new DonateCoinTask(config));
+        taskList.add(new Silver2CoinTask(config));
+        taskList.add(new LiveCheckIn(config));
+        taskList.add(new DonateGiftTask(config));
+        taskList.add(new ChargeTask(config));
+        taskList.add(new GetVipPrivilegeTask(config));
+        taskList.add(new ReadMangaTask(config));
     }
 
     public void execute() {
