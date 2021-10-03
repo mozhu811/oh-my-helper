@@ -6,6 +6,7 @@ import io.cruii.bilibili.dao.BilibiliUserRepository;
 import io.cruii.bilibili.dao.TaskConfigRepository;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.push.QyWechatPusher;
+import io.cruii.bilibili.push.ServerChanPusher;
 import io.cruii.bilibili.push.TelegramBotPusher;
 import lombok.extern.log4j.Log4j2;
 import org.slf4j.MDC;
@@ -115,6 +116,12 @@ public class TaskRunner {
 
                     if (!CharSequenceUtil.hasBlank(tgBotToken, tgBotChatId)) {
                         TelegramBotPusher pusher = new TelegramBotPusher(tgBotToken, tgBotChatId);
+                        pusher.push(content);
+                    }
+
+                    String scKey = taskConfig.getScKey();
+                    if (CharSequenceUtil.isNotBlank(scKey)) {
+                        ServerChanPusher pusher = new ServerChanPusher(scKey);
                         pusher.push(content);
                     }
                 }
