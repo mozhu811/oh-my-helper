@@ -21,7 +21,7 @@
 
 ## Thanks
 
-该项目基于 [JunzhouLiu/BILIBILI-HELPER](https://github.com/JunzhouLiu/BILIBILI-HELPER) 以及[SocialSisterYi/bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 开发
+该项目灵感来源于 [JunzhouLiu/BILIBILI-HELPER](https://github.com/JunzhouLiu/BILIBILI-HELPER) 以及[SocialSisterYi/bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 
 
 
 感谢 JetBrains 对本项目的支持。
