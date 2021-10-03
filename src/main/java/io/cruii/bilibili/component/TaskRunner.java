@@ -125,7 +125,7 @@ public class TaskRunner {
         }, "message-push").start();
     }
 
-    @Scheduled(cron = "30 10 15 * * ?")
+    @Scheduled(cron = "0 10 0 * * ?")
     public void run() {
         taskConfigRepository
                 .findAll()
