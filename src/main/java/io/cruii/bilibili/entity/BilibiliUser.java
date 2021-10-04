@@ -45,8 +45,6 @@ public class BilibiliUser implements Serializable {
 
     private Integer vipType;
 
-    private Long dueDate;
-
     private Integer vipStatus;
 
     private Boolean isLogin;
@@ -56,11 +54,11 @@ public class BilibiliUser implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         BilibiliUser that = (BilibiliUser) o;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getDedeuserid(), that.getDedeuserid()) && Objects.equals(getUsername(), that.getUsername()) && Objects.equals(getCoins(), that.getCoins()) && Objects.equals(getLevel(), that.getLevel()) && Objects.equals(getCurrentExp(), that.getCurrentExp()) && Objects.equals(getNextExp(), that.getNextExp()) && Objects.equals(getUpgradeDays(), that.getUpgradeDays()) && Objects.equals(getMedals(), that.getMedals()) && Objects.equals(getVipType(), that.getVipType()) && Objects.equals(getDueDate(), that.getDueDate()) && Objects.equals(getVipStatus(), that.getVipStatus()) && Objects.equals(getIsLogin(), that.getIsLogin());
+        return Objects.equals(getId(), that.getId()) && Objects.equals(getDedeuserid(), that.getDedeuserid()) && Objects.equals(getUsername(), that.getUsername()) && Objects.equals(getCoins(), that.getCoins()) && Objects.equals(getLevel(), that.getLevel()) && Objects.equals(getCurrentExp(), that.getCurrentExp()) && Objects.equals(getNextExp(), that.getNextExp()) && Objects.equals(getUpgradeDays(), that.getUpgradeDays()) && Objects.equals(getMedals(), that.getMedals()) && Objects.equals(getVipType(), that.getVipType()) && Objects.equals(getVipStatus(), that.getVipStatus()) && Objects.equals(getIsLogin(), that.getIsLogin());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getDedeuserid(), getUsername(), getCoins(), getLevel(), getCurrentExp(), getNextExp(), getUpgradeDays(), getMedals(), getVipType(), getDueDate(), getVipStatus(), getIsLogin());
+        return Objects.hash(getId(), getDedeuserid(), getUsername(), getCoins(), getLevel(), getCurrentExp(), getNextExp(), getUpgradeDays(), getMedals(), getVipType(), getVipStatus(), getIsLogin());
     }
 }

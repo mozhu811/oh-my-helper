@@ -10,6 +10,7 @@ import io.cruii.bilibili.push.QyWechatPusher;
 import io.cruii.bilibili.push.ServerChanPusher;
 import io.cruii.bilibili.push.TelegramBotPusher;
 import lombok.extern.log4j.Log4j2;
+import ma.glasnost.orika.MapperFactory;
 import org.slf4j.MDC;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -41,13 +42,16 @@ public class TaskRunner {
     private final TaskConfigRepository taskConfigRepository;
     private final BilibiliUserRepository bilibiliUserRepository;
     private final Executor bilibiliExecutor;
+    private final MapperFactory mapperFactory;
 
     public TaskRunner(TaskConfigRepository taskConfigRepository,
                       BilibiliUserRepository bilibiliUserRepository,
-                      Executor bilibiliExecutor) {
+                      Executor bilibiliExecutor,
+                      MapperFactory mapperFactory) {
         this.taskConfigRepository = taskConfigRepository;
         this.bilibiliUserRepository = bilibiliUserRepository;
         this.bilibiliExecutor = bilibiliExecutor;
+        this.mapperFactory = mapperFactory;
 
         startTaskThread();
         startPushThread();
@@ -89,15 +93,21 @@ public class TaskRunner {
                             .map(line -> line.split("\\|\\|")[1])
                             .collect(Collectors.joining("\n"));
 
-                    BilibiliDelegate delegate = new BilibiliDelegate(taskConfig.getDedeuserid(), taskConfig.getSessdata(), taskConfig.getBiliJct());
-                    BilibiliUser user = delegate.getUser();
-
-                    logs.stream()
-                            .filter(line -> line.contains(traceId) && line.contains("当前进度"))
-                            .forEach(line -> {
-                                String upgradeDays = line.substring(line.lastIndexOf(":") + 1, line.length() - 1).trim();
-                                user.setUpgradeDays(Integer.valueOf(upgradeDays));
-                                bilibiliUserRepository.saveAndFlush(user);
+                    bilibiliUserRepository
+                            .findOne(taskConfig.getDedeuserid())
+                            .ifPresent(u -> {
+                                BilibiliDelegate delegate = new BilibiliDelegate(taskConfig.getDedeuserid(), taskConfig.getSessdata(), taskConfig.getBiliJct());
+                                BilibiliUser user = delegate.getUser();
+                                Long id = u.getId();
+                                mapperFactory.getMapperFacade().map(user, u);
+                                logs.stream()
+                                        .filter(line -> line.contains(traceId) && line.contains("当前进度"))
+                                        .forEach(line -> {
+                                            String upgradeDays = line.substring(line.lastIndexOf(":") + 1, line.length() - 1).trim();
+                                            u.setId(id);
+                                            u.setUpgradeDays(Integer.parseInt(upgradeDays));
+                                            bilibiliUserRepository.saveAndFlush(u);
+                                        });
                             });
 
                     String corpId = taskConfig.getCorpId();
