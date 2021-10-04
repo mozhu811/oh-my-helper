@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import io.cruii.bilibili.dao.BilibiliUserRepository;
 import io.cruii.bilibili.dao.TaskConfigRepository;
+import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.push.QyWechatPusher;
 import io.cruii.bilibili.push.ServerChanPusher;
@@ -88,17 +89,16 @@ public class TaskRunner {
                             .map(line -> line.split("\\|\\|")[1])
                             .collect(Collectors.joining("\n"));
 
-                    bilibiliUserRepository
-                            .findOne(taskConfig.getDedeuserid())
-                            .ifPresent(user -> logs
-                                    .stream()
-                                    .filter(line -> line.contains(traceId) && line.contains("当前进度"))
-                                    .forEach(line -> {
-                                        String upgradeDays = line.substring(line.lastIndexOf(":") + 1, line.length() - 1).trim();
-                                        user.setUpgradeDays(Integer.valueOf(upgradeDays));
-                                        bilibiliUserRepository.saveAndFlush(user);
-                                    })
-                            );
+                    BilibiliDelegate delegate = new BilibiliDelegate(taskConfig.getDedeuserid(), taskConfig.getSessdata(), taskConfig.getBiliJct());
+                    BilibiliUser user = delegate.getUser();
+
+                    logs.stream()
+                            .filter(line -> line.contains(traceId) && line.contains("当前进度"))
+                            .forEach(line -> {
+                                String upgradeDays = line.substring(line.lastIndexOf(":") + 1, line.length() - 1).trim();
+                                user.setUpgradeDays(Integer.valueOf(upgradeDays));
+                                bilibiliUserRepository.saveAndFlush(user);
+                            });
 
                     String corpId = taskConfig.getCorpId();
                     String corpSecret = taskConfig.getCorpSecret();
