@@ -23,7 +23,7 @@ public class ServerChanPusher implements Pusher{
     public void push(String content) {
         String url = UriComponentsBuilder
                 .fromHttpUrl("https://sctapi.ftqq.com/{scKey}.send?title={title}&desp={content}")
-                .build(scKey, "Bilibili Helper Hub任务日志", content).toString();
+                .build(scKey, "Bilibili Helper Hub任务日志", content.replace("\n", "\n\n")).toString();
         JSONObject resp = JSONUtil.parseObj(HttpRequest.get(URLUtil.encode(url)).execute().body());
         if (resp.getInt("code") == 0) {
             log.info("ServerChan推送成功");
