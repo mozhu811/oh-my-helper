@@ -81,7 +81,7 @@ public class TaskRunner {
                     TaskConfig taskConfig = CACHE.get(traceId);
 
                     String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
-                    List<String> logs = FileUtil.readLines(new File("logs/all-" + date + ".log"), StandardCharsets.UTF_8);
+                    List<String> logs = FileUtil.readLines(new File("logs/all-" + date + ".0.log"), StandardCharsets.UTF_8);
                     String content = logs
                             .stream()
                             .filter(line -> line.contains(traceId))

@@ -40,19 +40,16 @@
     <!-- 按照每天生成日志文件。存储事件日志 -->
     <appender name="allDayFile"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!--日志文件输出的文件名 -->
-            <FileNamePattern>${LOG_HOME}/all-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <FileNamePattern>${LOG_HOME}/all-%d{yyyy-MM-dd}.%i.log</FileNamePattern>
             <!--日志文件保留天数 -->
-            <MaxHistory>30</MaxHistory>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${fileLayout}</pattern>
         </encoder>
-        <!--日志文件最大的大小 -->
-        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <MaxFileSize>1GB</MaxFileSize>
-        </triggeringPolicy>
     </appender>
 
     <!-- 按照每天生成日志文件。存储事件日志 -->
@@ -64,19 +61,16 @@
             <onMismatch>DENY</onMismatch>
         </filter>
 
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!--日志文件输出的文件名 -->
-            <FileNamePattern>${LOG_HOME}/debug-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <FileNamePattern>${LOG_HOME}/debug-%d{yyyy-MM-dd}.%i.log</FileNamePattern>
             <!--日志文件保留天数 -->
-            <MaxHistory>30</MaxHistory>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${fileLayout}</pattern>
         </encoder>
-        <!--日志文件最大的大小 -->
-        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <MaxFileSize>1GB</MaxFileSize>
-        </triggeringPolicy>
     </appender>
 
     <!-- 按照每天生成日志文件。存储事件日志 -->
@@ -87,19 +81,16 @@
             <onMatch>ACCEPT</onMatch>
             <onMismatch>DENY</onMismatch>
         </filter>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!--日志文件输出的文件名 -->
-            <FileNamePattern>${LOG_HOME}/info-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <FileNamePattern>${LOG_HOME}/info-%d{yyyy-MM-dd}.%i.log</FileNamePattern>
             <!--日志文件保留天数 -->
-            <MaxHistory>30</MaxHistory>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${fileLayout}</pattern>
         </encoder>
-        <!--日志文件最大的大小 -->
-        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <MaxFileSize>1GB</MaxFileSize>
-        </triggeringPolicy>
     </appender>
 
     <!-- 按照每天生成日志文件。存储事件日志 -->
@@ -110,19 +101,16 @@
             <onMatch>ACCEPT</onMatch>
             <onMismatch>DENY</onMismatch>
         </filter>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!--日志文件输出的文件名 -->
-            <FileNamePattern>${LOG_HOME}/error-%d{yyyy-MM-dd}.log</FileNamePattern>
+            <FileNamePattern>${LOG_HOME}/error-%d{yyyy-MM-dd}.%i.log</FileNamePattern>
             <!--日志文件保留天数 -->
-            <MaxHistory>30</MaxHistory>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${fileLayout}</pattern>
         </encoder>
-        <!--日志文件最大的大小 -->
-        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <MaxFileSize>1GB</MaxFileSize>
-        </triggeringPolicy>
     </appender>
 
     <!--     日志输出级别 -->
@@ -134,7 +122,7 @@
         <appender-ref ref="allDayFile"/>
     </root>
 
-<!--    可以控制具体的包或者类打印到特定的日志里-->
+    <!--可以控制具体的包或者类打印到特定的日志里-->
     <logger name="org.mongodb.driver" level="info" additivity="true">
         <appender-ref ref="stdOut"/>
         <appender-ref ref="debugDayFile"/>
