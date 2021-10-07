@@ -87,7 +87,7 @@ public class TaskRunner {
                 assert traceId != null;
                 String content = logs
                         .stream()
-                        .filter(line -> line.contains(traceId) && line.contains("INFO"))
+                        .filter(line -> line.contains(traceId) && (line.contains("INFO") || line.contains("ERROR")))
                         .map(line -> line.split("\\|\\|")[1])
                         .collect(Collectors.joining("\n"));
 
