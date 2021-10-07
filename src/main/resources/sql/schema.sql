@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS `bilibili_user`(
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `id` IDENTITY NOT NULL AUTO_INCREMENT,
     `dedeuserid` VARCHAR NOT NULL ,
     `username` VARCHAR NOT NULL ,
     `coins` DOUBLE DEFAULT 0,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `bilibili_user`(
 );
 
 CREATE TABLE IF NOT EXISTS `task_config` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `id` IDENTITY NOT NULL AUTO_INCREMENT,
     `dedeuserid` VARCHAR NOT NULL ,
     `sessdata` VARCHAR NOT NULL ,
     `bili_jct` VARCHAR NOT NULL ,

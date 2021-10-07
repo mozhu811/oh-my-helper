@@ -1,10 +1,6 @@
 package io.cruii.bilibili.task;
 
-import cn.hutool.http.Header;
-import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
-import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.exception.BilibiliCookieExpiredException;
 import lombok.extern.log4j.Log4j2;

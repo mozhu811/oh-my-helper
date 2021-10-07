@@ -1,6 +1,7 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
@@ -26,7 +27,8 @@ public class ChargeTask extends AbstractTask {
             return;
         }
 
-        BilibiliUser user = delegate.getUser();
+        BilibiliUser user = BilibiliUserContext.get();
+
         Integer vipType = user.getVipType();
         if (vipType == 0 || vipType == 1) {
             log.info("账号非年费大会员，停止执行充电任务 ❌");

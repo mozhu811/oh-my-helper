@@ -1,9 +1,10 @@
 package io.cruii.bilibili.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.cruii.bilibili.component.BilibiliDelegate;
-import io.cruii.bilibili.dao.BilibiliUserRepository;
 import io.cruii.bilibili.dto.BilibiliUserDTO;
 import io.cruii.bilibili.entity.BilibiliUser;
+import io.cruii.bilibili.mapper.BilibiliUserMapper;
 import io.cruii.bilibili.service.BilibiliUserService;
 import io.cruii.bilibili.vo.BilibiliUserVO;
 import lombok.extern.log4j.Log4j2;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -24,12 +25,12 @@ import java.util.stream.Collectors;
 @Service
 @Log4j2
 public class BilibiliUserServiceImpl implements BilibiliUserService {
-    private final BilibiliUserRepository bilibiliUserRepository;
+    private final BilibiliUserMapper bilibiliUserMapper;
     private final MapperFactory mapperFactory;
 
-    public BilibiliUserServiceImpl(BilibiliUserRepository bilibiliUserRepository,
+    public BilibiliUserServiceImpl(BilibiliUserMapper bilibiliUserMapper,
                                    MapperFactory mapperFactory) {
-        this.bilibiliUserRepository = bilibiliUserRepository;
+        this.bilibiliUserMapper = bilibiliUserMapper;
         this.mapperFactory = mapperFactory;
     }
 
@@ -39,26 +40,36 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
         BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
         BilibiliUser user = delegate.getUser();
 
-        Optional<BilibiliUser> exist = bilibiliUserRepository
-                .findOne(dedeuserid);
-        exist.ifPresent(bilibiliUser -> user.setId(bilibiliUser.getId()));
-        bilibiliUserRepository.saveAndFlush(user);
+        BilibiliUser exist = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, dedeuserid));
+        if (Objects.isNull(exist)) {
+            bilibiliUserMapper.insert(user);
+        } else {
+            user.setId(exist.getId());
+            bilibiliUserMapper.updateById(user);
+        }
     }
 
     @Override
     public void save(BilibiliUserDTO user) {
         BilibiliUser bilibiliUser = mapperFactory.getMapperFacade().map(user, BilibiliUser.class);
-        bilibiliUserRepository.saveAndFlush(bilibiliUser);
+        BilibiliUser exist = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, user.getDedeuserid()));
+        if (Objects.isNull(exist)) {
+            bilibiliUserMapper.insert(bilibiliUser);
+        } else {
+            bilibiliUser.setId(exist.getId());
+            bilibiliUserMapper.updateById(bilibiliUser);
+        }
     }
 
     @Override
     public boolean isExist(String dedeuserid) {
-        return bilibiliUserRepository.findOne(dedeuserid).isPresent();
+        return Objects.nonNull(bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, dedeuserid)));
     }
 
     @Override
     public List<BilibiliUserVO> list(HttpServletRequest request) {
-        return bilibiliUserRepository.findAll()
+        return bilibiliUserMapper
+                .selectList(null)
                 .stream()
                 .sorted(Comparator.comparingInt(BilibiliUser::getCurrentExp).reversed())
                 .map(user -> {

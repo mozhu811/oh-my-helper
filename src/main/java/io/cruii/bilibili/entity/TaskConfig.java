@@ -1,29 +1,23 @@
 package io.cruii.bilibili.entity;
 
-import lombok.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
 import java.io.Serializable;
-import java.util.Objects;
 
 /**
  * @author cruii
  * Created on 2021/6/8
  */
-@Getter
-@Setter
-@ToString
-@RequiredArgsConstructor
-@Entity(name = "task_config")
+@Data
+@TableName("task_config")
 public class TaskConfig implements Serializable {
 
     private static final long serialVersionUID = 6151419899088396002L;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
@@ -143,16 +137,4 @@ public class TaskConfig implements Serializable {
      */
     private Boolean followDeveloper;
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        TaskConfig that = (TaskConfig) o;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getDedeuserid(), that.getDedeuserid()) && Objects.equals(getSessdata(), that.getSessdata()) && Objects.equals(getBiliJct(), that.getBiliJct()) && Objects.equals(getDonateCoins(), that.getDonateCoins()) && Objects.equals(getReserveCoins(), that.getReserveCoins()) && Objects.equals(getAutoCharge(), that.getAutoCharge()) && Objects.equals(getDonateGift(), that.getDonateGift()) && Objects.equals(getDonateGiftTarget(), that.getDonateGiftTarget()) && Objects.equals(getAutoChargeTarget(), that.getAutoChargeTarget()) && Objects.equals(getDevicePlatform(), that.getDevicePlatform()) && Objects.equals(getDonateCoinStrategy(), that.getDonateCoinStrategy()) && Objects.equals(getUserAgent(), that.getUserAgent()) && Objects.equals(getSkipTask(), that.getSkipTask()) && Objects.equals(getTgBotToken(), that.getTgBotToken()) && Objects.equals(getTgBotChatId(), that.getTgBotChatId()) && Objects.equals(getScKey(), that.getScKey()) && Objects.equals(getCorpId(), that.getCorpId()) && Objects.equals(getAgentId(), that.getAgentId()) && Objects.equals(getCorpSecret(), that.getCorpSecret()) && Objects.equals(getMediaId(), that.getMediaId()) && Objects.equals(getBiliPush(), that.getBiliPush()) && Objects.equals(getFollowDeveloper(), that.getFollowDeveloper());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getId(), getDedeuserid(), getSessdata(), getBiliJct(), getDonateCoins(), getReserveCoins(), getAutoCharge(), getDonateGift(), getDonateGiftTarget(), getAutoChargeTarget(), getDevicePlatform(), getDonateCoinStrategy(), getUserAgent(), getSkipTask(), getTgBotToken(), getTgBotChatId(), getScKey(), getCorpId(), getAgentId(), getCorpSecret(), getMediaId(), getBiliPush(), getFollowDeveloper());
-    }
 }

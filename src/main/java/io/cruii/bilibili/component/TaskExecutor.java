@@ -38,6 +38,7 @@ public class TaskExecutor {
 
     public void execute() {
         Collections.shuffle(taskList);
+        taskList.add(new GetCoinChangeLogTask(config));
         taskList.add(new CheckCookieTask(config));
         Collections.reverse(taskList);
         taskList.forEach(task -> {
@@ -51,7 +52,13 @@ public class TaskExecutor {
             }
         });
         log.info("[所有任务已执行完成]");
+
         calExp();
+
+        afterFinish();
+    }
+
+    private void afterFinish() {
         try {
             TaskRunner.FINISH_QUEUE.put(MDC.get("traceId"));
         } catch (InterruptedException e) {

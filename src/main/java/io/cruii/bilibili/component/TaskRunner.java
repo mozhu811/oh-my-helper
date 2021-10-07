@@ -2,15 +2,16 @@ package io.cruii.bilibili.component;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.text.CharSequenceUtil;
-import io.cruii.bilibili.dao.BilibiliUserRepository;
-import io.cruii.bilibili.dao.TaskConfigRepository;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
+import io.cruii.bilibili.mapper.BilibiliUserMapper;
+import io.cruii.bilibili.mapper.TaskConfigMapper;
 import io.cruii.bilibili.push.QyWechatPusher;
 import io.cruii.bilibili.push.ServerChanPusher;
 import io.cruii.bilibili.push.TelegramBotPusher;
 import lombok.extern.log4j.Log4j2;
-import ma.glasnost.orika.MapperFactory;
 import org.slf4j.MDC;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -39,20 +41,16 @@ public class TaskRunner {
 
     private static final Map<String, TaskConfig> CACHE = new HashMap<>();
 
-    private final TaskConfigRepository taskConfigRepository;
-    private final BilibiliUserRepository bilibiliUserRepository;
+    private final TaskConfigMapper taskConfigMapper;
+    private final BilibiliUserMapper bilibiliUserMapper;
     private final Executor bilibiliExecutor;
-    private final MapperFactory mapperFactory;
 
-    public TaskRunner(TaskConfigRepository taskConfigRepository,
-                      BilibiliUserRepository bilibiliUserRepository,
-                      Executor bilibiliExecutor,
-                      MapperFactory mapperFactory) {
-        this.taskConfigRepository = taskConfigRepository;
-        this.bilibiliUserRepository = bilibiliUserRepository;
+    public TaskRunner(TaskConfigMapper taskConfigMapper,
+                      BilibiliUserMapper bilibiliUserMapper,
+                      Executor bilibiliExecutor) {
+        this.taskConfigMapper = taskConfigMapper;
+        this.bilibiliUserMapper = bilibiliUserMapper;
         this.bilibiliExecutor = bilibiliExecutor;
-        this.mapperFactory = mapperFactory;
-
         startTaskThread();
         startPushThread();
     }
@@ -80,86 +78,104 @@ public class TaskRunner {
     private void startPushThread() {
         log.info("开启推送线程");
         new Thread(() -> {
-            try {
-                while (true) {
-                    String traceId = FINISH_QUEUE.take();
-                    TaskConfig taskConfig = CACHE.get(traceId);
+            while (true) {
+                String traceId = getTraceId();
+                TaskConfig taskConfig = CACHE.get(traceId);
 
-                    String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
-                    List<String> logs = FileUtil.readLines(new File("logs/all-" + date + ".0.log"), StandardCharsets.UTF_8);
-                    String content = logs
-                            .stream()
-                            .filter(line -> line.contains(traceId))
-                            .map(line -> line.split("\\|\\|")[1])
-                            .collect(Collectors.joining("\n"));
+                String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
+                List<String> logs = FileUtil.readLines(new File("logs/all-" + date + ".0.log"), StandardCharsets.UTF_8);
+                assert traceId != null;
+                String content = logs
+                        .stream()
+                        .filter(line -> line.contains(traceId) && line.contains("INFO"))
+                        .map(line -> line.split("\\|\\|")[1])
+                        .collect(Collectors.joining("\n"));
 
-                    bilibiliUserRepository
-                            .findOne(taskConfig.getDedeuserid())
-                            .ifPresent(u -> {
-                                BilibiliDelegate delegate = new BilibiliDelegate(taskConfig.getDedeuserid(), taskConfig.getSessdata(), taskConfig.getBiliJct());
-                                BilibiliUser user = delegate.getUser();
-                                Long id = u.getId();
-                                mapperFactory.getMapperFacade().map(user, u);
-                                logs.stream()
-                                        .filter(line -> line.contains(traceId) && line.contains("当前进度"))
-                                        .forEach(line -> {
-                                            String upgradeDays = line.substring(line.lastIndexOf(":") + 1, line.length() - 1).trim();
-                                            u.setId(id);
-                                            u.setUpgradeDays(Integer.parseInt(upgradeDays));
-                                            bilibiliUserRepository.saveAndFlush(u);
-                                        });
+                BilibiliDelegate delegate = new BilibiliDelegate(taskConfig.getDedeuserid(), taskConfig.getSessdata(), taskConfig.getBiliJct());
+                BilibiliUser user = delegate.getUser();
+
+                if (user.getLevel() < 6) {
+                    logs.stream()
+                            .filter(line -> line.contains(traceId) && line.contains("当前进度"))
+                            .forEach(line -> {
+                                String upgradeDays = line.substring(line.lastIndexOf(":") + 1, line.length() - 1).trim();
+                                user.setUpgradeDays(Integer.parseInt(upgradeDays));
                             });
-
-                    String corpId = taskConfig.getCorpId();
-                    String corpSecret = taskConfig.getCorpSecret();
-                    String agentId = taskConfig.getAgentId();
-                    String mediaId = taskConfig.getMediaId();
-
-                    if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId, mediaId)) {
-
-                        QyWechatPusher pusher = new QyWechatPusher(corpId, corpSecret, agentId, mediaId);
-                        pusher.push(content.replace("\n", "<br>"));
-                    }
-
-                    String tgBotToken = taskConfig.getTgBotToken();
-                    String tgBotChatId = taskConfig.getTgBotChatId();
-
-                    if (!CharSequenceUtil.hasBlank(tgBotToken, tgBotChatId)) {
-                        TelegramBotPusher pusher = new TelegramBotPusher(tgBotToken, tgBotChatId);
-                        pusher.push(content);
-                    }
-
-                    String scKey = taskConfig.getScKey();
-                    if (CharSequenceUtil.isNotBlank(scKey)) {
-                        ServerChanPusher pusher = new ServerChanPusher(scKey);
-                        pusher.push(content);
-                    }
                 }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
+
+                bilibiliUserMapper.update(user, Wrappers.lambdaUpdate(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, user.getDedeuserid()));
+
+                push(taskConfig, content);
             }
         }, "message-push").start();
     }
 
+    private void push(TaskConfig taskConfig, String content) {
+        String corpId = taskConfig.getCorpId();
+        String corpSecret = taskConfig.getCorpSecret();
+        String agentId = taskConfig.getAgentId();
+        String mediaId = taskConfig.getMediaId();
+
+        if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId, mediaId)) {
+            QyWechatPusher pusher = new QyWechatPusher(corpId, corpSecret, agentId, mediaId);
+            pusher.push(content.replace("\n", "<br>"));
+        }
+
+        String tgBotToken = taskConfig.getTgBotToken();
+        String tgBotChatId = taskConfig.getTgBotChatId();
+
+        if (!CharSequenceUtil.hasBlank(tgBotToken, tgBotChatId)) {
+            TelegramBotPusher pusher = new TelegramBotPusher(tgBotToken, tgBotChatId);
+            pusher.push(content);
+        }
+
+        String scKey = taskConfig.getScKey();
+        if (CharSequenceUtil.isNotBlank(scKey)) {
+            ServerChanPusher pusher = new ServerChanPusher(scKey);
+            pusher.push(content);
+        }
+
+        BilibiliUserContext.remove();
+    }
+
+    private String getTraceId() {
+        String traceId = null;
+        try {
+            traceId = FINISH_QUEUE.take();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            Thread.currentThread().interrupt();
+        }
+        return traceId;
+    }
+
     @Scheduled(cron = "0 10 0 * * ?")
     public void run() {
-        taskConfigRepository
-                .findAll()
-                .forEach(config -> bilibiliExecutor.execute(() -> {
-                    String traceId = MDC.getCopyOfContextMap().get("traceId");
-                    CACHE.put(traceId, config);
-                    new TaskExecutor(config).execute();
-                }));
+        taskConfigMapper
+                .selectList(null)
+                .forEach(this::accept);
     }
 
     public void run(String uid) {
-        taskConfigRepository
-                .findOne(uid)
-                .ifPresent(config -> bilibiliExecutor.execute(() -> {
-                    String traceId = MDC.getCopyOfContextMap().get("traceId");
-                    CACHE.put(traceId, config);
-                    new TaskExecutor(config).execute();
-                }));
+        TaskConfig taskConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, uid));
+        Optional.ofNullable(taskConfig)
+                .ifPresent(this::accept);
+    }
+
+    private void accept(TaskConfig config) {
+        bilibiliExecutor.execute(() -> {
+            BilibiliDelegate delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct(), config.getUserAgent());
+            BilibiliUser user = delegate.getUser();
+            if (Boolean.TRUE.equals(user.getIsLogin())) {
+                BilibiliUserContext.set(user);
+
+                String traceId = MDC.getCopyOfContextMap().get("traceId");
+                CACHE.put(traceId, config);
+                new TaskExecutor(config).execute();
+            } else {
+                // todo 推送过期消息
+                log.warn("账户[{}]Cookie已过期", user.getDedeuserid());
+            }
+        });
     }
 }

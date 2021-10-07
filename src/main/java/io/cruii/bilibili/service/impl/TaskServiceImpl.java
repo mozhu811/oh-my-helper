@@ -1,18 +1,20 @@
 package io.cruii.bilibili.service.impl;
 
 import cn.hutool.json.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.component.TaskRunner;
-import io.cruii.bilibili.dao.BilibiliUserRepository;
-import io.cruii.bilibili.dao.TaskConfigRepository;
 import io.cruii.bilibili.dto.TaskConfigDTO;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
+import io.cruii.bilibili.mapper.BilibiliUserMapper;
+import io.cruii.bilibili.mapper.TaskConfigMapper;
 import io.cruii.bilibili.service.TaskService;
 import lombok.extern.log4j.Log4j2;
 import ma.glasnost.orika.MapperFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 /**
  * @author cruii
@@ -22,22 +24,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Log4j2
 public class TaskServiceImpl implements TaskService {
 
-    private final TaskConfigRepository taskConfigRepository;
+    private final TaskConfigMapper taskConfigMapper;
 
-    private final BilibiliUserRepository bilibiliUserRepository;
+    private final BilibiliUserMapper bilibiliUserMapper;
 
     private final MapperFactory mapperFactory;
 
-    public TaskServiceImpl(TaskConfigRepository taskConfigRepository,
-                           BilibiliUserRepository bilibiliUserRepository,
+    public TaskServiceImpl(TaskConfigMapper taskConfigMapper,
+                           BilibiliUserMapper bilibiliUserMapper,
                            MapperFactory mapperFactory) {
-        this.taskConfigRepository = taskConfigRepository;
-        this.bilibiliUserRepository = bilibiliUserRepository;
+        this.taskConfigMapper = taskConfigMapper;
+        this.bilibiliUserMapper = bilibiliUserMapper;
         this.mapperFactory = mapperFactory;
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean createTask(TaskConfigDTO taskConfig) throws InterruptedException {
         TaskConfig config = mapperFactory.getMapperFacade().map(taskConfig, TaskConfig.class);
         BilibiliDelegate delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct(), config.getUserAgent());
@@ -47,14 +48,22 @@ public class TaskServiceImpl implements TaskService {
         if (Boolean.TRUE.equals(user.getIsLogin())) {
             // 用户Cookie有效
             // 持久化任务配置信息
-            taskConfigRepository.findOne(user.getDedeuserid())
-                    .ifPresent(exist -> config.setId(exist.getId()));
-            taskConfigRepository.saveAndFlush(config);
+            TaskConfig existConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, user.getDedeuserid()));
+            if (Objects.nonNull(existConfig)) {
+                config.setId(existConfig.getId());
+                taskConfigMapper.updateById(config);
+            } else {
+                taskConfigMapper.insert(config);
+            }
 
             // 持久化用户信息
-            bilibiliUserRepository.findOne(user.getDedeuserid())
-                            .ifPresent(exist -> user.setId(exist.getId()));
-            bilibiliUserRepository.saveAndFlush(user);
+            BilibiliUser existUser = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, user.getDedeuserid()));
+            if (Objects.isNull(existUser)) {
+                bilibiliUserMapper.insert(user);
+            } else {
+                user.setId(existUser.getId());
+                bilibiliUserMapper.updateById(user);
+            }
 
             // 初次执行任务
             TaskRunner.getTaskQueue().put(user.getDedeuserid());
@@ -74,18 +83,15 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public boolean isExist(String dedeuserid) {
-        return taskConfigRepository.findOne(dedeuserid).isPresent();
+        return Objects.nonNull(taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, dedeuserid)));
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void removeTask(String dedeuserid) {
-        taskConfigRepository
-                .findOne(dedeuserid)
-                .ifPresent(taskConfigRepository::delete);
+        BilibiliUser existUser = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, dedeuserid));
+        TaskConfig existConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, dedeuserid));
 
-        bilibiliUserRepository
-                .findOne(dedeuserid)
-                .ifPresent(bilibiliUserRepository::delete);
+        taskConfigMapper.deleteById(existConfig);
+        bilibiliUserMapper.deleteById(existUser);
     }
 }

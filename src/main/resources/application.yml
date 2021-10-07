@@ -14,11 +14,8 @@ spring:
      path: /h2
      settings:
        web-allow-others: true
-  jpa:
-    hibernate:
-      ddl-auto: update
-    database-platform: org.hibernate.dialect.H2Dialect
-    show-sql: true
-
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 logging:
   config: classpath:logback-spring.xml
