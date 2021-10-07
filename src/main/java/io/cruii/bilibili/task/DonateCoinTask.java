@@ -1,6 +1,8 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.context.BilibiliUserContext;
+import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
@@ -23,6 +25,12 @@ public class DonateCoinTask extends VideoTask {
 
     @Override
     public void run() {
+        BilibiliUser user = BilibiliUserContext.get();
+        if (user.getLevel() >= 6) {
+            log.info("账号已到达6级，取消执行投币任务");
+            return;
+        }
+
         Integer donateCoins = config.getDonateCoins();
         log.info("配置投币数为：{}", donateCoins);
         int actual = calDiff();
