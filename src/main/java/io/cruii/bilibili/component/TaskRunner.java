@@ -116,25 +116,21 @@ public class TaskRunner {
         String agentId = taskConfig.getAgentId();
         String mediaId = taskConfig.getMediaId();
 
+        boolean result = false;
         if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId, mediaId)) {
             QyWechatPusher pusher = new QyWechatPusher(corpId, corpSecret, agentId, mediaId);
-            pusher.push(content.replace("\n", "<br>"));
+            result = pusher.push(content.replace("\n", "<br>"));
+        } else if (!CharSequenceUtil.hasBlank(taskConfig.getTgBotToken(), taskConfig.getTgBotChatId())) {
+            TelegramBotPusher pusher = new TelegramBotPusher(taskConfig.getTgBotToken(), taskConfig.getTgBotChatId());
+            result = pusher.push(content);
+        } else if (CharSequenceUtil.isNotBlank(taskConfig.getScKey())) {
+            ServerChanPusher pusher = new ServerChanPusher(taskConfig.getScKey());
+            result = pusher.push(content);
+        } else {
+            log.info("该账号未配置推送或推送配置异常");
         }
 
-        String tgBotToken = taskConfig.getTgBotToken();
-        String tgBotChatId = taskConfig.getTgBotChatId();
-
-        if (!CharSequenceUtil.hasBlank(tgBotToken, tgBotChatId)) {
-            TelegramBotPusher pusher = new TelegramBotPusher(tgBotToken, tgBotChatId);
-            pusher.push(content);
-        }
-
-        String scKey = taskConfig.getScKey();
-        if (CharSequenceUtil.isNotBlank(scKey)) {
-            ServerChanPusher pusher = new ServerChanPusher(scKey);
-            pusher.push(content);
-        }
-
+        log.info("账号[{}]推送结果: {}", taskConfig.getDedeuserid(), result);
         BilibiliUserContext.remove();
     }
 

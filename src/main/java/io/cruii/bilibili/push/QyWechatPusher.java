@@ -27,7 +27,7 @@ public class QyWechatPusher implements Pusher {
     }
 
     @Override
-    public void push(String content) {
+    public boolean push(String content) {
         HttpRequest httpRequest = HttpRequest.post("https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="
                 + getAccessToken());
         JSONObject requestBody = JSONUtil.createObj();
@@ -49,8 +49,10 @@ public class QyWechatPusher implements Pusher {
         JSONObject resp = JSONUtil.parseObj(httpRequest.execute().body());
         if (resp.getInt("errcode") == 0) {
             log.info("推送成功");
+            return true;
         } else {
             log.error("推送失败：{}", resp.getStr("errmsg"));
+            return false;
         }
     }
 

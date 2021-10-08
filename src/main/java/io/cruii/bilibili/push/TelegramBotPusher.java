@@ -22,15 +22,17 @@ public class TelegramBotPusher implements Pusher {
     }
 
     @Override
-    public void push(String content) {
+    public boolean push(String content) {
         String url = UriComponentsBuilder
                 .fromHttpUrl("https://api.telegram.org/bot{token}/sendMessage?chat_id={chatId}&text={content}")
                 .build(token, chatId, content).toString();
         JSONObject resp = JSONUtil.parseObj(HttpRequest.get(url).execute().body());
         if (Boolean.TRUE.equals(resp.getBool("ok"))) {
             log.info("Telegram Bot 推送成功");
+            return true;
         } else {
             log.error("Telegram Bot 推送失败：{}", resp);
+            return false;
         }
     }
 }

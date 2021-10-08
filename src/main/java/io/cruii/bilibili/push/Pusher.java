@@ -5,5 +5,5 @@ package io.cruii.bilibili.push;
  * Created on 2021/9/23
  */
 public interface Pusher {
-    void push(String content);
+    boolean push(String content);
 }
