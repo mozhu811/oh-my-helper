@@ -1,6 +1,7 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
@@ -12,8 +13,8 @@ import lombok.extern.log4j.Log4j2;
  */
 @Log4j2
 public class GetVipPrivilegeTask extends AbstractTask {
-    public GetVipPrivilegeTask(TaskConfig config) {
-        super(config);
+    public GetVipPrivilegeTask(BilibiliDelegate delegate) {
+        super(delegate);
     }
 
     @Override

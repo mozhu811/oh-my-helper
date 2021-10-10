@@ -2,6 +2,7 @@ package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
@@ -47,8 +48,8 @@ public abstract class VideoTask extends AbstractTask {
 
     public final List<String> trend = new ArrayList<>();
 
-    VideoTask(TaskConfig config) {
-        super(config);
+    VideoTask(BilibiliDelegate delegate) {
+        super(delegate);
         initFollowList();
         initTrend();
     }

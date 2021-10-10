@@ -1,6 +1,7 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
@@ -12,8 +13,8 @@ import lombok.extern.log4j.Log4j2;
 public class Silver2CoinTask extends AbstractTask {
     private static final int THRESHOLD = 700;
 
-    public Silver2CoinTask(TaskConfig config) {
-        super(config);
+    public Silver2CoinTask(BilibiliDelegate delegate) {
+        super(delegate);
     }
 
     @Override

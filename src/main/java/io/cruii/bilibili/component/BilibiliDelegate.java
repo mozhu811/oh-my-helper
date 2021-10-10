@@ -3,14 +3,19 @@ package io.cruii.bilibili.component;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.http.Header;
 import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.entity.BilibiliUser;
+import io.cruii.bilibili.entity.TaskConfig;
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
@@ -22,6 +27,8 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -30,30 +37,86 @@ import java.util.stream.Collectors;
  */
 @Log4j2
 public class BilibiliDelegate {
+    private static final String UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
 
-    private final String dedeuserid;
-    private final String sessdata;
-    private final String biliJct;
-    private final String userAgent;
+    @Getter
+    private final TaskConfig config;
+    @Getter
+    private HttpRequest httpRequest;
 
-    public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct, String userAgent) {
-        this.dedeuserid = dedeuserid;
-        this.sessdata = sessdata;
-        this.biliJct = biliJct;
-        if (CharSequenceUtil.isBlank(userAgent)) {
-            this.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
-        } else {
-            this.userAgent = userAgent;
-        }
-    }
+    private String proxyHost;
+    private Integer proxyPort;
 
     public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct) {
-        this.dedeuserid = dedeuserid;
-        this.sessdata = sessdata;
-        this.biliJct = biliJct;
-        this.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
+        TaskConfig taskConfig = new TaskConfig();
+        taskConfig.setDedeuserid(dedeuserid);
+        taskConfig.setSessdata(sessdata);
+        taskConfig.setBiliJct(biliJct);
+        taskConfig.setUserAgent(UA);
+        this.config = taskConfig;
     }
 
+    public BilibiliDelegate(TaskConfig config) {
+        this.config = config;
+        if (CharSequenceUtil.isBlank(config.getUserAgent())) {
+            config.setUserAgent(UA);
+        }
+        String proxy = getProxy();
+
+        while (!checkProxy(proxy)) {
+            proxy = getProxy();
+        }
+
+        setProxy(proxy);
+    }
+
+    private int getRandomNum() {
+        return new Random().nextInt(10);
+    }
+
+    private void setProxy(String proxy) {
+        this.proxyHost = proxy.split(":")[0];
+        this.proxyPort = Integer.parseInt(proxy.split(":")[1]);
+    }
+
+    private String getProxy() {
+        try {
+            TimeUnit.SECONDS.sleep(5L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            Thread.currentThread().interrupt();
+        }
+
+        String body = HttpRequest.get("http://tiqu.pyhttp.taolop.com/getip?count=10&neek=11933&type=2&yys=0&port=1&sb=&mr=1&sep=0&ts=1&pack=5325")
+                .execute().body();
+        JSONObject resp = JSONUtil.parseObj(body);
+        JSONArray proxyList = resp.getJSONArray("data");
+
+        int index = getRandomNum();
+        JSONObject proxyObj = (JSONObject) proxyList.get(index);
+        String proxy = proxyObj.getStr("ip") + ":" + proxyObj.getInt("port");
+        log.debug("本次获取代理地址: {}", proxy);
+
+        return proxy;
+    }
+
+    private boolean checkProxy(String proxy) {
+        String host = proxy.split(":")[0];
+        int port = Integer.parseInt(proxy.split(":")[1]);
+        try {
+            HttpResponse response = HttpRequest.get("https://www.baidu.com")
+                    .setHttpProxy(host, port)
+                    .setConnectionTimeout(10000)
+                    .execute();
+            if (response.getStatus() == 200) {
+                log.debug("该代理地址可用");
+                return true;
+            }
+        } catch (IORuntimeException e) {
+            return false;
+        }
+        return false;
+    }
 
     /**
      * 获取用户B站导航栏状态信息
@@ -69,15 +132,15 @@ public class BilibiliDelegate {
         Boolean isLogin = data.getBool("isLogin");
 
         if (Boolean.FALSE.equals(isLogin)) {
-            log.warn("账号Cookie已失效, {}, {}", dedeuserid, sessdata);
+            log.warn("账号Cookie已失效, {}, {}", config.getDedeuserid(), config.getSessdata());
 
             // 如果没有登录成功，则返回简要信息
-            return getUser(dedeuserid);
+            return getUser(config.getDedeuserid());
         }
 
         // 登录成功，获取详细信息
         InputStream avatarStream = getAvatarStream(data.getStr("face"));
-        String path = "avatars" + File.separator + dedeuserid + ".png";
+        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         File avatarFile = new File(path);
         if (!avatarFile.exists()) {
             FileUtil.writeFromStream(avatarStream, avatarFile);
@@ -114,7 +177,7 @@ public class BilibiliDelegate {
                 .collect(Collectors.toList());
 
         BilibiliUser info = new BilibiliUser();
-        info.setDedeuserid(dedeuserid);
+        info.setDedeuserid(config.getDedeuserid());
         info.setUsername(uname);
         info.setCoins(coins);
         info.setLevel(currentLevel);
@@ -144,7 +207,7 @@ public class BilibiliDelegate {
             return null;
         }
         InputStream avatarStream = getAvatarStream(baseInfo.getStr("face"));
-        String path = "avatars" + File.separator + dedeuserid + ".png";
+        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         File avatarFile = new File(path);
         if (!avatarFile.exists()) {
             FileUtil.writeFromStream(avatarStream, avatarFile);
@@ -167,7 +230,7 @@ public class BilibiliDelegate {
      */
     public JSONObject getMedalWall() {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("target_id", CollUtil.newArrayList(dedeuserid));
+        params.put("target_id", CollUtil.newArrayList(config.getDedeuserid()));
         return doGet(BilibiliAPI.GET_MEDAL_WALL, params);
     }
 
@@ -205,7 +268,7 @@ public class BilibiliDelegate {
      */
     public JSONObject getFollowedUpPostVideo() {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("uid", CollUtil.newArrayList(dedeuserid));
+        params.put("uid", CollUtil.newArrayList(config.getDedeuserid()));
         params.put("type_list", CollUtil.newArrayList("8"));
         params.put("from", CollUtil.newArrayList());
         params.put("platform", CollUtil.newArrayList("web"));
@@ -251,7 +314,7 @@ public class BilibiliDelegate {
     public JSONObject shareVideo(String bvid) {
         Map<String, Object> params = new HashMap<>();
         params.put("bvid", bvid);
-        params.put("csrf", biliJct);
+        params.put("csrf", config.getBiliJct());
         String requestBody = HttpUtil.toParams(params);
 
         return doPost(BilibiliAPI.SHARE_VIDEO, requestBody);
@@ -326,7 +389,7 @@ public class BilibiliDelegate {
         params.put("multiply", numCoin);
         params.put("select_like", isLike);
         params.put("cross_domain", true);
-        params.put("csrf", biliJct);
+        params.put("csrf", config.getBiliJct());
         String requestBody = HttpUtil.toParams(params);
 
         Map<String, String> headers = new HashMap<>();
@@ -352,8 +415,8 @@ public class BilibiliDelegate {
      */
     public JSONObject silver2Coin() {
         Map<String, Object> params = new HashMap<>();
-        params.put("csrf_token", biliJct);
-        params.put("csrf", biliJct);
+        params.put("csrf_token", config.getBiliJct());
+        params.put("csrf", config.getBiliJct());
         String requestBody = HttpUtil.toParams(params);
 
         return doPost(BilibiliAPI.SILVER_2_COIN, requestBody);
@@ -408,8 +471,8 @@ public class BilibiliDelegate {
         params.put("gift_id", giftId);
         params.put("bag_id", bagId);
         params.put("gift_num", giftNum);
-        params.put("uid", dedeuserid);
-        params.put("csrf", biliJct);
+        params.put("uid", config.getDedeuserid());
+        params.put("csrf", config.getBiliJct());
         params.put("send_ruid", 0);
         params.put("storm_beat_id", 0);
         params.put("price", 0);
@@ -427,7 +490,7 @@ public class BilibiliDelegate {
      */
     public JSONObject getChargeInfo() {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("mid", CollUtil.newArrayList(dedeuserid));
+        params.put("mid", CollUtil.newArrayList(config.getDedeuserid()));
 
         return doGet(BilibiliAPI.GET_CHARGE_INFO, params);
     }
@@ -445,8 +508,8 @@ public class BilibiliDelegate {
         params.put("is_bp_remains_prior", true);
         params.put("up_mid", upUserId);
         params.put("otype", "up");
-        params.put("oid", dedeuserid);
-        params.put("csrf", biliJct);
+        params.put("oid", config.getDedeuserid());
+        params.put("csrf", config.getBiliJct());
 
         String requestBody = HttpUtil.toParams(params);
 
@@ -463,7 +526,7 @@ public class BilibiliDelegate {
         Map<String, Object> params = new HashMap<>();
         params.put("order_id", orderNo);
         params.put("message", "up的作品很棒");
-        params.put("csrf", biliJct);
+        params.put("csrf", config.getBiliJct());
 
         String requestBody = HttpUtil.toParams(params);
 
@@ -492,7 +555,7 @@ public class BilibiliDelegate {
     public JSONObject getVipReward(int type) {
         Map<String, Object> params = new HashMap<>();
         params.put("type", type);
-        params.put("csrf", biliJct);
+        params.put("csrf", config.getBiliJct());
 
         String requestBody = HttpUtil.toParams(params);
         return doPost(BilibiliAPI.GET_VIP_REWARD, requestBody);
@@ -519,7 +582,7 @@ public class BilibiliDelegate {
         params.put("fid", uid);
         params.put("act", 1);
         params.put("re_src", 11);
-        params.put("csrf", biliJct);
+        params.put("csrf", config.getBiliJct());
 
         String requestBody = HttpUtil.toParams(params);
         return doPost(BilibiliAPI.RELATION_MODIFY, requestBody);
@@ -532,6 +595,7 @@ public class BilibiliDelegate {
         InputStream avatarStream = getAvatarStream(data.getStr("face"));
         return Base64.encode(avatarStream);
     }
+
     /**
      * 获取B站用户头像文件流
      *
@@ -585,12 +649,14 @@ public class BilibiliDelegate {
         url = UriComponentsBuilder.fromHttpUrl(url)
                 .queryParams(params)
                 .build().toUriString();
-        String body = HttpRequest.get(url)
+        httpRequest = HttpRequest.get(url)
+                .setHttpProxy(proxyHost, proxyPort)
                 .header(Header.CONNECTION, "keep-alive")
-                .header(Header.USER_AGENT, userAgent)
-                .cookie("bili_jct=" + biliJct +
-                        ";SESSDATA=" + sessdata +
-                        ";DedeUserID=" + dedeuserid + ";")
+                .header(Header.USER_AGENT, config.getUserAgent())
+                .cookie("bili_jct=" + config.getBiliJct() +
+                        ";SESSDATA=" + config.getSessdata() +
+                        ";DedeUserID=" + config.getDedeuserid() + ";");
+        String body = httpRequest
                 .execute().body();
         return JSONUtil.parseObj(body);
     }
@@ -600,16 +666,19 @@ public class BilibiliDelegate {
     }
 
     private JSONObject doPost(String url, String requestBody, Map<String, String> headers) {
-        String body = HttpRequest.post(url)
+        httpRequest = HttpRequest.post(url)
+                .setHttpProxy(proxyHost, proxyPort)
                 .header(Header.CONTENT_TYPE, JSONUtil.isJson(requestBody) ?
                         MediaType.APPLICATION_JSON_VALUE : MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .header(Header.CONNECTION, "keep-alive")
-                .header(Header.USER_AGENT, userAgent)
+                .header(Header.USER_AGENT, config.getUserAgent())
                 .header(Header.REFERER, "https://www.bilibili.com/")
                 .addHeaders(headers)
-                .cookie("bili_jct=" + biliJct +
-                        ";SESSDATA=" + sessdata +
-                        ";DedeUserID=" + dedeuserid + ";")
+                .cookie("bili_jct=" + config.getBiliJct() +
+                        ";SESSDATA=" + config.getSessdata() +
+                        ";DedeUserID=" + config.getDedeuserid() + ";");
+
+        String body = httpRequest
                 .body(requestBody).execute().body();
         return JSONUtil.parseObj(body);
     }

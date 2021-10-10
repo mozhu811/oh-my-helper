@@ -1,6 +1,7 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
@@ -16,8 +17,11 @@ import java.util.Objects;
 public class ChargeTask extends AbstractTask {
     private static final String AUTHOR_MID = "287969457";
 
-    public ChargeTask(TaskConfig config) {
-        super(config);
+    private final TaskConfig config;
+
+    public ChargeTask(BilibiliDelegate delegate) {
+        super(delegate);
+        this.config = delegate.getConfig();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
@@ -19,8 +20,11 @@ import java.util.stream.Collectors;
  */
 @Log4j2
 public class DonateCoinTask extends VideoTask {
-    public DonateCoinTask(TaskConfig config) {
-        super(config);
+    private final TaskConfig config;
+
+    public DonateCoinTask(BilibiliDelegate delegate) {
+        super(delegate);
+        this.config = delegate.getConfig();
     }
 
     @Override

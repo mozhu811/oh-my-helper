@@ -1,5 +1,7 @@
 package io.cruii.bilibili.component;
 
+import cn.hutool.core.io.IORuntimeException;
+import cn.hutool.http.HttpException;
 import cn.hutool.json.JSONObject;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
@@ -20,35 +22,36 @@ import java.util.concurrent.TimeUnit;
 public class TaskExecutor {
 
     private final List<Task> taskList = new ArrayList<>();
-    private final TaskConfig config;
     private final BilibiliDelegate delegate;
-    public TaskExecutor(TaskConfig config) {
-        delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct(), config.getUserAgent());
-        this.config = config;
-        taskList.add(new WatchVideoTask(config));
-        taskList.add(new MangaTask(config));
-        taskList.add(new DonateCoinTask(config));
-        taskList.add(new Silver2CoinTask(config));
-        taskList.add(new LiveCheckIn(config));
-        taskList.add(new DonateGiftTask(config));
-        taskList.add(new ChargeTask(config));
-        taskList.add(new GetVipPrivilegeTask(config));
-        taskList.add(new ReadMangaTask(config));
+
+    public TaskExecutor(BilibiliDelegate delegate) {
+        this.delegate = delegate;
+        taskList.add(new WatchVideoTask(delegate));
+        taskList.add(new MangaTask(delegate));
+        taskList.add(new DonateCoinTask(delegate));
+        taskList.add(new Silver2CoinTask(delegate));
+        taskList.add(new LiveCheckIn(delegate));
+        taskList.add(new DonateGiftTask(delegate));
+        taskList.add(new ChargeTask(delegate));
+        taskList.add(new GetVipPrivilegeTask(delegate));
+        taskList.add(new ReadMangaTask(delegate));
     }
 
     public void execute() {
         Collections.shuffle(taskList);
-        taskList.add(new GetCoinChangeLogTask(config));
-        taskList.add(new CheckCookieTask(config));
+        taskList.add(new GetCoinChangeLogTask(delegate));
+        taskList.add(new CheckCookieTask(delegate));
         Collections.reverse(taskList);
         taskList.forEach(task -> {
-            log.info("[{}]", task.getName());
-            task.run();
             try {
+                log.info("[{}]", task.getName());
+                task.run();
                 TimeUnit.SECONDS.sleep(5L);
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 Thread.currentThread().interrupt();
+            } catch (HttpException | IORuntimeException e) {
+                log.debug("HTTP访问异常: {}, 切换代理地址", e.getMessage());
             }
         });
         log.info("[所有任务已执行完成]");

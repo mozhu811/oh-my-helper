@@ -1,6 +1,7 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
@@ -11,8 +12,8 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class WatchVideoTask extends VideoTask {
 
-    public WatchVideoTask(TaskConfig config) {
-        super(config);
+    public WatchVideoTask(BilibiliDelegate delegate) {
+        super(delegate);
     }
 
     @Override

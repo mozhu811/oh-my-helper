@@ -1,6 +1,7 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
@@ -12,13 +13,13 @@ import lombok.extern.log4j.Log4j2;
  */
 @Log4j2
 public class MangaTask extends AbstractTask {
-    public MangaTask(TaskConfig config) {
-        super(config);
+    public MangaTask(BilibiliDelegate delegate) {
+        super(delegate);
     }
 
     @Override
     public void run() {
-        JSONObject resp = delegate.mangaCheckIn(config.getDevicePlatform());
+        JSONObject resp = delegate.mangaCheckIn(delegate.getConfig().getDevicePlatform());
         if (resp != null && "0".equals(resp.getStr(CODE).trim())) {
             log.info("漫画签到成功 ✔️");
         } else if (resp != null && MANGA_CLOCK_IN_DUPLICATE.equals(resp.getStr("msg"))) {

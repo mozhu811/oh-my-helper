@@ -3,6 +3,7 @@ package io.cruii.bilibili.task;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
@@ -22,8 +23,11 @@ public class DonateGiftTask extends AbstractTask {
 
     private String roomId;
 
-    public DonateGiftTask(TaskConfig config) {
-        super(config);
+    private final TaskConfig config;
+
+    public DonateGiftTask(BilibiliDelegate delegate) {
+        super(delegate);
+        this.config = delegate.getConfig();
     }
 
     @Override

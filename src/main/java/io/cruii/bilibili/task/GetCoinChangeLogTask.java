@@ -2,6 +2,7 @@ package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
@@ -14,8 +15,8 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class GetCoinChangeLogTask extends AbstractTask {
 
-    public GetCoinChangeLogTask(TaskConfig config) {
-        super(config);
+    public GetCoinChangeLogTask(BilibiliDelegate delegate) {
+        super(delegate);
     }
 
     @Override

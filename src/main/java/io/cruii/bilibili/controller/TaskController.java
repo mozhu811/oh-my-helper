@@ -46,14 +46,13 @@ public class TaskController {
 
     @DeleteMapping()
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeTask(@CookieValue("dedeuserid") String dedeuserId,
+    public void removeTask(@CookieValue("dedeuserid") String dedeuserid,
                            @CookieValue("sessdata") String sessdata,
                            @CookieValue("biliJct") String biliJct) {
-        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserId, sessdata, biliJct);
+        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
         BilibiliUser user = delegate.getUser();
-        log.debug(user);
         if (Boolean.TRUE.equals(user.getIsLogin())) {
-            taskService.removeTask(dedeuserId);
+            taskService.removeTask(dedeuserid);
         }
     }
 }

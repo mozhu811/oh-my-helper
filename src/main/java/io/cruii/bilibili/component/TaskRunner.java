@@ -39,7 +39,7 @@ public class TaskRunner {
     private static final BlockingQueue<String> TASK_QUEUE = new LinkedBlockingDeque<>();
     protected static final BlockingQueue<String> FINISH_QUEUE = new LinkedBlockingDeque<>();
 
-    private static final Map<String, TaskConfig> CACHE = new HashMap<>();
+    private static final Map<String, BilibiliDelegate> CACHE = new HashMap<>();
 
     private final TaskConfigMapper taskConfigMapper;
     private final BilibiliUserMapper bilibiliUserMapper;
@@ -80,7 +80,7 @@ public class TaskRunner {
         new Thread(() -> {
             while (true) {
                 String traceId = getTraceId();
-                TaskConfig taskConfig = CACHE.get(traceId);
+                BilibiliDelegate delegate = CACHE.get(traceId);
 
                 String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
                 List<String> logs = FileUtil.readLines(new File("logs/all-" + date + ".0.log"), StandardCharsets.UTF_8);
@@ -91,7 +91,6 @@ public class TaskRunner {
                         .map(line -> line.split("\\|\\|")[1])
                         .collect(Collectors.joining("\n"));
 
-                BilibiliDelegate delegate = new BilibiliDelegate(taskConfig.getDedeuserid(), taskConfig.getSessdata(), taskConfig.getBiliJct());
                 BilibiliUser user = delegate.getUser();
 
                 if (user.getLevel() < 6) {
@@ -105,7 +104,7 @@ public class TaskRunner {
 
                 bilibiliUserMapper.update(user, Wrappers.lambdaUpdate(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, user.getDedeuserid()));
 
-                push(taskConfig, content);
+                push(delegate.getConfig(), content);
             }
         }, "message-push").start();
     }
@@ -160,14 +159,14 @@ public class TaskRunner {
 
     private void accept(TaskConfig config) {
         bilibiliExecutor.execute(() -> {
-            BilibiliDelegate delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct(), config.getUserAgent());
+            BilibiliDelegate delegate = new BilibiliDelegate(config);
             BilibiliUser user = delegate.getUser();
             if (Boolean.TRUE.equals(user.getIsLogin())) {
                 BilibiliUserContext.set(user);
 
                 String traceId = MDC.getCopyOfContextMap().get("traceId");
-                CACHE.put(traceId, config);
-                new TaskExecutor(config).execute();
+                CACHE.put(traceId, delegate);
+                new TaskExecutor(delegate).execute();
             } else {
                 // todo 推送过期消息
                 log.warn("账户[{}]Cookie已过期", user.getDedeuserid());

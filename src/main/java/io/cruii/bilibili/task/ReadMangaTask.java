@@ -1,7 +1,7 @@
 package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
-import io.cruii.bilibili.entity.TaskConfig;
+import io.cruii.bilibili.component.BilibiliDelegate;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -10,8 +10,8 @@ import lombok.extern.log4j.Log4j2;
  */
 @Log4j2
 public class ReadMangaTask extends AbstractTask {
-    public ReadMangaTask(TaskConfig config) {
-        super(config);
+    public ReadMangaTask(BilibiliDelegate delegate) {
+        super(delegate);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package io.cruii.bilibili.service;
 
 import io.cruii.bilibili.dto.TaskConfigDTO;
+import io.cruii.bilibili.entity.TaskConfig;
 
 /**
  * @author cruii
@@ -25,4 +26,6 @@ public interface TaskService {
     boolean isExist(String dedeuserid);
 
     void removeTask(String dedeuserid);
+
+    TaskConfig getTask(String dedeuserId, String sessdata, String biliJct);
 }
