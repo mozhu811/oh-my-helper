@@ -1,10 +1,7 @@
 package io.cruii.bilibili.component;
 
-import cn.hutool.core.io.IORuntimeException;
-import cn.hutool.http.HttpException;
 import cn.hutool.json.JSONObject;
 import io.cruii.bilibili.entity.BilibiliUser;
-import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.task.*;
 import lombok.extern.log4j.Log4j2;
 import org.slf4j.MDC;
@@ -12,6 +9,8 @@ import org.slf4j.MDC;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -20,6 +19,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Log4j2
 public class TaskExecutor {
+    private static final BlockingQueue<Task> TASK_RETRY_QUEUE = new LinkedBlockingDeque<>();
 
     private final List<Task> taskList = new ArrayList<>();
     private final BilibiliDelegate delegate;
@@ -35,6 +35,28 @@ public class TaskExecutor {
         taskList.add(new ChargeTask(delegate));
         taskList.add(new GetVipPrivilegeTask(delegate));
         taskList.add(new ReadMangaTask(delegate));
+
+
+        new Thread(() -> {
+            log.info("启动重试任务线程");
+            while (true) {
+                Task task = null;
+                try {
+                    task = TASK_RETRY_QUEUE.take();
+                    log.debug("重试任务[{}]", task.getName());
+                    task.run();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } catch (Exception e) {
+                    assert task != null;
+                    try {
+                        TASK_RETRY_QUEUE.put(task);
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+        }).start();
     }
 
     public void execute() {
@@ -46,12 +68,18 @@ public class TaskExecutor {
             try {
                 log.info("[{}]", task.getName());
                 task.run();
-                TimeUnit.SECONDS.sleep(5L);
+                TimeUnit.SECONDS.sleep(3L);
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 Thread.currentThread().interrupt();
-            } catch (HttpException | IORuntimeException e) {
-                log.debug("HTTP访问异常: {}, 切换代理地址", e.getMessage());
+            } catch (Exception e) {
+                log.debug("HTTP访问异常: {}, 进行重试", e.getMessage());
+                try {
+                    TASK_RETRY_QUEUE.put(task);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                    Thread.currentThread().interrupt();
+                }
             }
         });
         log.info("[所有任务已执行完成]");
@@ -73,7 +101,7 @@ public class TaskExecutor {
     private void calExp() {
         JSONObject coinExpToday = delegate.getCoinExpToday();
         int exp = coinExpToday.getInt("data") + 15;
-        log.info("今日已获得[{}]点经验",  exp);
+        log.info("今日已获得[{}]点经验", exp);
         BilibiliUser user = delegate.getUser();
         if (user.getLevel() < 6) {
             int upgradeDays = (user.getNextExp() - user.getCurrentExp()) / exp;

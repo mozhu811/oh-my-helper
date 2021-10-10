@@ -41,7 +41,7 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public boolean createTask(TaskConfigDTO taskConfig) throws InterruptedException {
         TaskConfig config = mapperFactory.getMapperFacade().map(taskConfig, TaskConfig.class);
-        BilibiliDelegate delegate = new BilibiliDelegate(config);
+        BilibiliDelegate delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct());
         // 验证并获取用户B站信息
         BilibiliUser user = delegate.getUser();
 
