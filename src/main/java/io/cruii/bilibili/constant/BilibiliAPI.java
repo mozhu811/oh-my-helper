@@ -153,4 +153,8 @@ public interface BilibiliAPI {
      * 操作用户关系
      */
     String RELATION_MODIFY = "https://api.bilibili.com/x/relation/modify";
+
+    String GET_JURY_CASE = "https://api.bilibili.com/x/credit/v2/jury/case/next";
+
+    String JURY_VOTE = "https://api.bilibili.com/x/credit/v2/jury/vote";
 }

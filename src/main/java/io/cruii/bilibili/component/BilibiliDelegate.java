@@ -61,6 +61,10 @@ public class BilibiliDelegate {
         if (CharSequenceUtil.isBlank(config.getUserAgent())) {
             config.setUserAgent(UA);
         }
+        changeProxy();
+    }
+
+    public void changeProxy() {
         String proxy = getProxy();
 
         while (!checkProxy(proxy)) {
@@ -70,30 +74,18 @@ public class BilibiliDelegate {
         setProxy(proxy);
     }
 
-    private int getRandomNum() {
-        return new Random().nextInt(10);
-    }
-
     private void setProxy(String proxy) {
         this.proxyHost = proxy.split(":")[0];
         this.proxyPort = Integer.parseInt(proxy.split(":")[1]);
     }
 
     private String getProxy() {
-        try {
-            TimeUnit.SECONDS.sleep(5L);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            Thread.currentThread().interrupt();
-        }
-
-        String body = HttpRequest.get("http://tiqu.pyhttp.taolop.com/getip?count=10&neek=11933&type=2&yys=0&port=1&sb=&mr=1&sep=0&ts=1&pack=5325")
+        String body = HttpRequest.get("http://tiqu.pyhttp.taolop.com/getip?count=1&neek=12064&type=2&yys=0&port=1&sb=&mr=1&sep=0&ts=1&pack=5474")
                 .execute().body();
         JSONObject resp = JSONUtil.parseObj(body);
         JSONArray proxyList = resp.getJSONArray("data");
 
-        int index = getRandomNum();
-        JSONObject proxyObj = (JSONObject) proxyList.get(index);
+        JSONObject proxyObj = (JSONObject) proxyList.get(0);
         String proxy = proxyObj.getStr("ip") + ":" + proxyObj.getInt("port");
         log.debug("本次获取代理地址: {}", proxy);
 

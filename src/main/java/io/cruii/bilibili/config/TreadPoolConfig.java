@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -17,7 +16,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 @EnableAsync
 public class TreadPoolConfig {
     @Bean
-    public Executor bilibiliExecutor() {
+    public ThreadPoolTaskExecutor bilibiliExecutor() {
         ThreadPoolTaskExecutor executor = new TaskThreadPoolExecutor();
         // 核心线程数：线程池创建时候初始化的线程数
         executor.setCorePoolSize(5);
