@@ -73,7 +73,7 @@ public class TaskExecutor {
                     @Override
                     public <V> void onRetry(Attempt<V> attempt) {
                         if (attempt.hasException()) {
-                            log.error("第{}次调用失败", attempt.getAttemptNumber());
+                            log.error("第{}次调用失败: {}", attempt.getAttemptNumber(), attempt.getExceptionCause().getMessage());
                         }
                     }
                 })
