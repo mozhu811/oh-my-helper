@@ -2,7 +2,6 @@ package io.cruii.bilibili.task;
 
 import cn.hutool.json.JSONObject;
 import io.cruii.bilibili.component.BilibiliDelegate;
-import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -18,6 +17,9 @@ public class WatchVideoTask extends VideoTask {
 
     @Override
     public void run() {
+        checkAttemptsAndChangeProxy();
+        addAttempts();
+
         JSONObject resp = delegate.getExpRewardStatus();
         // 从热榜中随机选取一个视频
         String bvid = trend.get(random.nextInt(trend.size()));

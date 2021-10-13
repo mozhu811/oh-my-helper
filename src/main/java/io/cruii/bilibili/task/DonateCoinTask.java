@@ -29,6 +29,9 @@ public class DonateCoinTask extends VideoTask {
 
     @Override
     public void run() {
+        checkAttemptsAndChangeProxy();
+        addAttempts();
+
         BilibiliUser user = BilibiliUserContext.get();
         if (user.getLevel() >= 6) {
             log.info("账号已到达6级，取消执行投币任务");

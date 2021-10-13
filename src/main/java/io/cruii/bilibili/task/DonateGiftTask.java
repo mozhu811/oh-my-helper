@@ -32,6 +32,9 @@ public class DonateGiftTask extends AbstractTask {
 
     @Override
     public void run() {
+        checkAttemptsAndChangeProxy();
+        addAttempts();
+
         if (!Boolean.TRUE.equals(config.getDonateGift())) {
             log.info("未启用赠送即将过期礼物 ❌");
             return;

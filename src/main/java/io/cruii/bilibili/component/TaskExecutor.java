@@ -1,6 +1,7 @@
 package io.cruii.bilibili.component;
 
 import cn.hutool.core.io.IORuntimeException;
+import cn.hutool.http.HttpException;
 import cn.hutool.json.JSONObject;
 import com.github.rholder.retry.*;
 import io.cruii.bilibili.entity.BilibiliUser;
@@ -66,6 +67,7 @@ public class TaskExecutor {
 
         Retryer<Boolean> retryer = RetryerBuilder.<Boolean>newBuilder()
                 .retryIfExceptionOfType(IORuntimeException.class)
+                .retryIfExceptionOfType(HttpException.class)
                 .withStopStrategy(StopStrategies.stopAfterAttempt(12))
                 .withRetryListener(new RetryListener() {
                     @Override

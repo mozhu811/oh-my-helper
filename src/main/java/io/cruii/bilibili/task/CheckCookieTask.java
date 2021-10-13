@@ -24,6 +24,9 @@ public class CheckCookieTask extends AbstractTask {
 
     @Override
     public void run() {
+        checkAttemptsAndChangeProxy();
+        addAttempts();
+
         JSONObject resp = delegate.checkCookie();
         if (resp.getInt("code") == 0 &&
                 Boolean.TRUE.equals(resp.getByPath("data.isLogin"))) {

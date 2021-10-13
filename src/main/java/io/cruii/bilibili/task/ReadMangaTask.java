@@ -16,6 +16,9 @@ public class ReadMangaTask extends AbstractTask {
 
     @Override
     public void run() {
+        checkAttemptsAndChangeProxy();
+        addAttempts();
+
         JSONObject resp = delegate.readManga();
         if (resp.getInt(CODE) == 0) {
             log.info("完成漫画阅读 ✔️");

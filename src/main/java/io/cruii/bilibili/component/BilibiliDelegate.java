@@ -9,12 +9,12 @@ import cn.hutool.http.Header;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
-import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
+import io.cruii.bilibili.util.ProxyUtil;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.MediaType;
@@ -27,8 +27,6 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -65,10 +63,10 @@ public class BilibiliDelegate {
     }
 
     public void changeProxy() {
-        String proxy = getProxy();
+        String proxy = ProxyUtil.get();
 
         while (!checkProxy(proxy)) {
-            proxy = getProxy();
+            proxy = ProxyUtil.get();
         }
 
         setProxy(proxy);
@@ -77,19 +75,6 @@ public class BilibiliDelegate {
     private void setProxy(String proxy) {
         this.proxyHost = proxy.split(":")[0];
         this.proxyPort = Integer.parseInt(proxy.split(":")[1]);
-    }
-
-    private String getProxy() {
-        String body = HttpRequest.get("http://tiqu.pyhttp.taolop.com/getip?count=1&neek=12064&type=2&yys=0&port=1&sb=&mr=1&sep=0&ts=1&pack=5474")
-                .execute().body();
-        JSONObject resp = JSONUtil.parseObj(body);
-        JSONArray proxyList = resp.getJSONArray("data");
-
-        JSONObject proxyObj = (JSONObject) proxyList.get(0);
-        String proxy = proxyObj.getStr("ip") + ":" + proxyObj.getInt("port");
-        log.debug("本次获取代理地址: {}", proxy);
-
-        return proxy;
     }
 
     private boolean checkProxy(String proxy) {
