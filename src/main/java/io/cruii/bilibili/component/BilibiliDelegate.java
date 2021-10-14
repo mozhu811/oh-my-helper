@@ -3,11 +3,10 @@ package io.cruii.bilibili.component;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.http.Header;
 import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -65,34 +64,12 @@ public class BilibiliDelegate {
     public void changeProxy() {
         String proxy = ProxyUtil.get();
 
-        while (!checkProxy(proxy)) {
-            proxy = ProxyUtil.get();
-        }
-
         setProxy(proxy);
     }
 
     private void setProxy(String proxy) {
         this.proxyHost = proxy.split(":")[0];
         this.proxyPort = Integer.parseInt(proxy.split(":")[1]);
-    }
-
-    private boolean checkProxy(String proxy) {
-        String host = proxy.split(":")[0];
-        int port = Integer.parseInt(proxy.split(":")[1]);
-        try {
-            HttpResponse response = HttpRequest.get("https://www.baidu.com")
-                    .setHttpProxy(host, port)
-                    .setConnectionTimeout(10000)
-                    .execute();
-            if (response.getStatus() == 200) {
-                log.debug("该代理地址可用");
-                return true;
-            }
-        } catch (IORuntimeException e) {
-            return false;
-        }
-        return false;
     }
 
     /**
@@ -627,12 +604,17 @@ public class BilibiliDelegate {
                 .queryParams(params)
                 .build().toUriString();
         httpRequest = HttpRequest.get(url)
-                .setHttpProxy(proxyHost, proxyPort)
+                .timeout(100000)
                 .header(Header.CONNECTION, "keep-alive")
                 .header(Header.USER_AGENT, config.getUserAgent())
                 .cookie("bili_jct=" + config.getBiliJct() +
                         ";SESSDATA=" + config.getSessdata() +
                         ";DedeUserID=" + config.getDedeuserid() + ";");
+
+        if (!ObjectUtil.hasNull(proxyHost, proxyPort)){
+            httpRequest.setHttpProxy(proxyHost, proxyPort);
+        }
+
         String body = httpRequest
                 .execute().body();
         return JSONUtil.parseObj(body);
@@ -644,7 +626,7 @@ public class BilibiliDelegate {
 
     private JSONObject doPost(String url, String requestBody, Map<String, String> headers) {
         httpRequest = HttpRequest.post(url)
-                .setHttpProxy(proxyHost, proxyPort)
+                .timeout(10000)
                 .header(Header.CONTENT_TYPE, JSONUtil.isJson(requestBody) ?
                         MediaType.APPLICATION_JSON_VALUE : MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .header(Header.CONNECTION, "keep-alive")
@@ -654,7 +636,9 @@ public class BilibiliDelegate {
                 .cookie("bili_jct=" + config.getBiliJct() +
                         ";SESSDATA=" + config.getSessdata() +
                         ";DedeUserID=" + config.getDedeuserid() + ";");
-
+        if (!ObjectUtil.hasNull(proxyHost, proxyPort)){
+            httpRequest.setHttpProxy(proxyHost, proxyPort);
+        }
         String body = httpRequest
                 .body(requestBody).execute().body();
         return JSONUtil.parseObj(body);

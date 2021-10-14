@@ -66,14 +66,14 @@ public class TaskExecutor {
         Collections.reverse(taskList);
 
         Retryer<Boolean> retryer = RetryerBuilder.<Boolean>newBuilder()
-                .retryIfExceptionOfType(IORuntimeException.class)
                 .retryIfExceptionOfType(HttpException.class)
+                .retryIfExceptionOfType(IORuntimeException.class)
                 .withStopStrategy(StopStrategies.stopAfterAttempt(12))
                 .withRetryListener(new RetryListener() {
                     @Override
                     public <V> void onRetry(Attempt<V> attempt) {
                         if (attempt.hasException()) {
-                            log.error("第{}次调用失败: {}", attempt.getAttemptNumber(), attempt.getExceptionCause().getMessage());
+                            log.error("第{}次调用失败: {}, 进行重试", attempt.getAttemptNumber(), attempt.getExceptionCause().getMessage());
                         }
                     }
                 })
@@ -91,11 +91,12 @@ public class TaskExecutor {
                 Thread.currentThread().interrupt();
             } catch (ExecutionException e) {
                 log.error("重试[{}]任务失败, {}", task.getName(), e.getMessage());
+                if (e.getCause() instanceof BilibiliCookieExpiredException) {
+                    expired = true;
+                    break;
+                }
             } catch (RetryException e) {
                 log.error("[{}]任务超过执行次数, {}", task.getName(), e.getMessage());
-            } catch (BilibiliCookieExpiredException e) {
-                expired = true;
-                break;
             }
         }
 
