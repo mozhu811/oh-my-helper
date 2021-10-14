@@ -28,4 +28,6 @@ public interface TaskService {
     void removeTask(String dedeuserid);
 
     TaskConfig getTask(String dedeuserId, String sessdata, String biliJct);
+
+    void updateCookie(String dedeuserid, String sessdata, String biliJct);
 }

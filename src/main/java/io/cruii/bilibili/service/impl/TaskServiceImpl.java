@@ -103,4 +103,15 @@ public class TaskServiceImpl implements TaskService {
                 .eq(TaskConfig::getSessdata, sessdata)
                 .eq(TaskConfig::getBiliJct, biliJct));
     }
+
+    @Override
+    public void updateCookie(String dedeuserid, String sessdata, String biliJct) {
+        TaskConfig taskConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class)
+                .eq(TaskConfig::getDedeuserid, dedeuserid));
+        if (taskConfig != null) {
+            taskConfig.setSessdata(sessdata);
+            taskConfig.setBiliJct(biliJct);
+            taskConfigMapper.updateById(taskConfig);
+        }
+    }
 }
