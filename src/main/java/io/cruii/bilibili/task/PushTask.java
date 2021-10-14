@@ -5,6 +5,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.TaskConfig;
+import io.cruii.bilibili.push.BarkPusher;
 import io.cruii.bilibili.push.QyWechatPusher;
 import io.cruii.bilibili.push.ServerChanPusher;
 import io.cruii.bilibili.push.TelegramBotPusher;
@@ -52,7 +53,10 @@ public class PushTask implements Runnable {
         String mediaId = taskConfig.getMediaId();
 
         boolean result = false;
-        if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId, mediaId)) {
+        if (CharSequenceUtil.isNotBlank(taskConfig.getBarkToken())) {
+            BarkPusher barkPusher = new BarkPusher(taskConfig.getBarkToken());
+            result = barkPusher.push(content);
+        } else if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId, mediaId)) {
             QyWechatPusher pusher = new QyWechatPusher(corpId, corpSecret, agentId, mediaId);
             result = pusher.push(content.replace("\n", "<br>"));
         } else if (!CharSequenceUtil.hasBlank(taskConfig.getTgBotToken(), taskConfig.getTgBotChatId())) {

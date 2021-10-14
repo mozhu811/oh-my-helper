@@ -105,6 +105,11 @@ public class TaskConfigVO implements Serializable {
     private String mediaId;
 
     /**
+     * Bark 推送token
+     */
+    private String barkToken;
+
+    /**
      * B站推送
      */
     private Boolean biliPush;
