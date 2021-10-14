@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `task_config` (
     `corp_secret` VARCHAR NULL ,
     `agent_id` VARCHAR NULL ,
     `media_id` VARCHAR NULL ,
+    `bark_token` VARCHAR NULL ,
     `bili_push` BOOLEAN DEFAULT FALSE,
     `follow_developer` BOOLEAN DEFAULT FALSE,
     primary key (`id`)
