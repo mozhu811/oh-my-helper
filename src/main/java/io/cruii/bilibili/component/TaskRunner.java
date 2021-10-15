@@ -7,6 +7,7 @@ import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.mapper.BilibiliUserMapper;
 import io.cruii.bilibili.mapper.TaskConfigMapper;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  * Created on 2021/9/24
  */
 @Component
+@PropertySource(value = "classpath:application.yml")
 @Log4j2
 public class TaskRunner {
     private static final BlockingQueue<String> TASK_QUEUE = new LinkedBlockingDeque<>();
