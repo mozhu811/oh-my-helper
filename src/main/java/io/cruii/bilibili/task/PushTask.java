@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import io.cruii.bilibili.component.BilibiliDelegate;
 import io.cruii.bilibili.context.BilibiliUserContext;
+import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.push.BarkPusher;
 import io.cruii.bilibili.push.QyWechatPusher;
@@ -16,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 /**
@@ -23,9 +25,10 @@ import java.util.stream.Collectors;
  * Created on 2021/10/11
  */
 @Log4j2
-public class PushTask implements Runnable {
+public class PushTask implements Callable<BilibiliUser> {
     private final String traceId;
     private final BilibiliDelegate delegate;
+
     public PushTask(String traceId,
                     BilibiliDelegate delegate) {
         this.traceId = traceId;
@@ -33,7 +36,7 @@ public class PushTask implements Runnable {
     }
 
     @Override
-    public void run() {
+    public BilibiliUser call() {
         String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
         List<String> logs = FileUtil.readLines(new File("logs/all-" + date + ".0.log"), StandardCharsets.UTF_8);
         assert traceId != null;
@@ -43,21 +46,17 @@ public class PushTask implements Runnable {
                 .map(line -> line.split("\\|\\|")[1])
                 .collect(Collectors.joining("\n"));
 
-        push(delegate.getConfig(), content);
+        return push(delegate.getConfig(), content);
     }
 
-    private void push(TaskConfig taskConfig, String content) {
-        String corpId = taskConfig.getCorpId();
-        String corpSecret = taskConfig.getCorpSecret();
-        String agentId = taskConfig.getAgentId();
-        String mediaId = taskConfig.getMediaId();
+    private BilibiliUser push(TaskConfig taskConfig, String content) {
 
         boolean result = false;
         if (CharSequenceUtil.isNotBlank(taskConfig.getBarkToken())) {
             BarkPusher barkPusher = new BarkPusher(taskConfig.getBarkToken());
             result = barkPusher.push(content);
-        } else if (!CharSequenceUtil.hasBlank(corpId, corpSecret, agentId, mediaId)) {
-            QyWechatPusher pusher = new QyWechatPusher(corpId, corpSecret, agentId, mediaId);
+        } else if (!CharSequenceUtil.hasBlank(taskConfig.getCorpId(), taskConfig.getCorpSecret(), taskConfig.getAgentId(), taskConfig.getMediaId())) {
+            QyWechatPusher pusher = new QyWechatPusher(taskConfig.getCorpId(), taskConfig.getCorpSecret(), taskConfig.getAgentId(), taskConfig.getMediaId());
             result = pusher.push(content.replace("\n", "<br>"));
         } else if (!CharSequenceUtil.hasBlank(taskConfig.getTgBotToken(), taskConfig.getTgBotChatId())) {
             TelegramBotPusher pusher = new TelegramBotPusher(taskConfig.getTgBotToken(), taskConfig.getTgBotChatId());
@@ -71,5 +70,7 @@ public class PushTask implements Runnable {
 
         log.info("账号[{}]推送结果: {}", taskConfig.getDedeuserid(), result);
         BilibiliUserContext.remove();
+
+        return delegate.getUser();
     }
 }

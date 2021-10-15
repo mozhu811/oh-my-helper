@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -59,7 +60,7 @@ public class TaskExecutor {
         taskList.add(new ReadMangaTask(delegate));
     }
 
-    public void execute() {
+    public BilibiliUser execute() {
         Collections.shuffle(taskList);
         taskList.add(new GetCoinChangeLogTask(delegate));
         taskList.add(new CheckCookieTask(delegate));
@@ -105,11 +106,20 @@ public class TaskExecutor {
 
             calExp();
         }
-        afterFinish();
+        return push();
     }
 
-    private void afterFinish() {
-        PUSH_EXECUTOR.execute(new PushTask(MDC.get("traceId"), delegate));
+    private BilibiliUser push() {
+        Future<BilibiliUser> future = PUSH_EXECUTOR.submit(new PushTask(MDC.get("traceId"), delegate));
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.error(e.getMessage());
+        }
+        throw new RuntimeException("未知推送异常");
     }
 
     private void calExp() {

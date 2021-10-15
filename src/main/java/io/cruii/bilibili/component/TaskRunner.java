@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
+import io.cruii.bilibili.mapper.BilibiliUserMapper;
 import io.cruii.bilibili.mapper.TaskConfigMapper;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,12 +25,14 @@ public class TaskRunner {
     private static final BlockingQueue<String> TASK_QUEUE = new LinkedBlockingDeque<>();
 
     private final TaskConfigMapper taskConfigMapper;
-
+    private final BilibiliUserMapper bilibiliUserMapper;
     private final Executor bilibiliExecutor;
 
     public TaskRunner(TaskConfigMapper taskConfigMapper,
+                      BilibiliUserMapper bilibiliUserMapper,
                       Executor bilibiliExecutor) {
         this.taskConfigMapper = taskConfigMapper;
+        this.bilibiliUserMapper = bilibiliUserMapper;
         this.bilibiliExecutor = bilibiliExecutor;
         startTaskThread();
     }
@@ -54,7 +57,7 @@ public class TaskRunner {
         }).start();
     }
 
-    @Scheduled(cron = "0 21 1 * * ?")
+    @Scheduled(cron = "${task.cron:0 10 0 * * ?}")
     public void run() {
         taskConfigMapper
                 .selectList(null)
@@ -71,9 +74,11 @@ public class TaskRunner {
         bilibiliExecutor.execute(() -> {
             BilibiliDelegate delegate = new BilibiliDelegate(config);
             BilibiliUser user = delegate.getUser();
-            TaskExecutor taskExecutor = new TaskExecutor(delegate);
             BilibiliUserContext.set(user);
-            taskExecutor.execute();
+
+            TaskExecutor taskExecutor = new TaskExecutor(delegate);
+            user = taskExecutor.execute();
+            bilibiliUserMapper.updateById(user);
         });
     }
 }

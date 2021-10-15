@@ -18,9 +18,9 @@ public class BilibiliUser implements Serializable{
 
     private static final long serialVersionUID = -1589103932581149105L;
 
-    @TableId(type = IdType.AUTO)
     private Long id;
 
+    @TableId(type = IdType.INPUT)
     private String dedeuserid;
 
     private String username;

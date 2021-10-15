@@ -19,3 +19,6 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 logging:
   config: classpath:logback-spring.xml
+
+task:
+  cron: 0 21 1 * * ?
