@@ -3,8 +3,6 @@ package io.cruii.bilibili.task;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import io.cruii.bilibili.component.BilibiliDelegate;
-import io.cruii.bilibili.context.BilibiliUserContext;
-import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.push.BarkPusher;
 import io.cruii.bilibili.push.QyWechatPusher;
@@ -25,7 +23,7 @@ import java.util.stream.Collectors;
  * Created on 2021/10/11
  */
 @Log4j2
-public class PushTask implements Callable<BilibiliUser> {
+public class PushTask implements Callable<Boolean> {
     private final String traceId;
     private final BilibiliDelegate delegate;
 
@@ -36,7 +34,7 @@ public class PushTask implements Callable<BilibiliUser> {
     }
 
     @Override
-    public BilibiliUser call() {
+    public Boolean call() {
         String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
         List<String> logs = FileUtil.readLines(new File("logs/all-" + date + ".0.log"), StandardCharsets.UTF_8);
         assert traceId != null;
@@ -49,7 +47,7 @@ public class PushTask implements Callable<BilibiliUser> {
         return push(delegate.getConfig(), content);
     }
 
-    private BilibiliUser push(TaskConfig taskConfig, String content) {
+    private boolean push(TaskConfig taskConfig, String content) {
 
         boolean result = false;
         if (CharSequenceUtil.isNotBlank(taskConfig.getBarkToken())) {
@@ -67,10 +65,6 @@ public class PushTask implements Callable<BilibiliUser> {
         } else {
             log.info("该账号未配置推送或推送配置异常");
         }
-
-        log.info("账号[{}]推送结果: {}", taskConfig.getDedeuserid(), result);
-        BilibiliUserContext.remove();
-
-        return delegate.getUser();
+        return result;
     }
 }
