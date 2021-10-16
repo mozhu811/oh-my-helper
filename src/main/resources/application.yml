@@ -21,4 +21,4 @@ logging:
   config: classpath:logback-spring.xml
 
 task:
-  cron: 0 21 1 * * ?
+  cron: 0 10 0 * * ?
