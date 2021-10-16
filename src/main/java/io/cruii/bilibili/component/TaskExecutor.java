@@ -117,6 +117,7 @@ public class TaskExecutor {
             e.printStackTrace();
             Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
+            e.printStackTrace();
             log.error(e.getMessage());
         }
         throw new RuntimeException("未知推送异常");

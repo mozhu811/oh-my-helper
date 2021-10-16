@@ -611,7 +611,7 @@ public class BilibiliDelegate {
                         ";SESSDATA=" + config.getSessdata() +
                         ";DedeUserID=" + config.getDedeuserid() + ";");
 
-        if (!ObjectUtil.hasNull(proxyHost, proxyPort)){
+        if (!ObjectUtil.hasNull(proxyHost, proxyPort)) {
             httpRequest.setHttpProxy(proxyHost, proxyPort);
         }
 
@@ -636,7 +636,7 @@ public class BilibiliDelegate {
                 .cookie("bili_jct=" + config.getBiliJct() +
                         ";SESSDATA=" + config.getSessdata() +
                         ";DedeUserID=" + config.getDedeuserid() + ";");
-        if (!ObjectUtil.hasNull(proxyHost, proxyPort)){
+        if (!ObjectUtil.hasNull(proxyHost, proxyPort)) {
             httpRequest.setHttpProxy(proxyHost, proxyPort);
         }
         String body = httpRequest
