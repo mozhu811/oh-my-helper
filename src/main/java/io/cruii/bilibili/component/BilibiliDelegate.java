@@ -166,11 +166,10 @@ public class BilibiliDelegate {
         if (!avatarFile.exists()) {
             FileUtil.writeFromStream(avatarStream, avatarFile);
         }
-        String uname = coverUsername(baseInfo.getStr("name"));
 
         BilibiliUser info = new BilibiliUser();
         info.setDedeuserid(userId);
-        info.setUsername(uname);
+        info.setUsername(baseInfo.getStr("name"));
         info.setLevel(baseInfo.getInt("level"));
         info.setIsLogin(false);
 
