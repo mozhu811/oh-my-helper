@@ -4,6 +4,7 @@ import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.http.HttpException;
 import cn.hutool.json.JSONObject;
 import com.github.rholder.retry.*;
+import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.exception.BilibiliCookieExpiredException;
 import io.cruii.bilibili.task.*;
@@ -106,11 +107,49 @@ public class TaskExecutor {
 
             calExp();
         }
-        return push();
+
+        Boolean result = push();
+
+        BilibiliUser user = BilibiliUserContext.get();
+        log.info("账号[{}]推送结果: {}", user.getDedeuserid(), result);
+
+        if (Boolean.TRUE.equals(user.getIsLogin())) {
+            // 获取当日获取的经验
+            JSONObject expRewardStatus = delegate.getExpRewardStatus();
+            JSONObject body = expRewardStatus.getJSONObject("data");
+            Boolean share = body.getBool("share", false);
+            Boolean watch = body.getBool("watch", false);
+            Boolean login = body.getBool("login", false);
+            Integer coinExp = body.getInt("coin", 0);
+
+            int exp = 0;
+            if (Boolean.TRUE.equals(share)) {
+                exp += 5;
+            }
+
+            if (Boolean.TRUE.equals(watch)) {
+                exp += 5;
+            }
+
+            if (Boolean.TRUE.equals(login)) {
+                exp += 5;
+            }
+
+            exp += coinExp;
+
+            int diff = user.getNextExp() - user.getCurrentExp();
+
+            // 执行任务后的当前差值
+            diff = diff - exp;
+            int days = diff / exp + 1;
+            user.setUpgradeDays(days);
+        }
+        BilibiliUserContext.remove();
+        return user;
     }
 
-    private BilibiliUser push() {
-        Future<BilibiliUser> future = PUSH_EXECUTOR.submit(new PushTask(MDC.get("traceId"), delegate));
+    private Boolean push() {
+        Future<Boolean> future = PUSH_EXECUTOR.submit(new PushTask(MDC.get("traceId"), delegate));
         try {
             return future.get();
         } catch (InterruptedException e) {
