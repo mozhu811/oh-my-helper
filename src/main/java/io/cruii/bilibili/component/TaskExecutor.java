@@ -136,29 +136,28 @@ public class TaskExecutor {
     private BilibiliUser calExp() {
         BilibiliUser user = delegate.getUser();
         int exp = 0;
+        // 获取当日获取的经验
+        JSONObject expRewardStatus = delegate.getExpRewardStatus();
+        JSONObject body = expRewardStatus.getJSONObject("data");
+        Boolean share = body.getBool("share", false);
+        Boolean watch = body.getBool("watch", false);
+        Boolean login = body.getBool("login", false);
+        Integer coinExp = body.getInt("coins", 0);
+
+        if (Boolean.TRUE.equals(share)) {
+            exp += 5;
+        }
+
+        if (Boolean.TRUE.equals(watch)) {
+            exp += 5;
+        }
+
+        if (Boolean.TRUE.equals(login)) {
+            exp += 5;
+        }
+
+        exp += coinExp;
         if (user.getLevel() < 6) {
-            // 获取当日获取的经验
-            JSONObject expRewardStatus = delegate.getExpRewardStatus();
-            JSONObject body = expRewardStatus.getJSONObject("data");
-            Boolean share = body.getBool("share", false);
-            Boolean watch = body.getBool("watch", false);
-            Boolean login = body.getBool("login", false);
-            Integer coinExp = body.getInt("coins", 0);
-
-            if (Boolean.TRUE.equals(share)) {
-                exp += 5;
-            }
-
-            if (Boolean.TRUE.equals(watch)) {
-                exp += 5;
-            }
-
-            if (Boolean.TRUE.equals(login)) {
-                exp += 5;
-            }
-
-            exp += coinExp;
-
             int diff = user.getNextExp() - user.getCurrentExp();
 
             int days = (diff / exp) + 1;
