@@ -107,7 +107,7 @@ public class TaskExecutor {
         if (!expired) {
             log.info("[所有任务已执行完成]");
 
-            calExp();
+            user = calExp();
         }
 
         Boolean result = push();
@@ -133,7 +133,7 @@ public class TaskExecutor {
         throw new RuntimeException("未知推送异常");
     }
 
-    private void calExp() {
+    private BilibiliUser calExp() {
         BilibiliUser user = delegate.getUser();
         int exp = 0;
         if (user.getLevel() < 6) {
@@ -172,5 +172,7 @@ public class TaskExecutor {
         } else {
             log.info("当前等级Lv6，经验值为：{}", user.getCurrentExp());
         }
+
+        return user;
     }
 }
