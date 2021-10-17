@@ -14,7 +14,8 @@
 </div>
 
 🚀 Bilibili Helper Hub，Bilibili每日任务托管平台。  
-💄 项目前端地址: [BILIBILI-HELPER-HUB-FRONTEND](https://github.com/Cruii/bilibili-helper-hub-frontend)
+💄 项目前端地址: [BILIBILI-HELPER-HUB-FRONTEND](https://github.com/Cruii/bilibili-helper-hub-frontend)  
+本人搭建的平台地址：[BiliBili Helper Hub](https://bilibili.cruii.io/)
 ## Notice
 
 该项目会存储您的B站Cookie以及用户信息，并承诺不会用于该项目以外的用途。  
