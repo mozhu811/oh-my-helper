@@ -15,9 +15,12 @@
 
 🚀 Bilibili Helper Hub，Bilibili每日任务托管平台。  
 💄 项目前端地址: [BILIBILI-HELPER-HUB-FRONTEND](https://github.com/Cruii/bilibili-helper-hub-frontend)  
-本人搭建的平台地址：[BiliBili Helper Hub](https://bilibili.cruii.io/)
+😺 本人搭建的平台地址：[BiliBili Helper Hub](https://bilibili.cruii.io/)
 ## Notice
 
+本项目中proxy.properties文件需要自行更换为自己的API地址，且由于接口返回值的不同，请自行修改ProxyUtil.java文件中解析代理的部分代码逻辑  
+在我个人部署的平台中[BiliBili Helper Hub](https://bilibili.cruii.io/) ，我个人已经购买并配置了代理，每次任务会切换不同的IP  
+购买服务器以及代理池是一笔不小的开销，如果该项目能够帮助到您或您觉得还不错可以对开发者进行[打赏捐赠](https://github.com/Cruii/bilibili-helper-hub#sponsor) ，用于减少开销。获得的打赏捐赠将全部用于托管平台的开销。打赏捐赠的同时，希望您能在备注中填写您的B站UID即数字ID。  
 该项目会存储您的B站Cookie以及用户信息，并承诺不会用于该项目以外的用途。  
 对本项目有任何疑问或建议请提交issues或发送邮件到[cruii811@gmail.com](mailto:cruii811@gmail.com)
 
@@ -33,3 +36,7 @@
 ## License
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FCruii%2Fbilibili-helper-hub.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FCruii%2Fbilibili-helper-hub?ref=badge_large)
+
+## Sponsor
+
+![Sponsor](https://cruii.io/upload/2021/10/1-c5f430c3f57c461580f04cfb8fdc06e2.png)
