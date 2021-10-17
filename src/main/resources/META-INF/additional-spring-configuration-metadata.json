@@ -1,8 +1,9 @@
 {
   "properties": [
     {
-      "name": "scf.jar-location",
+      "name": "task.cron",
       "type": "java.lang.String",
-      "description": "云函数jar包的存放路径."
-  }
-] }
+      "description": "cron表达式,用于指定每日执行任务的时间."
+    }
+  ]
+}
