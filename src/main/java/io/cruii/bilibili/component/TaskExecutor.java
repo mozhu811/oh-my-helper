@@ -108,36 +108,6 @@ public class TaskExecutor {
             log.info("[所有任务已执行完成]");
 
             calExp();
-
-            user = delegate.getUser();
-
-            // 获取当日获取的经验
-            JSONObject expRewardStatus = delegate.getExpRewardStatus();
-            JSONObject body = expRewardStatus.getJSONObject("data");
-            Boolean share = body.getBool("share", false);
-            Boolean watch = body.getBool("watch", false);
-            Boolean login = body.getBool("login", false);
-            Integer coinExp = body.getInt("coin", 0);
-
-            int exp = 0;
-            if (Boolean.TRUE.equals(share)) {
-                exp += 5;
-            }
-
-            if (Boolean.TRUE.equals(watch)) {
-                exp += 5;
-            }
-
-            if (Boolean.TRUE.equals(login)) {
-                exp += 5;
-            }
-
-            exp += coinExp;
-
-            int diff = user.getNextExp() - user.getCurrentExp();
-
-            int days = (diff / exp) + 1;
-            user.setUpgradeDays(days);
         }
 
         Boolean result = push();
@@ -164,10 +134,38 @@ public class TaskExecutor {
     }
 
     private void calExp() {
-        JSONObject coinExpToday = delegate.getCoinExpToday();
-        int exp = coinExpToday.getInt("data") + 15;
-        log.info("今日已获得[{}]点经验", exp);
         BilibiliUser user = delegate.getUser();
+        int exp = 0;
+        if (user.getLevel() < 6) {
+            // 获取当日获取的经验
+            JSONObject expRewardStatus = delegate.getExpRewardStatus();
+            JSONObject body = expRewardStatus.getJSONObject("data");
+            Boolean share = body.getBool("share", false);
+            Boolean watch = body.getBool("watch", false);
+            Boolean login = body.getBool("login", false);
+            Integer coinExp = body.getInt("coins", 0);
+
+            if (Boolean.TRUE.equals(share)) {
+                exp += 5;
+            }
+
+            if (Boolean.TRUE.equals(watch)) {
+                exp += 5;
+            }
+
+            if (Boolean.TRUE.equals(login)) {
+                exp += 5;
+            }
+
+            exp += coinExp;
+
+            int diff = user.getNextExp() - user.getCurrentExp();
+
+            int days = (diff / exp) + 1;
+            user.setUpgradeDays(days);
+        }
+        log.info("今日已获得[{}]点经验", exp);
+
         if (user.getLevel() < 6) {
             int upgradeDays = (user.getNextExp() - user.getCurrentExp()) / exp;
             log.info("按照当前进度，升级到Lv{}还需要: {}天", user.getLevel() + 1, upgradeDays + 1);
