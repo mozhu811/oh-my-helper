@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 @Log4j2
 public class DonateCoinTask extends VideoTask {
     private final TaskConfig config;
+    private int counter = 0;
 
     public DonateCoinTask(BilibiliDelegate delegate) {
         super(delegate);
@@ -31,6 +32,14 @@ public class DonateCoinTask extends VideoTask {
     public void run() {
         checkAttemptsAndChangeProxy();
         addAttempts();
+
+        // 防止全部都投过币而导致任务卡死
+        counter++;
+        if (counter > 3) {
+            initFollowList();
+            initTrend();
+            counter = 0;
+        }
 
         BilibiliUser user = BilibiliUserContext.get();
         if (user.getLevel() >= 6) {
@@ -125,6 +134,7 @@ public class DonateCoinTask extends VideoTask {
                     if (resp.getByPath("data.multiply", Integer.class) > 0) {
                         String videoTitle = getVideoTitle(bvid);
                         log.info("已为视频[{}]投过币，本次跳过", videoTitle);
+                        bvidList.remove(bvid);
                         return false;
                     }
                     return true;

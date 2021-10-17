@@ -3,7 +3,6 @@ package io.cruii.bilibili.task;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import io.cruii.bilibili.component.BilibiliDelegate;
-import io.cruii.bilibili.entity.TaskConfig;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
@@ -57,7 +56,8 @@ public abstract class VideoTask extends AbstractTask {
     /**
      * 初始化已关注UP主最近发布视频的BVID
      */
-    private void initFollowList() {
+    protected void initFollowList() {
+        follow.clear();
         JSONObject resp = delegate.getFollowedUpPostVideo();
         JSONArray videos = resp.getJSONObject("data").getJSONArray("cards");
         if (videos == null || videos.isEmpty()) {
@@ -72,7 +72,8 @@ public abstract class VideoTask extends AbstractTask {
     /**
      * 初始化热门视频的BVID
      */
-    private void initTrend() {
+    protected void initTrend() {
+        trend.clear();
         int index = random.nextInt(regionIds.length);
         String regionId = String.valueOf(regionIds[index]);
         JSONObject resp = delegate.getTrendVideo(regionId);
