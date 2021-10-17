@@ -102,18 +102,15 @@ public class TaskExecutor {
             }
         }
 
+        BilibiliUser user = BilibiliUserContext.get();
+
         if (!expired) {
             log.info("[所有任务已执行完成]");
 
             calExp();
-        }
 
-        Boolean result = push();
+            user = delegate.getUser();
 
-        BilibiliUser user = BilibiliUserContext.get();
-        log.info("账号[{}]推送结果: {}", user.getDedeuserid(), result);
-
-        if (Boolean.TRUE.equals(user.getIsLogin())) {
             // 获取当日获取的经验
             JSONObject expRewardStatus = delegate.getExpRewardStatus();
             JSONObject body = expRewardStatus.getJSONObject("data");
@@ -139,12 +136,16 @@ public class TaskExecutor {
 
             int diff = user.getNextExp() - user.getCurrentExp();
 
-            // 执行任务后的当前差值
-            diff = diff - exp;
-            int days = diff / exp + 1;
+            int days = (diff / exp) + 1;
             user.setUpgradeDays(days);
         }
+
+        Boolean result = push();
+
+        log.info("账号[{}]推送结果: {}", user.getDedeuserid(), result);
+
         BilibiliUserContext.remove();
+
         return user;
     }
 
