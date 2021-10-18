@@ -26,13 +26,16 @@ public class TelegramBotPusher implements Pusher {
         String url = UriComponentsBuilder
                 .fromHttpUrl("https://api.telegram.org/bot{token}/sendMessage?chat_id={chatId}&text={content}")
                 .build(token, chatId, content).toString();
-        JSONObject resp = JSONUtil.parseObj(HttpRequest.get(url).execute().body());
-        if (Boolean.TRUE.equals(resp.getBool("ok"))) {
-            log.info("Telegram Bot 推送成功");
-            return true;
-        } else {
-            log.error("Telegram Bot 推送失败：{}", resp);
-            return false;
+        String body = HttpRequest.get(url).execute().body();
+        log.info(body);
+        if (JSONUtil.isJson(body)) {
+            JSONObject resp = JSONUtil.parseObj(body);
+            if (Boolean.TRUE.equals(resp.getBool("ok"))) {
+                log.info("Telegram Bot 推送成功");
+                return true;
+            }
         }
+        log.error("Telegram Bot 推送失败：{}", body);
+        return false;
     }
 }

@@ -12,7 +12,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  * Created on 2021/10/03
  */
 @Log4j2
-public class ServerChanPusher implements Pusher{
+public class ServerChanPusher implements Pusher {
     private final String scKey;
 
     public ServerChanPusher(String scKey) {
@@ -24,13 +24,16 @@ public class ServerChanPusher implements Pusher{
         String url = UriComponentsBuilder
                 .fromHttpUrl("https://sctapi.ftqq.com/{scKey}.send?title={title}&desp={content}")
                 .build(scKey, "Bilibili Helper Hub任务日志", content.replace("\n", "\n\n")).toString();
-        JSONObject resp = JSONUtil.parseObj(HttpRequest.get(URLUtil.encode(url)).execute().body());
-        if (resp.getInt("code") == 0) {
-            log.info("ServerChan推送成功");
-            return true;
-        } else {
-            log.error("ServerChan推送失败：{}", resp.getStr("message"));
-            return false;
+        String body = HttpRequest.get(URLUtil.encode(url)).execute().body();
+        log.info(body);
+        if (JSONUtil.isJson(body)) {
+            JSONObject resp = JSONUtil.parseObj(body);
+            if (resp.getInt("code") == 0) {
+                log.info("ServerChan推送成功");
+                return true;
+            }
         }
+        log.error("ServerChan推送失败：{}", body);
+        return false;
     }
 }

@@ -46,14 +46,17 @@ public class QyWechatPusher implements Pusher {
 
 
         httpRequest.body(requestBody.toJSONString(0));
-        JSONObject resp = JSONUtil.parseObj(httpRequest.execute().body());
-        if (resp.getInt("errcode") == 0) {
-            log.info("推送成功");
-            return true;
-        } else {
-            log.error("推送失败：{}", resp.getStr("errmsg"));
-            return false;
+        String body = httpRequest.execute().body();
+        log.info(body);
+        if (JSONUtil.isJson(body)) {
+            JSONObject resp = JSONUtil.parseObj(body);
+            if (resp.getInt("errcode") == 0) {
+                log.info("推送成功");
+                return true;
+            }
         }
+        log.error("推送失败：{}", body);
+        return false;
     }
 
     private String getAccessToken() {
