@@ -24,7 +24,7 @@ public class ServerChanPusher implements Pusher {
         String url = UriComponentsBuilder
                 .fromHttpUrl("https://sctapi.ftqq.com/{scKey}.send?title={title}&desp={content}")
                 .build(scKey, "Bilibili Helper Hub任务日志", content.replace("\n", "\n\n")).toString();
-        String body = HttpRequest.get(URLUtil.encode(url)).execute().body();
+        String body = HttpRequest.post(URLUtil.encode(url)).execute().body();
         log.info(body);
         if (JSONUtil.isJson(body)) {
             JSONObject resp = JSONUtil.parseObj(body);

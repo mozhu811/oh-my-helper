@@ -26,7 +26,7 @@ public class TelegramBotPusher implements Pusher {
         String url = UriComponentsBuilder
                 .fromHttpUrl("https://api.telegram.org/bot{token}/sendMessage?chat_id={chatId}&text={content}")
                 .build(token, chatId, content).toString();
-        String body = HttpRequest.get(url).execute().body();
+        String body = HttpRequest.post(url).execute().body();
         log.info(body);
         if (JSONUtil.isJson(body)) {
             JSONObject resp = JSONUtil.parseObj(body);

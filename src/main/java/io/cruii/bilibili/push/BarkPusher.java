@@ -24,7 +24,7 @@ public class BarkPusher implements Pusher{
                 .fromHttpUrl("https://api.day.app/{token}/{title}/{content}")
                 .build(token, "Bilibili Helper Hub任务日志", content)
                 .toString();
-        String body = HttpRequest.get(url).execute().body();
+        String body = HttpRequest.post(url).execute().body();
         log.info(body);
         if (JSONUtil.isJson(body)) {
             JSONObject resp = JSONUtil.parseObj(body);
