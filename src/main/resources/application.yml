@@ -1,11 +1,16 @@
 server:
   port: 811
 
+db:
+  host: localhost
+  port: 3306
+  name: test
+
 spring:
   datasource:
-    url:
-    username:
-    password:
+    url: jdbc:mysql://${db.host}:${db.port}/${db.name}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowMultiQueries=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: 970811
     driver-class-name: com.mysql.cj.jdbc.Driver
 mybatis-plus:
   configuration:

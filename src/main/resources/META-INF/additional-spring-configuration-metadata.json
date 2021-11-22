@@ -4,6 +4,21 @@
       "name": "task.cron",
       "type": "java.lang.String",
       "description": "cron表达式,用于指定每日执行任务的时间."
+    },
+    {
+      "name": "db.host",
+      "type": "java.lang.String",
+      "description": "MySQL服务器地址."
+    },
+    {
+      "name": "db.port",
+      "type": "java.lang.Integer",
+      "description": "MySQL服务器端口."
+    },
+    {
+      "name": "db.name",
+      "type": "java.lang.String",
+      "description": "数据库名."
     }
   ]
 }
