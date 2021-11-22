@@ -1,10 +1,10 @@
 package io.cruii.bilibili.push;
 
+import cn.hutool.http.Header;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * @author cruii
@@ -23,11 +23,10 @@ public class TelegramBotPusher implements Pusher {
 
     @Override
     public boolean push(String content) {
-        String url = UriComponentsBuilder
-                .fromHttpUrl("https://api.telegram.org/bot{token}/sendMessage?chat_id={chatId}&text={content}")
-                .build(token, chatId, content).toString();
-        String body = HttpRequest.post(url).execute().body();
-        log.info(body);
+        String body = HttpRequest.post("https://api.telegram.org/bot" + token + "/sendMessage")
+                .header(Header.CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body("chat_id=" + chatId + "&text=" + content)
+                .execute().body();
         if (JSONUtil.isJson(body)) {
             JSONObject resp = JSONUtil.parseObj(body);
             if (Boolean.TRUE.equals(resp.getBool("ok"))) {

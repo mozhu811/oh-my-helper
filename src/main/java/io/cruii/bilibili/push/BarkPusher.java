@@ -4,7 +4,6 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * @author cruii
@@ -12,22 +11,21 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 @Log4j2
 public class BarkPusher implements Pusher{
-    private final String token;
+    private final String deviceKey;
 
-    public BarkPusher(String token) {
-        this.token = token;
+    public BarkPusher(String deviceKey) {
+        this.deviceKey = deviceKey;
     }
 
     @Override
     public boolean push(String content) {
-        String url = UriComponentsBuilder
-                .fromHttpUrl("https://api.day.app/{token}/{title}/{content}")
-                .build(token, "Bilibili Helper Hub任务日志", content)
-                .toString();
-        String body = HttpRequest.post(url).execute().body();
-        log.info(body);
-        if (JSONUtil.isJson(body)) {
-            JSONObject resp = JSONUtil.parseObj(body);
+        JSONObject body = JSONUtil.createObj();
+        body.set("body", content)
+                .set("device_key", deviceKey)
+                .set("title", "Bilibili Helper Hub任务日志");
+        String res = HttpRequest.post("https://api.day.app/push").body(body.toJSONString(0)).execute().body();
+        if (JSONUtil.isJson(res)) {
+            JSONObject resp = JSONUtil.parseObj(res);
             if (resp.getInt("code") == 200) {
                 log.info("Bark 推送成功");
                 return true;
