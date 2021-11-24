@@ -13,6 +13,7 @@ import cn.hutool.json.JSONUtil;
 import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
+import io.cruii.bilibili.util.CosUtil;
 import io.cruii.bilibili.util.ProxyUtil;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -38,6 +39,7 @@ public class BilibiliDelegate {
 
     @Getter
     private final TaskConfig config;
+
     @Getter
     private HttpRequest httpRequest;
 
@@ -93,12 +95,14 @@ public class BilibiliDelegate {
         }
 
         // 登录成功，获取详细信息
+        // 获取头像
         InputStream avatarStream = getAvatarStream(data.getStr("face"));
         String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         File avatarFile = new File(path);
-        if (!avatarFile.exists()) {
-            FileUtil.writeFromStream(avatarStream, avatarFile);
-        }
+        FileUtil.writeFromStream(avatarStream, avatarFile);
+
+        // 上传到 oss
+        CosUtil.upload(avatarFile);
 
         String uname = data.getStr("uname");
         // 获取硬币数
