@@ -12,6 +12,15 @@ spring:
     username: root
     password: 970811
     driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 50
+      auto-commit: true
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      connection-test-query: SELECT 1
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -20,3 +29,11 @@ logging:
 
 task:
   cron: 0 10 0 * * ?
+  push:
+    dedeuserid:
+tencent:
+  secret-id:
+  secret-key:
+  cos-region:
+  bucket-name:
+  folder: avatars
