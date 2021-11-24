@@ -19,6 +19,36 @@
       "name": "db.name",
       "type": "java.lang.String",
       "description": "数据库名."
+    },
+    {
+      "name": "tencent.secret-id",
+      "type": "java.lang.String",
+      "description": "腾讯云 API 秘钥secret-id, 具体请参考https://console.cloud.tencent.com/cam/capi."
+    },
+    {
+      "name": "tencent.secret-key",
+      "type": "java.lang.String",
+      "description": "腾讯云 API 秘钥secret-key, 具体请参考https://console.cloud.tencent.com/cam/capi."
+    },
+    {
+      "name": "tencent.cos-region",
+      "type": "java.lang.String",
+      "description": "对象存储所在的区域."
+    },
+    {
+      "name": "tencent.bucket-name",
+      "type": "java.lang.String",
+      "description": "存储桶名."
+    },
+    {
+      "name": "tencent.folder",
+      "type": "java.lang.String",
+      "description": "文件上传路径."
+    },
+    {
+      "name": "task.push.dedeuserid",
+      "type": "java.lang.String",
+      "description": "B站私信推送账号的 ID."
     }
   ]
 }
