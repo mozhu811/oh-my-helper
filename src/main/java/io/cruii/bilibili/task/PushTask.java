@@ -48,10 +48,9 @@ public class PushTask implements Callable<Boolean> {
     }
 
     private boolean push(TaskConfig taskConfig, String content) {
-
         boolean result = false;
-        if (CharSequenceUtil.isNotBlank(taskConfig.getBarkToken())) {
-            BarkPusher barkPusher = new BarkPusher(taskConfig.getBarkToken());
+        if (CharSequenceUtil.isNotBlank(taskConfig.getBarkDeviceKey())) {
+            BarkPusher barkPusher = new BarkPusher(taskConfig.getBarkDeviceKey());
             result = barkPusher.push(content);
         } else if (!CharSequenceUtil.hasBlank(taskConfig.getCorpId(), taskConfig.getCorpSecret(), taskConfig.getAgentId(), taskConfig.getMediaId())) {
             QyWechatPusher pusher = new QyWechatPusher(taskConfig.getCorpId(), taskConfig.getCorpSecret(), taskConfig.getAgentId(), taskConfig.getMediaId());
