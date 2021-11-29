@@ -45,7 +45,7 @@
             <FileNamePattern>${LOG_HOME}/all-%d{yyyy-MM-dd}.%i.log</FileNamePattern>
             <!--日志文件保留天数 -->
             <maxHistory>30</maxHistory>
-            <maxFileSize>100KB</maxFileSize>
+            <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${fileLayout}</pattern>
@@ -66,7 +66,7 @@
             <FileNamePattern>${LOG_HOME}/debug-%d{yyyy-MM-dd}.%i.log</FileNamePattern>
             <!--日志文件保留天数 -->
             <maxHistory>30</maxHistory>
-            <maxFileSize>100KB</maxFileSize>
+            <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${fileLayout}</pattern>
@@ -86,7 +86,7 @@
             <FileNamePattern>${LOG_HOME}/info-%d{yyyy-MM-dd}.%i.log</FileNamePattern>
             <!--日志文件保留天数 -->
             <maxHistory>30</maxHistory>
-            <maxFileSize>100KB</maxFileSize>
+            <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${fileLayout}</pattern>
@@ -106,7 +106,7 @@
             <FileNamePattern>${LOG_HOME}/error-%d{yyyy-MM-dd}.%i.log</FileNamePattern>
             <!--日志文件保留天数 -->
             <maxHistory>30</maxHistory>
-            <maxFileSize>100KB</maxFileSize>
+            <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${fileLayout}</pattern>
