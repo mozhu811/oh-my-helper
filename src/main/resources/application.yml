@@ -16,11 +16,12 @@ spring:
     hikari:
       minimum-idle: 10
       maximum-pool-size: 50
-      auto-commit: true
-      idle-timeout: 30000
-      max-lifetime: 1800000
+      idle-timeout: 60000
+      max-lifetime: 600000
       connection-timeout: 30000
       connection-test-query: SELECT 1
+      allow-pool-suspension: true
+      pool-name: DatabasePool
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
