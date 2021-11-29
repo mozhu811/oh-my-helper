@@ -167,9 +167,10 @@ public class BilibiliDelegate {
         InputStream avatarStream = getAvatarStream(baseInfo.getStr("face"));
         String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         File avatarFile = new File(path);
-        if (!avatarFile.exists()) {
-            FileUtil.writeFromStream(avatarStream, avatarFile);
-        }
+        FileUtil.writeFromStream(avatarStream, avatarFile);
+
+        // 上传到 oss
+        CosUtil.upload(avatarFile);
 
         BilibiliUser info = new BilibiliUser();
         info.setDedeuserid(userId);
