@@ -27,7 +27,9 @@ public class CosUtil {
      * 初始化
      */
     private static void setup() {
-        tencentCloudConfig = SpringUtil.getApplicationContext().getBean("tencentCloudConfig", TencentCloudConfig.class);
+        if (tencentCloudConfig == null) {
+            tencentCloudConfig = SpringUtil.getApplicationContext().getBean("tencentCloudConfig", TencentCloudConfig.class);
+        }
         BasicCOSCredentials credentials = new BasicCOSCredentials(tencentCloudConfig.getSecretId(), tencentCloudConfig.getSecretKey());
         ClientConfig clientConfig = new ClientConfig(new Region(tencentCloudConfig.getCosRegion()));
         clientConfig.setHttpProtocol(HttpProtocol.https);
@@ -40,16 +42,15 @@ public class CosUtil {
      * @param file 待上传的文件
      */
     public static void upload(File file) {
-        if (cosClient == null) {
-            setup();
-        }
-
         try {
+            setup();
             String key = tencentCloudConfig.getFolder() + "/" + file.getName();
             PutObjectRequest putObjectRequest = new PutObjectRequest(tencentCloudConfig.getBucketName(), key, file);
             cosClient.putObject(putObjectRequest);
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            cosClient.shutdown();
         }
     }
 }
