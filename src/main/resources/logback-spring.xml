@@ -130,4 +130,10 @@
         <appender-ref ref="errorDayFile"/>
     </logger>
 
+    <logger name="org.apache.http" level="error" additivity="true">
+        <appender-ref ref="stdOut"/>
+        <appender-ref ref="debugDayFile"/>
+        <appender-ref ref="infoDayFile"/>
+        <appender-ref ref="errorDayFile"/>
+    </logger>
 </configuration>
