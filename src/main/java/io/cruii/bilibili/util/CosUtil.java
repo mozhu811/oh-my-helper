@@ -41,7 +41,7 @@ public class CosUtil {
      *
      * @param file 待上传的文件
      */
-    public static void upload(File file) {
+    public static synchronized void upload(File file) {
         try {
             setup();
             String key = tencentCloudConfig.getFolder() + "/" + file.getName();
