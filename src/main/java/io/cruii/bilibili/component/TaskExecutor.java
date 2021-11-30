@@ -162,6 +162,8 @@ public class TaskExecutor {
 
             int days = (diff / exp) + 1;
             user.setUpgradeDays(days);
+        } else {
+            user.setUpgradeDays(null);
         }
         log.info("今日已获得[{}]点经验", exp);
 
