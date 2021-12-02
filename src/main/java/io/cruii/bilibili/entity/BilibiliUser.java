@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 
 /**
@@ -43,4 +44,7 @@ public class BilibiliUser implements Serializable{
 
     private Boolean isLogin;
 
+    private LocalDateTime lastRunTime;
+
+    private LocalDateTime createTime;
 }

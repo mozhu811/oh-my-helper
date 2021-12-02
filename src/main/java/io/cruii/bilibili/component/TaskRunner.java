@@ -11,6 +11,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
@@ -59,17 +60,17 @@ public class TaskRunner {
         }).start();
     }
 
+    public void run(String uid) {
+        TaskConfig taskConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, uid));
+        Optional.ofNullable(taskConfig)
+                .ifPresent(this::accept);
+    }
+
     @Scheduled(cron = "${task.cron:0 10 0 * * ?}")
     public void run() {
         taskConfigMapper
                 .selectList(null)
                 .forEach(this::accept);
-    }
-
-    public void run(String uid) {
-        TaskConfig taskConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, uid));
-        Optional.ofNullable(taskConfig)
-                .ifPresent(this::accept);
     }
 
     private void accept(TaskConfig config) {
@@ -80,6 +81,7 @@ public class TaskRunner {
 
             TaskExecutor taskExecutor = new TaskExecutor(delegate);
             user = taskExecutor.execute();
+            user.setLastRunTime(LocalDateTime.now());
             bilibiliUserMapper.updateById(user);
         });
     }
