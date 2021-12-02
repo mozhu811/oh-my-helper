@@ -3,13 +3,17 @@ package io.cruii.bilibili.component;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.SecureUtil;
 import cn.hutool.http.Header;
+import cn.hutool.http.HttpException;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.github.rholder.retry.*;
 import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
@@ -27,6 +31,8 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /**
@@ -45,6 +51,20 @@ public class BilibiliDelegate {
 
     private String proxyHost;
     private Integer proxyPort;
+
+    private final Retryer<String> retryer = RetryerBuilder.<String>newBuilder()
+            .retryIfExceptionOfType(HttpException.class)
+            .retryIfExceptionOfType(IORuntimeException.class)
+            .withStopStrategy(StopStrategies.stopAfterAttempt(12))
+            .withRetryListener(new RetryListener() {
+                @Override
+                public <V> void onRetry(Attempt<V> attempt) {
+                    if (attempt.hasException()) {
+                        log.error("第{}次调用失败: {}, 进行重试", attempt.getAttemptNumber(), attempt.getExceptionCause().getMessage());
+                    }
+                }
+            })
+            .build();
 
     public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct) {
         TaskConfig taskConfig = new TaskConfig();
@@ -99,7 +119,15 @@ public class BilibiliDelegate {
         InputStream avatarStream = getAvatarStream(data.getStr("face"));
         String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         File avatarFile = new File(path);
-        FileUtil.writeFromStream(avatarStream, avatarFile);
+        if (avatarFile.exists()) {
+            String localMd5 = SecureUtil.md5(avatarFile);
+            String remoteMd5 = SecureUtil.md5(avatarStream);
+            if (!localMd5.equals(remoteMd5)) {
+                FileUtil.writeFromStream(avatarStream, avatarFile);
+            }
+        } else {
+            FileUtil.writeFromStream(avatarStream, avatarFile);
+        }
 
         // 上传到 oss
         CosUtil.upload(avatarFile);
@@ -167,7 +195,15 @@ public class BilibiliDelegate {
         InputStream avatarStream = getAvatarStream(baseInfo.getStr("face"));
         String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         File avatarFile = new File(path);
-        FileUtil.writeFromStream(avatarStream, avatarFile);
+        if (avatarFile.exists()) {
+            String localMd5 = SecureUtil.md5(avatarFile);
+            String remoteMd5 = SecureUtil.md5(avatarStream);
+            if (!localMd5.equals(remoteMd5)) {
+                FileUtil.writeFromStream(avatarStream, avatarFile);
+            }
+        } else {
+            FileUtil.writeFromStream(avatarStream, avatarFile);
+        }
 
         // 上传到 oss
         CosUtil.upload(avatarFile);
@@ -619,9 +655,7 @@ public class BilibiliDelegate {
             httpRequest.setHttpProxy(proxyHost, proxyPort);
         }
 
-        String body = httpRequest
-                .execute().body();
-        return JSONUtil.parseObj(body);
+        return retryableCall(httpRequest);
     }
 
     private JSONObject doPost(String url, String requestBody) {
@@ -643,8 +677,20 @@ public class BilibiliDelegate {
         if (!ObjectUtil.hasNull(proxyHost, proxyPort)) {
             httpRequest.setHttpProxy(proxyHost, proxyPort);
         }
-        String body = httpRequest
-                .body(requestBody).execute().body();
-        return JSONUtil.parseObj(body);
+
+        return retryableCall(httpRequest.body(requestBody));
+    }
+
+    private JSONObject retryableCall(HttpRequest httpRequest) {
+        Callable<String> task = () -> httpRequest.execute().body();
+        String responseBody = null;
+        try {
+            responseBody = retryer.call(task);
+        } catch (ExecutionException e) {
+            log.error("重试调用接口[{}]失败, {}", httpRequest.getUrl(), e.getMessage());
+        } catch (RetryException e) {
+            log.error("调用接口[{}]超过执行次数, {}", httpRequest.getUrl(), e.getMessage());
+        }
+        return JSONUtil.parseObj(responseBody);
     }
 }
