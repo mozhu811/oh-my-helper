@@ -11,7 +11,7 @@ import java.util.concurrent.Future;
  * @author cruii
  * Created on 2021/9/24
  */
-public final class TaskThreadPoolExecutor extends ThreadPoolTaskExecutor {
+public final class BilibiliTaskExecutor extends ThreadPoolTaskExecutor {
     @Override
     public void execute(Runnable task) {
         super.execute(ThreadMdcUtil.wrap(task, MDC.getCopyOfContextMap()));

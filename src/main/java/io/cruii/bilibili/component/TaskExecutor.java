@@ -91,9 +91,9 @@ public class TaskExecutor {
             user = calExp();
         }
         PushTask pushTask = new PushTask(MDC.get("traceId"), delegate);
-        Boolean result = pushTask.push();
+//        Boolean result = pushTask.push();
 
-        log.info("账号[{}]推送结果: {}", user.getDedeuserid(), result);
+//        log.info("账号[{}]推送结果: {}", user.getDedeuserid(), result);
 
         BilibiliUserContext.remove();
 
