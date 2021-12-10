@@ -15,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 /**
@@ -23,7 +22,7 @@ import java.util.stream.Collectors;
  * Created on 2021/10/11
  */
 @Log4j2
-public class PushTask implements Callable<Boolean> {
+public class PushTask {
     private final String traceId;
     private final BilibiliDelegate delegate;
 
@@ -33,8 +32,7 @@ public class PushTask implements Callable<Boolean> {
         this.delegate = delegate;
     }
 
-    @Override
-    public Boolean call() {
+    public Boolean push() {
         String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
         List<String> logs = FileUtil.readLines(new File("logs/all-" + date + ".0.log"), StandardCharsets.UTF_8);
         assert traceId != null;

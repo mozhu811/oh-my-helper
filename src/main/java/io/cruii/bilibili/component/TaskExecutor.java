@@ -28,25 +28,6 @@ import java.util.concurrent.TimeUnit;
 public class TaskExecutor {
     private final List<Task> taskList = new ArrayList<>();
     private final BilibiliDelegate delegate;
-    private static final ThreadPoolTaskExecutor PUSH_EXECUTOR;
-
-    static {
-        ThreadPoolTaskExecutor executor = new TaskThreadPoolExecutor();
-        // 核心线程数：线程池创建时候初始化的线程数
-        executor.setCorePoolSize(50);
-        // 最大线程数：线程池最大的线程数，只有在缓冲队列满了之后才会申请超过核心线程数的线程
-        executor.setMaxPoolSize(50);
-        // 缓冲队列：用来缓冲执行任务的队列
-        executor.setQueueCapacity(500);
-        // 允许线程的空闲时间60秒：当超过了核心线程之外的线程在空闲时间到达之后会被销毁
-        executor.setKeepAliveSeconds(120);
-        // 线程池名的前缀：设置好了之后可以方便我们定位处理任务所在的线程池
-        executor.setThreadNamePrefix("push-");
-        // 缓冲队列满了之后的拒绝策略：由调用线程处理（一般是主线程）
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        executor.initialize();
-        PUSH_EXECUTOR = executor;
-    }
 
     public TaskExecutor(BilibiliDelegate delegate) {
         this.delegate = delegate;
@@ -109,28 +90,14 @@ public class TaskExecutor {
 
             user = calExp();
         }
-
-        Boolean result = push();
+        PushTask pushTask = new PushTask(MDC.get("traceId"), delegate);
+        Boolean result = pushTask.push();
 
         log.info("账号[{}]推送结果: {}", user.getDedeuserid(), result);
 
         BilibiliUserContext.remove();
 
         return user;
-    }
-
-    private Boolean push() {
-        Future<Boolean> future = PUSH_EXECUTOR.submit(new PushTask(MDC.get("traceId"), delegate));
-        try {
-            return future.get();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            Thread.currentThread().interrupt();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-            log.error(e.getMessage());
-        }
-        return false;
     }
 
     private BilibiliUser calExp() {
