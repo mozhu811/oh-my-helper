@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
@@ -29,11 +29,11 @@ public class TaskRunner {
 
     private final TaskConfigMapper taskConfigMapper;
     private final BilibiliUserMapper bilibiliUserMapper;
-    private final Executor bilibiliExecutor;
+    private final TaskThreadPoolExecutor bilibiliExecutor;
 
     public TaskRunner(TaskConfigMapper taskConfigMapper,
                       BilibiliUserMapper bilibiliUserMapper,
-                      Executor bilibiliExecutor) {
+                      TaskThreadPoolExecutor bilibiliExecutor) {
         this.taskConfigMapper = taskConfigMapper;
         this.bilibiliUserMapper = bilibiliUserMapper;
         this.bilibiliExecutor = bilibiliExecutor;
@@ -68,14 +68,21 @@ public class TaskRunner {
 
     @Scheduled(cron = "${task.cron:0 10 0 * * ?}")
     public void run() {
-        taskConfigMapper
-                .selectList(null)
-                .forEach(this::accept);
+        ConcurrentLinkedQueue<TaskConfig> queue = new ConcurrentLinkedQueue<>(taskConfigMapper
+                .selectList(null));
+        while (!queue.isEmpty()) {
+            if (bilibiliExecutor.getActiveCount() < bilibiliExecutor.getCorePoolSize()) {
+                log.info("当前空闲线程数：" + (bilibiliExecutor.getCorePoolSize() - bilibiliExecutor.getActiveCount()));
+                accept(queue.poll());
+            } else {
+                log.info("当前线程已满，等待");
+            }
+        }
     }
 
     private void accept(TaskConfig config) {
-        bilibiliExecutor.execute(() -> {
-            BilibiliDelegate delegate = new BilibiliDelegate(config);
+        BilibiliDelegate delegate = new BilibiliDelegate(config);
+        bilibiliExecutor.submit(() -> {
             BilibiliUser user = delegate.getUser();
             BilibiliUserContext.set(user);
 
