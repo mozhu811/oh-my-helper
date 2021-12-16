@@ -3,7 +3,7 @@ package io.cruii.bilibili.service.impl;
 import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.cruii.bilibili.component.BilibiliDelegate;
-import io.cruii.bilibili.component.TaskRunner;
+import io.cruii.bilibili.component.TaskManager;
 import io.cruii.bilibili.dto.TaskConfigDTO;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
@@ -30,12 +30,15 @@ public class TaskServiceImpl implements TaskService {
 
     private final MapperFactory mapperFactory;
 
+    private final TaskManager taskManager;
     public TaskServiceImpl(TaskConfigMapper taskConfigMapper,
                            BilibiliUserMapper bilibiliUserMapper,
-                           MapperFactory mapperFactory) {
+                           MapperFactory mapperFactory,
+                           TaskManager taskManager) {
         this.taskConfigMapper = taskConfigMapper;
         this.bilibiliUserMapper = bilibiliUserMapper;
         this.mapperFactory = mapperFactory;
+        this.taskManager = taskManager;
     }
 
     @Override
@@ -66,7 +69,7 @@ public class TaskServiceImpl implements TaskService {
             }
 
             // 初次执行任务
-            TaskRunner.getTaskQueue().put(user.getDedeuserid());
+            taskManager.put(config);
             if (Boolean.TRUE.equals(config.getFollowDeveloper())) {
                 String devUid = "287969457";
                 JSONObject followResp = delegate.followUser(devUid);

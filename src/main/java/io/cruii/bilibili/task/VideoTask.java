@@ -58,14 +58,19 @@ public abstract class VideoTask extends AbstractTask {
      */
     protected void initFollowList() {
         follow.clear();
-        JSONObject resp = delegate.getFollowedUpPostVideo();
-        JSONArray videos = resp.getJSONObject("data").getJSONArray("cards");
-        if (videos == null || videos.isEmpty()) {
-            return;
-        }
-        for (Object video : videos) {
-            String bvid = ((JSONObject) video).getByPath("desc.bvid", String.class);
-            follow.add(bvid);
+        try {
+            JSONObject resp = delegate.getFollowedUpPostVideo();
+            JSONArray videos = resp.getJSONObject("data").getJSONArray("cards");
+            if (videos == null || videos.isEmpty()) {
+                return;
+            }
+            for (Object video : videos) {
+                String bvid = ((JSONObject) video).getByPath("desc.bvid", String.class);
+                follow.add(bvid);
+            }
+        } catch (Exception e){
+            log.error("获取已关注UP主最近发布视频出错", e);
+            follow.addAll(trend);
         }
     }
 

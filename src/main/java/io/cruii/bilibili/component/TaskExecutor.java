@@ -48,38 +48,19 @@ public class TaskExecutor {
         taskList.add(new CheckCookieTask(delegate));
         Collections.reverse(taskList);
 
-        Retryer<Boolean> retryer = RetryerBuilder.<Boolean>newBuilder()
-                .retryIfExceptionOfType(HttpException.class)
-                .retryIfExceptionOfType(IORuntimeException.class)
-                .withStopStrategy(StopStrategies.stopAfterAttempt(12))
-                .withRetryListener(new RetryListener() {
-                    @Override
-                    public <V> void onRetry(Attempt<V> attempt) {
-                        if (attempt.hasException()) {
-                            log.error("第{}次调用失败: {}, 进行重试", attempt.getAttemptNumber(), attempt.getExceptionCause().getMessage());
-                        }
-                    }
-                })
-                .build();
         boolean expired = false;
         for (Task task : taskList) {
             try {
                 log.info("[{}]", task.getName());
-                retryer.call(() -> {
-                    task.run();
-                    return true;
-                });
+                task.run();
                 TimeUnit.SECONDS.sleep(3L);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-            } catch (ExecutionException e) {
-                log.error("重试[{}]任务失败, {}", task.getName(), e.getMessage());
-                if (e.getCause() instanceof BilibiliCookieExpiredException) {
-                    expired = true;
-                    break;
-                }
-            } catch (RetryException e) {
-                log.error("[{}]任务超过执行次数, {}", task.getName(), e.getMessage());
+            } catch (BilibiliCookieExpiredException e) {
+                expired = true;
+                break;
+            } catch (Exception e) {
+                log.error("[{}]任务执行失败", task.getName(), e);
             }
         }
 
@@ -91,9 +72,15 @@ public class TaskExecutor {
             user = calExp();
         }
         PushTask pushTask = new PushTask(MDC.get("traceId"), delegate);
-        Boolean result = pushTask.push();
-
+        boolean result = false;
+        try {
+            result = pushTask.push();
+        } catch (IORuntimeException e) {
+            e.printStackTrace();
+            log.error("推送失败, {}", e.getMessage());
+        }
         log.info("账号[{}]推送结果: {}", user.getDedeuserid(), result);
+
 
         BilibiliUserContext.remove();
 

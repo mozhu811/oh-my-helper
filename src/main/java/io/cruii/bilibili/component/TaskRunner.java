@@ -1,20 +1,21 @@
 package io.cruii.bilibili.component;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
 import io.cruii.bilibili.mapper.BilibiliUserMapper;
 import io.cruii.bilibili.mapper.TaskConfigMapper;
 import lombok.extern.log4j.Log4j2;
+import org.slf4j.MDC;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
@@ -29,67 +30,48 @@ public class TaskRunner {
 
     private final TaskConfigMapper taskConfigMapper;
     private final BilibiliUserMapper bilibiliUserMapper;
-    private final TaskThreadPoolExecutor bilibiliExecutor;
+    private final ThreadPoolTaskExecutor bilibiliExecutor;
+    private final TaskManager taskManager;
 
     public TaskRunner(TaskConfigMapper taskConfigMapper,
                       BilibiliUserMapper bilibiliUserMapper,
-                      TaskThreadPoolExecutor bilibiliExecutor) {
+                      ThreadPoolTaskExecutor bilibiliExecutor,
+                      TaskManager taskManager) {
         this.taskConfigMapper = taskConfigMapper;
         this.bilibiliUserMapper = bilibiliUserMapper;
         this.bilibiliExecutor = bilibiliExecutor;
-        startTaskThread();
+        this.taskManager = taskManager;
     }
 
     public static BlockingQueue<String> getTaskQueue() {
         return TASK_QUEUE;
     }
 
-    private void startTaskThread() {
-        log.info("开启任务线程");
-        new Thread(() -> {
-            while (true) {
-                try {
-                    String uid = TASK_QUEUE.take();
-                    run(uid);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    Thread.currentThread().interrupt();
-                }
-
-            }
-        }).start();
-    }
-
-    public void run(String uid) {
-        TaskConfig taskConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, uid));
-        Optional.ofNullable(taskConfig)
-                .ifPresent(this::accept);
-    }
-
     @Scheduled(cron = "${task.cron:0 10 0 * * ?}")
     public void run() {
-        ConcurrentLinkedQueue<TaskConfig> queue = new ConcurrentLinkedQueue<>(taskConfigMapper
-                .selectList(null));
-        while (!queue.isEmpty()) {
-            if (bilibiliExecutor.getActiveCount() < bilibiliExecutor.getCorePoolSize()) {
-                log.info("当前空闲线程数：" + (bilibiliExecutor.getCorePoolSize() - bilibiliExecutor.getActiveCount()));
-                accept(queue.poll());
-            } else {
-                log.info("当前线程已满，等待");
-            }
-        }
+        List<TaskConfig> taskConfigs = taskConfigMapper.selectList(null);
+        taskManager.putAll(taskConfigs);
     }
 
-    private void accept(TaskConfig config) {
-        BilibiliDelegate delegate = new BilibiliDelegate(config);
-        bilibiliExecutor.submit(() -> {
-            BilibiliUser user = delegate.getUser();
-            BilibiliUserContext.set(user);
+    @SuppressWarnings("InfiniteLoopStatement")
+    @PostConstruct
+    public void init() {
+        for (int i = 0; i < 10; i++) {
+            bilibiliExecutor.execute(() -> {
+                while (true) {
+                    TaskConfig taskConfig = taskManager.get();
+                    MDC.put("traceId", taskConfig.getDedeuserid());
+                    BilibiliDelegate delegate = new BilibiliDelegate(taskConfig);
+                    BilibiliUser user = delegate.getUser();
+                    BilibiliUserContext.set(user);
 
-            TaskExecutor taskExecutor = new TaskExecutor(delegate);
-            user = taskExecutor.execute();
-            user.setLastRunTime(LocalDateTime.now());
-            bilibiliUserMapper.updateById(user);
-        });
+                    TaskExecutor taskExecutor = new TaskExecutor(delegate);
+                    user = taskExecutor.execute();
+                    user.setLastRunTime(LocalDateTime.now());
+                    bilibiliUserMapper.updateById(user);
+                }
+
+            });
+        }
     }
 }

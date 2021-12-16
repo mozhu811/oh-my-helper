@@ -55,7 +55,7 @@ public class BilibiliDelegate {
     private final Retryer<String> retryer = RetryerBuilder.<String>newBuilder()
             .retryIfExceptionOfType(HttpException.class)
             .retryIfExceptionOfType(IORuntimeException.class)
-            .withStopStrategy(StopStrategies.stopAfterAttempt(12))
+            .withStopStrategy(StopStrategies.stopAfterAttempt(3))
             .withRetryListener(new RetryListener() {
                 @Override
                 public <V> void onRetry(Attempt<V> attempt) {
