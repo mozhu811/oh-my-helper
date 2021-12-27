@@ -43,35 +43,11 @@ public abstract class VideoTask extends AbstractTask {
 
     public final Random random = new Random();
 
-    public final List<String> follow = new ArrayList<>();
-
     public final List<String> trend = new ArrayList<>();
 
     VideoTask(BilibiliDelegate delegate) {
         super(delegate);
-        initFollowList();
         initTrend();
-    }
-
-    /**
-     * 初始化已关注UP主最近发布视频的BVID
-     */
-    protected void initFollowList() {
-        follow.clear();
-        try {
-            JSONObject resp = delegate.getFollowedUpPostVideo();
-            JSONArray videos = resp.getJSONObject("data").getJSONArray("cards");
-            if (videos == null || videos.isEmpty()) {
-                return;
-            }
-            for (Object video : videos) {
-                String bvid = ((JSONObject) video).getByPath("desc.bvid", String.class);
-                follow.add(bvid);
-            }
-        } catch (Exception e){
-            log.error("获取已关注UP主最近发布视频出错", e);
-            follow.addAll(trend);
-        }
     }
 
     /**

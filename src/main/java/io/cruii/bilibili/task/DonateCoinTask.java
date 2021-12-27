@@ -10,6 +10,7 @@ import lombok.extern.log4j.Log4j2;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -36,7 +37,6 @@ public class DonateCoinTask extends VideoTask {
         // 防止全部都投过币而导致任务卡死
         counter++;
         if (counter > 3) {
-            initFollowList();
             initTrend();
             counter = 0;
         }
@@ -65,22 +65,14 @@ public class DonateCoinTask extends VideoTask {
             return;
         }
 
-        // 获取投币策略
-        Integer donatePriority = config.getDonateCoinStrategy();
         List<String> bvidList;
-        if (donatePriority == 1) {
-            // 热榜投币
-            Collections.shuffle(trend);
-            bvidList = trend.stream().limit(actual).collect(Collectors.toList());
-        } else {
-            // 动态列表投币
-            Collections.shuffle(follow);
-            bvidList = follow.stream().limit(actual).collect(Collectors.toList());
-        }
+        // 热榜投币
+        Collections.shuffle(trend);
+        bvidList = trend.stream().limit(actual).collect(Collectors.toList());
 
         boolean done = doDonate(bvidList);
 
-        // 若为完成当日任务重复执行
+        // 若未完成当日任务重复执行
         if (!done) {
             run();
         } else {
@@ -100,7 +92,7 @@ public class DonateCoinTask extends VideoTask {
      */
     private int calDiff() {
         JSONObject coinExpToday = delegate.getCoinExpToday();
-        Integer data = coinExpToday.getInt("data");
+        Integer data = coinExpToday.getInt("data", 0);
         return config.getDonateCoins() - data / 10;
     }
 
@@ -130,14 +122,9 @@ public class DonateCoinTask extends VideoTask {
     private boolean doDonate(List<String> bvidList) {
         bvidList.stream()
                 .filter(bvid -> {
+                    // 若视频已投币，则跳过
                     JSONObject resp = delegate.checkDonateCoin(bvid);
-                    if (resp.getByPath("data.multiply", Integer.class) > 0) {
-                        String videoTitle = getVideoTitle(bvid);
-                        log.info("已为视频[{}]投过币，本次跳过", videoTitle);
-                        bvidList.remove(bvid);
-                        return false;
-                    }
-                    return true;
+                    return resp.getByPath("data.multiply", Integer.class) < 1;
                 })
                 .forEach(bvid -> {
                     JSONObject resp = delegate.donateCoin(bvid, 1, 1);
@@ -146,6 +133,12 @@ public class DonateCoinTask extends VideoTask {
                         log.info("为视频[{}]投币成功 ✔️", videoTitle);
                     } else {
                         log.error("为视频[{}]投币失败 ❌", resp.getStr(MESSAGE));
+                    }
+                    try {
+                        TimeUnit.SECONDS.sleep(3);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.error(e);
                     }
                 });
 

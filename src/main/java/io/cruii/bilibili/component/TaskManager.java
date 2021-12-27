@@ -25,7 +25,7 @@ public class TaskManager {
         tasks.addAll(taskConfigs);
     }
 
-    public synchronized TaskConfig get() {
+    public TaskConfig get() {
         TaskConfig taskConfig = null;
         try {
             taskConfig = tasks.take();

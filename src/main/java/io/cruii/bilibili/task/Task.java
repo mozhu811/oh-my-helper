@@ -8,7 +8,7 @@ package io.cruii.bilibili.task;
  */
 public interface Task {
 
-    void run();
+    void run() throws Exception;
 
     String getName();
 

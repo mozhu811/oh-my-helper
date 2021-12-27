@@ -25,14 +25,9 @@ public class ChargeTask extends AbstractTask {
     }
 
     @Override
-    public void run() {
+    public void run() throws Exception {
         checkAttemptsAndChangeProxy();
         addAttempts();
-
-        if (Boolean.FALSE.equals(config.getAutoCharge())) {
-            log.info("[{}]未启用自动充电功能 ❌", config.getDedeuserid());
-            return;
-        }
 
         BilibiliUser user = BilibiliUserContext.get();
 
@@ -57,12 +52,13 @@ public class ChargeTask extends AbstractTask {
         }
         String targetId = config.getAutoChargeTarget();
         if (Objects.equals(targetId, "0")) {
-            targetId = config.getDedeuserid();
+            log.info("充电对象设置为 0，将为作者[{}]进行充电，感谢您对本项目的支持", AUTHOR_MID);
+            targetId = AUTHOR_MID;
         }
 
         BilibiliUser targetUser = delegate.getUser(targetId);
         if (targetUser == null) {
-            log.info("充电对象不存在，将为作者[{}]进行充电", AUTHOR_MID);
+            log.info("充电对象未找到，将为作者[{}]进行充电", AUTHOR_MID);
             targetId = AUTHOR_MID;
         }
 

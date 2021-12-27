@@ -2,7 +2,6 @@ package io.cruii.bilibili.util;
 
 import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.io.resource.ResourceUtil;
-import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
@@ -14,7 +13,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -29,25 +27,17 @@ public class ProxyUtil {
     private ProxyUtil() {
     }
 
-
-    public static synchronized String get() {
+    static {
         try {
-            TimeUnit.SECONDS.sleep(5L);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            InputStream stream = ResourceUtil.getStream("proxy.properties");
+            Properties properties = new Properties();
+            properties.load(stream);
+            proxyApi = properties.getProperty("proxy.api");
+        } catch (IOException e) {
+            log.error("无法获取proxy.properties文件");
         }
-
-        if (CharSequenceUtil.isBlank(proxyApi)) {
-            try {
-                InputStream stream = ResourceUtil.getStream("proxy.properties");
-                Properties properties = new Properties();
-                properties.load(stream);
-                proxyApi = properties.getProperty("proxy.api");
-            } catch (IOException e) {
-                log.error("无法获取proxy.properties文件");
-            }
-        }
-
+    }
+    public static synchronized String get() {
         if (proxyList.isEmpty()) {
             log.debug("获取代理地址");
             String body = HttpRequest.get(proxyApi)

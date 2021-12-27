@@ -1,24 +1,15 @@
 package io.cruii.bilibili.component;
 
-import cn.hutool.core.io.IORuntimeException;
-import cn.hutool.http.HttpException;
 import cn.hutool.json.JSONObject;
-import com.github.rholder.retry.*;
 import io.cruii.bilibili.context.BilibiliUserContext;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.exception.BilibiliCookieExpiredException;
 import io.cruii.bilibili.task.*;
 import lombok.extern.log4j.Log4j2;
 import org.slf4j.MDC;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author cruii
@@ -31,6 +22,8 @@ public class TaskExecutor {
 
     public TaskExecutor(BilibiliDelegate delegate) {
         this.delegate = delegate;
+        taskList.add(new CheckCookieTask(delegate));
+        taskList.add(new GetCoinChangeLogTask(delegate));
         taskList.add(new WatchVideoTask(delegate));
         taskList.add(new MangaTask(delegate));
         taskList.add(new DonateCoinTask(delegate));
@@ -43,24 +36,18 @@ public class TaskExecutor {
     }
 
     public BilibiliUser execute() {
-        Collections.shuffle(taskList);
-        taskList.add(new GetCoinChangeLogTask(delegate));
-        taskList.add(new CheckCookieTask(delegate));
-        Collections.reverse(taskList);
-
         boolean expired = false;
         for (Task task : taskList) {
             try {
                 log.info("[{}]", task.getName());
                 task.run();
-                TimeUnit.SECONDS.sleep(3L);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (BilibiliCookieExpiredException e) {
                 expired = true;
                 break;
             } catch (Exception e) {
-                log.error("[{}]任务执行失败", task.getName(), e);
+                log.error("[{}]任务执行失败",  task.getName(), e);
             }
         }
 
@@ -75,20 +62,18 @@ public class TaskExecutor {
         boolean result = false;
         try {
             result = pushTask.push();
-        } catch (IORuntimeException e) {
-            e.printStackTrace();
-            log.error("推送失败, {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("推送失败, {}", e.getMessage(), e);
         }
         log.info("账号[{}]推送结果: {}", user.getDedeuserid(), result);
 
-
         BilibiliUserContext.remove();
-
+        MDC.clear();
         return user;
     }
 
     private BilibiliUser calExp() {
-        BilibiliUser user = delegate.getUser();
+        BilibiliUser user = BilibiliUserContext.get();
         int exp = 0;
         // 获取当日获取的经验
         JSONObject expRewardStatus = delegate.getExpRewardStatus();

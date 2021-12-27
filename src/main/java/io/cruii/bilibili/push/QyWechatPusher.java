@@ -1,11 +1,19 @@
 package io.cruii.bilibili.push;
 
-import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import io.cruii.bilibili.util.HttpUtil;
 import lombok.extern.log4j.Log4j2;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.util.EntityUtils;
 
+import java.net.URI;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -28,8 +36,6 @@ public class QyWechatPusher implements Pusher {
 
     @Override
     public boolean push(String content) {
-        HttpRequest httpRequest = HttpRequest.post("https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="
-                + getAccessToken());
         JSONObject requestBody = JSONUtil.createObj();
         requestBody.set("touser", "@all")
                 .set("msgtype", "mpnews")
@@ -45,24 +51,45 @@ public class QyWechatPusher implements Pusher {
                                                 .collect(Collectors.joining("\n")) + "\n\n点击查看详细日志"))));
 
 
-        httpRequest.body(requestBody.toJSONString(0));
-        String body = httpRequest.execute().body();
-        log.info(body);
-        if (JSONUtil.isJson(body)) {
-            JSONObject resp = JSONUtil.parseObj(body);
-            if (resp.getInt("errcode") == 0) {
-                log.info("推送成功");
+        Map<String, String> params = new HashMap<>();
+        params.put("access_token", getAccessToken());
+        URI uri = HttpUtil.buildUri("https://qyapi.weixin.qq.com/cgi-bin/message/send", params);
+        StringEntity entity = new StringEntity(requestBody.toJSONString(0), "UTF-8");
+        entity.setContentType("application/json");
+        HttpPost httpPost = new HttpPost(uri);
+        httpPost.setEntity(entity);
+
+        try (CloseableHttpResponse httpResponse = HttpUtil.buildHttpClient().execute(httpPost)) {
+            if (httpResponse.getStatusLine().getStatusCode() == 200) {
+                log.info("企业微信推送成功");
+                EntityUtils.consume(httpResponse.getEntity());
                 return true;
             }
+            log.error("企业微信推送失败: {}", EntityUtils.toString(httpResponse.getEntity()));
+            EntityUtils.consume(httpResponse.getEntity());
+        } catch (Exception e) {
+            log.error("企业微信推送失败", e);
         }
-        log.error("推送失败：{}", body);
         return false;
     }
 
     private String getAccessToken() {
-        String resp = HttpRequest.get("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid="
-                + corpId + "&corpsecret=" + corpSecret).execute().body();
+        Map<String, String> params = new HashMap<>();
+        params.put("corpid", corpId);
+        params.put("corpsecret", corpSecret);
+        URI uri = HttpUtil.buildUri("https://qyapi.weixin.qq.com/cgi-bin/gettoken", params);
+        HttpGet httpGet = new HttpGet(uri);
 
-        return JSONUtil.parseObj(resp).getStr("access_token");
+        try (CloseableHttpResponse httpResponse = HttpUtil.buildHttpClient().execute(httpGet)) {
+            if (httpResponse.getStatusLine().getStatusCode() == 200) {
+                String body = EntityUtils.toString(httpResponse.getEntity());
+                String accessToken = JSONUtil.parseObj(body).getStr("access_token");
+                EntityUtils.consume(httpResponse.getEntity());
+                return accessToken;
+            }
+        } catch (Exception e) {
+            log.error("获取企业微信access_token失败", e);
+        }
+        throw new RuntimeException("获取企业微信access_token失败");
     }
 }

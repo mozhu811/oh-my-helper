@@ -31,7 +31,7 @@ public abstract class AbstractTask implements Task {
     public void checkAttemptsAndChangeProxy() {
         if (attempts % 3 == 0 && attempts <= 9) {
             log.info("切换代理");
-            delegate.changeProxy();
+            delegate.setProxy();
         }
     }
 }

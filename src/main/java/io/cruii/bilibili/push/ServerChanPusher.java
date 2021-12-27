@@ -1,10 +1,18 @@
 package io.cruii.bilibili.push;
 
-import cn.hutool.http.Header;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
+import io.cruii.bilibili.util.HttpUtil;
 import lombok.extern.log4j.Log4j2;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author cruii
@@ -20,17 +28,25 @@ public class ServerChanPusher implements Pusher {
 
     @Override
     public boolean push(String content) {
-        String body = HttpRequest.post("https://sctapi.ftqq.com/" + scKey + ".send")
-                .header(Header.CONTENT_TYPE, "application/x-www-form-urlencoded")
-                .body("title=Bilibili Helper Hub任务日志&desp=" + content.replace("\n", "\n\n")).execute().body();
-        if (JSONUtil.isJson(body)) {
-            JSONObject resp = JSONUtil.parseObj(body);
-            if (resp.getInt("code") == 0) {
-                log.info("ServerChan推送成功");
+        URI uri = HttpUtil.buildUri("https://sctapi.ftqq.com/" + scKey + ".send");
+        List<NameValuePair> formData = new ArrayList<>();
+        formData.add(new BasicNameValuePair("title", "Bilibili Helper Hub任务日志"));
+        formData.add(new BasicNameValuePair("desp", content.replace("\n", "\n\n")));
+        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formData, StandardCharsets.UTF_8);
+        HttpPost httpPost = new HttpPost(uri);
+        httpPost.setEntity(entity);
+
+        try (CloseableHttpResponse httpResponse = HttpUtil.buildHttpClient().execute(httpPost)) {
+            if (httpResponse.getStatusLine().getStatusCode() == 200) {
+                log.info("Server酱推送成功");
+                EntityUtils.consume(httpResponse.getEntity());
                 return true;
             }
+            log.error("Server酱推送失败: {}", EntityUtils.toString(httpResponse.getEntity()));
+            EntityUtils.consume(httpResponse.getEntity());
+        } catch (Exception e) {
+            log.error("Server酱推送失败", e);
         }
-        log.error("ServerChan推送失败：{}", body);
         return false;
     }
 }

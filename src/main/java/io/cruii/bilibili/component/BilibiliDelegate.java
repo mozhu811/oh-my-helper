@@ -1,38 +1,40 @@
 package io.cruii.bilibili.component;
 
-import cn.hutool.core.codec.Base64;
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.IORuntimeException;
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.crypto.SecureUtil;
-import cn.hutool.http.Header;
-import cn.hutool.http.HttpException;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.github.rholder.retry.*;
 import io.cruii.bilibili.constant.BilibiliAPI;
 import io.cruii.bilibili.entity.BilibiliUser;
 import io.cruii.bilibili.entity.TaskConfig;
+import io.cruii.bilibili.exception.RequestException;
 import io.cruii.bilibili.util.CosUtil;
+import io.cruii.bilibili.util.HttpUtil;
 import io.cruii.bilibili.util.ProxyUtil;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.http.MediaType;
-import org.springframework.util.LinkedMultiValueMap;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
-import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /**
@@ -46,25 +48,9 @@ public class BilibiliDelegate {
     @Getter
     private final TaskConfig config;
 
-    @Getter
-    private HttpRequest httpRequest;
-
     private String proxyHost;
-    private Integer proxyPort;
 
-    private final Retryer<String> retryer = RetryerBuilder.<String>newBuilder()
-            .retryIfExceptionOfType(HttpException.class)
-            .retryIfExceptionOfType(IORuntimeException.class)
-            .withStopStrategy(StopStrategies.stopAfterAttempt(3))
-            .withRetryListener(new RetryListener() {
-                @Override
-                public <V> void onRetry(Attempt<V> attempt) {
-                    if (attempt.hasException()) {
-                        log.error("第{}次调用失败: {}, 进行重试", attempt.getAttemptNumber(), attempt.getExceptionCause().getMessage());
-                    }
-                }
-            })
-            .build();
+    private Integer proxyPort;
 
     public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct) {
         TaskConfig taskConfig = new TaskConfig();
@@ -73,6 +59,7 @@ public class BilibiliDelegate {
         taskConfig.setBiliJct(biliJct);
         taskConfig.setUserAgent(UA);
         this.config = taskConfig;
+        setProxy();
     }
 
     public BilibiliDelegate(TaskConfig config) {
@@ -80,10 +67,10 @@ public class BilibiliDelegate {
         if (CharSequenceUtil.isBlank(config.getUserAgent())) {
             config.setUserAgent(UA);
         }
-        changeProxy();
+        setProxy();
     }
 
-    public void changeProxy() {
+    public void setProxy() {
         String proxy = ProxyUtil.get();
 
         setProxy(proxy);
@@ -116,21 +103,26 @@ public class BilibiliDelegate {
 
         // 登录成功，获取详细信息
         // 获取头像
-        InputStream avatarStream = getAvatarStream(data.getStr("face"));
-        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
-        File avatarFile = new File(path);
-        if (avatarFile.exists()) {
-            String localMd5 = SecureUtil.md5(avatarFile);
-            String remoteMd5 = SecureUtil.md5(avatarStream);
-            if (!localMd5.equals(remoteMd5)) {
-                FileUtil.writeFromStream(avatarStream, avatarFile);
-            }
-        } else {
-            FileUtil.writeFromStream(avatarStream, avatarFile);
-        }
+        try {
+            byte[] faces = getAvatarStream(data.getStr("face"));
 
-        // 上传到 oss
-        CosUtil.upload(avatarFile);
+            String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
+            File avatarFile = new File(path);
+            if (avatarFile.exists()) {
+                String localMd5 = SecureUtil.md5().digestHex(avatarFile);
+                String remoteMd5 = SecureUtil.md5().digestHex(faces);
+                if (!localMd5.equals(remoteMd5)) {
+                    FileUtil.writeBytes(faces, avatarFile);
+                }
+            } else {
+                FileUtil.writeBytes(faces, avatarFile);
+            }
+
+            // 上传到 oss
+            CosUtil.upload(avatarFile);
+        } catch (Exception e) {
+            log.error("获取头像失败", e);
+        }
 
         String uname = data.getStr("uname");
         // 获取硬币数
@@ -184,25 +176,26 @@ public class BilibiliDelegate {
      * @return B站用户信息 {@link BilibiliUser}
      */
     public BilibiliUser getUser(String userId) {
-        String body = HttpRequest.get(BilibiliAPI.GET_USER_SPACE_INFO + "?mid=" + userId).execute().body();
-
-        JSONObject resp = JSONUtil.parseObj(body);
+        Map<String, String> params = new HashMap<>();
+        params.put("mid", userId);
+        JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_INFO, params);
         JSONObject baseInfo = resp.getJSONObject("data");
         if (resp.getInt("code") == -404 || baseInfo == null) {
             log.error("用户[{}]不存在", userId);
             return null;
         }
-        InputStream avatarStream = getAvatarStream(baseInfo.getStr("face"));
+        byte[] faces = getAvatarStream(baseInfo.getStr("face"));
+
         String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         File avatarFile = new File(path);
         if (avatarFile.exists()) {
-            String localMd5 = SecureUtil.md5(avatarFile);
-            String remoteMd5 = SecureUtil.md5(avatarStream);
+            String localMd5 = SecureUtil.md5().digestHex(avatarFile);
+            String remoteMd5 = SecureUtil.md5().digestHex(faces);
             if (!localMd5.equals(remoteMd5)) {
-                FileUtil.writeFromStream(avatarStream, avatarFile);
+                FileUtil.writeBytes(faces, avatarFile);
             }
         } else {
-            FileUtil.writeFromStream(avatarStream, avatarFile);
+            FileUtil.writeBytes(faces, avatarFile);
         }
 
         // 上传到 oss
@@ -223,8 +216,8 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getMedalWall() {
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("target_id", CollUtil.newArrayList(config.getDedeuserid()));
+        Map<String, String> params = new HashMap<>();
+        params.put("target_id", config.getDedeuserid());
         return doGet(BilibiliAPI.GET_MEDAL_WALL, params);
     }
 
@@ -261,11 +254,11 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getFollowedUpPostVideo() {
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("uid", CollUtil.newArrayList(config.getDedeuserid()));
-        params.put("type_list", CollUtil.newArrayList("8"));
-        params.put("from", CollUtil.newArrayList());
-        params.put("platform", CollUtil.newArrayList("web"));
+        Map<String, String> params = new HashMap<>();
+        params.put("uid", config.getDedeuserid());
+        params.put("type_list", "8");
+        params.put("from", "");
+        params.put("platform", "web");
 
         return doGet(BilibiliAPI.GET_FOLLOWED_UP_POST_VIDEO, params);
     }
@@ -277,9 +270,9 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getTrendVideo(String regionId) {
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("rid", CollUtil.newArrayList(regionId));
-        params.put("day", CollUtil.newArrayList("3"));
+        Map<String, String> params = new HashMap<>();
+        params.put("rid", regionId);
+        params.put("day", "3");
 
         return doGet(BilibiliAPI.GET_TREND_VIDEO, params);
     }
@@ -292,11 +285,10 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject playVideo(String bvid, int playedTime) {
-        Map<String, Object> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put("bvid", bvid);
-        params.put("played_time", playedTime);
-        String requestBody = HttpUtil.toParams(params);
-        return doPost(BilibiliAPI.REPORT_HEARTBEAT, requestBody);
+        params.put("played_time", String.valueOf(playedTime));
+        return doPost(BilibiliAPI.REPORT_HEARTBEAT, params);
     }
 
     /**
@@ -306,12 +298,11 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject shareVideo(String bvid) {
-        Map<String, Object> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put("bvid", bvid);
         params.put("csrf", config.getBiliJct());
-        String requestBody = HttpUtil.toParams(params);
 
-        return doPost(BilibiliAPI.SHARE_VIDEO, requestBody);
+        return doPost(BilibiliAPI.SHARE_VIDEO, params);
     }
 
 
@@ -321,10 +312,9 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject mangaCheckIn(String platform) {
-        Map<String, Object> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put("platform", platform);
-        String requestBody = HttpUtil.toParams(params);
-        return doPost(BilibiliAPI.MANGA_SIGN, requestBody);
+        return doPost(BilibiliAPI.MANGA_SIGN, params);
     }
 
     /**
@@ -343,8 +333,8 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getVideoDetails(String bvid) {
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("bvid", CollUtil.newArrayList(bvid));
+        Map<String, String> params = new HashMap<>();
+        params.put("bvid", bvid);
         return doGet(BilibiliAPI.GET_VIDEO_DETAILS, params);
     }
 
@@ -365,8 +355,8 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject checkDonateCoin(String bvid) {
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("bvid", CollUtil.newArrayList(bvid));
+        Map<String, String> params = new HashMap<>();
+        params.put("bvid", bvid);
         return doGet(BilibiliAPI.CHECK_DONATE_COIN, params);
     }
 
@@ -378,19 +368,18 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject donateCoin(String bvid, int numCoin, int isLike) {
-        Map<String, Object> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put("bvid", bvid);
-        params.put("multiply", numCoin);
-        params.put("select_like", isLike);
-        params.put("cross_domain", true);
+        params.put("multiply", String.valueOf(numCoin));
+        params.put("select_like", String.valueOf(isLike));
+        params.put("cross_domain", "true");
         params.put("csrf", config.getBiliJct());
-        String requestBody = HttpUtil.toParams(params);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Referer", "https://www.bilibili.com/video/" + bvid);
         headers.put("Origin", "https://www.bilibili.com");
 
-        return doPost(BilibiliAPI.DONATE_COIN, requestBody, headers);
+        return doPost(BilibiliAPI.DONATE_COIN, params, headers);
     }
 
     /**
@@ -408,12 +397,11 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject silver2Coin() {
-        Map<String, Object> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put("csrf_token", config.getBiliJct());
         params.put("csrf", config.getBiliJct());
-        String requestBody = HttpUtil.toParams(params);
 
-        return doPost(BilibiliAPI.SILVER_2_COIN, requestBody);
+        return doPost(BilibiliAPI.SILVER_2_COIN, params);
     }
 
     /**
@@ -441,8 +429,8 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getLiveRoomInfo(String userId) {
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("mid", CollUtil.newArrayList(userId));
+        Map<String, String> params = new HashMap<>();
+        params.put("mid", userId);
 
         return doGet(BilibiliAPI.GET_LIVE_ROOM_INFO, params);
     }
@@ -459,22 +447,21 @@ public class BilibiliDelegate {
      */
     public JSONObject donateGift(String userId, String roomId,
                                  String bagId, String giftId, int giftNum) {
-        Map<String, Object> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put("biz_id", roomId);
         params.put("ruid", userId);
         params.put("gift_id", giftId);
         params.put("bag_id", bagId);
-        params.put("gift_num", giftNum);
+        params.put("gift_num", String.valueOf(giftNum));
         params.put("uid", config.getDedeuserid());
         params.put("csrf", config.getBiliJct());
-        params.put("send_ruid", 0);
-        params.put("storm_beat_id", 0);
-        params.put("price", 0);
+        params.put("send_ruid", "0");
+        params.put("storm_beat_id", "0");
+        params.put("price", "0");
         params.put("platform", "pc");
         params.put("biz_code", "live");
-        String requestBody = HttpUtil.toParams(params);
 
-        return doPost(BilibiliAPI.SEND_GIFT, requestBody);
+        return doPost(BilibiliAPI.SEND_GIFT, params);
     }
 
     /**
@@ -483,8 +470,8 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getChargeInfo() {
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.put("mid", CollUtil.newArrayList(config.getDedeuserid()));
+        Map<String, String> params = new HashMap<>();
+        params.put("mid", config.getDedeuserid());
 
         return doGet(BilibiliAPI.GET_CHARGE_INFO, params);
     }
@@ -497,17 +484,15 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject doCharge(int couponBalance, String upUserId) {
-        Map<String, Object> params = new HashMap<>();
-        params.put("bp_num", couponBalance);
-        params.put("is_bp_remains_prior", true);
+        Map<String, String> params = new HashMap<>();
+        params.put("bp_num", String.valueOf(couponBalance));
+        params.put("is_bp_remains_prior", "true");
         params.put("up_mid", upUserId);
         params.put("otype", "up");
         params.put("oid", config.getDedeuserid());
         params.put("csrf", config.getBiliJct());
 
-        String requestBody = HttpUtil.toParams(params);
-
-        return doPost(BilibiliAPI.CHARGE, requestBody);
+        return doPost(BilibiliAPI.CHARGE, params);
     }
 
     /**
@@ -517,14 +502,12 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject doChargeComment(String orderNo) {
-        Map<String, Object> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put("order_id", orderNo);
         params.put("message", "up的作品很棒");
         params.put("csrf", config.getBiliJct());
 
-        String requestBody = HttpUtil.toParams(params);
-
-        return doPost(BilibiliAPI.COMMIT_CHARGE_COMMENT, requestBody);
+        return doPost(BilibiliAPI.COMMIT_CHARGE_COMMENT, params);
     }
 
     /**
@@ -533,11 +516,10 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getMangaVipReward() {
-        Map<String, Object> params = new HashMap<>();
-        params.put("reason_id", 1);
+        Map<String, String> params = new HashMap<>();
+        params.put("reason_id", "1");
 
-        String requestBody = JSONUtil.parseObj(params).toJSONString(0);
-        return doPost(BilibiliAPI.GET_MANGA_VIP_REWARD, requestBody);
+        return doPost(BilibiliAPI.GET_MANGA_VIP_REWARD, params);
     }
 
     /**
@@ -547,12 +529,11 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getVipReward(int type) {
-        Map<String, Object> params = new HashMap<>();
-        params.put("type", type);
+        Map<String, String> params = new HashMap<>();
+        params.put("type", String.valueOf(type));
         params.put("csrf", config.getBiliJct());
 
-        String requestBody = HttpUtil.toParams(params);
-        return doPost(BilibiliAPI.GET_VIP_REWARD, requestBody);
+        return doPost(BilibiliAPI.GET_VIP_REWARD, params);
     }
 
     /**
@@ -567,27 +548,17 @@ public class BilibiliDelegate {
         params.put("comic_id", "26009");
         params.put("ep_id", "300318");
 
-        String requestBody = JSONUtil.parseObj(params).toJSONString(0);
-        return doPost(BilibiliAPI.READ_MANGA, requestBody);
+        return doPost(BilibiliAPI.READ_MANGA, params);
     }
 
     public JSONObject followUser(String uid) {
-        Map<String, Object> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
         params.put("fid", uid);
-        params.put("act", 1);
-        params.put("re_src", 11);
+        params.put("act", "1");
+        params.put("re_src", "11");
         params.put("csrf", config.getBiliJct());
 
-        String requestBody = HttpUtil.toParams(params);
-        return doPost(BilibiliAPI.RELATION_MODIFY, requestBody);
-    }
-
-    public String getAvatar() {
-        JSONObject resp = doGet(BilibiliAPI.GET_USER_INFO_NAV);
-        // 解析响应信息
-        JSONObject data = resp.getJSONObject("data");
-        InputStream avatarStream = getAvatarStream(data.getStr("face"));
-        return Base64.encode(avatarStream);
+        return doPost(BilibiliAPI.RELATION_MODIFY, params);
     }
 
     /**
@@ -596,10 +567,22 @@ public class BilibiliDelegate {
      * @param avatarUrl 头像地址
      * @return 头像文件流
      */
-    private InputStream getAvatarStream(String avatarUrl) {
-        return HttpRequest
-                .get(avatarUrl)
-                .execute().bodyStream();
+    private byte[] getAvatarStream(String avatarUrl) {
+        URI uri;
+        try {
+            uri = new URIBuilder(avatarUrl).build();
+        } catch (URISyntaxException e) {
+            log.error("解析头像地址失败", e);
+            return new byte[0];
+        }
+        HttpGet httpGet = new HttpGet(uri);
+
+        try (CloseableHttpResponse response = HttpUtil.buildHttpClient().execute(httpGet)) {
+            return EntityUtils.toByteArray(response.getEntity());
+        } catch (Exception e) {
+            log.error("获取头像文件流失败", e);
+        }
+        return new byte[0];
     }
 
     /**
@@ -608,6 +591,7 @@ public class BilibiliDelegate {
      * @param username B站用户名
      * @return 使用*号覆盖后的用户名
      */
+    @Deprecated
     private String coverUsername(String username) {
         StringBuilder sb = new StringBuilder();
 
@@ -629,7 +613,7 @@ public class BilibiliDelegate {
     }
 
     private JSONObject doGet(String url) {
-        return doGet(url, null);
+        return doGet(url, MapUtil.empty());
     }
 
     /**
@@ -639,58 +623,59 @@ public class BilibiliDelegate {
      * @param params 查询字符串参数 {@link MultiValueMap}
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    private JSONObject doGet(String url, MultiValueMap<String, String> params) {
-        url = UriComponentsBuilder.fromHttpUrl(url)
-                .queryParams(params)
-                .build().toUriString();
-        httpRequest = HttpRequest.get(url)
-                .timeout(100000)
-                .header(Header.CONNECTION, "keep-alive")
-                .header(Header.USER_AGENT, config.getUserAgent())
-                .cookie("bili_jct=" + config.getBiliJct() +
-                        ";SESSDATA=" + config.getSessdata() +
-                        ";DedeUserID=" + config.getDedeuserid() + ";");
+    private JSONObject doGet(String url, Map<String, String> params) {
 
-        if (!ObjectUtil.hasNull(proxyHost, proxyPort)) {
-            httpRequest.setHttpProxy(proxyHost, proxyPort);
-        }
+        URI uri = HttpUtil.buildUri(url, params);
 
-        return retryableCall(httpRequest);
+        HttpGet httpGet = new HttpGet(uri);
+        httpGet.setHeader("User-Agent", config.getUserAgent());
+        httpGet.setHeader("Connection", "keep-alive");
+        httpGet.setHeader("Cookie", "bili_jct=" + config.getBiliJct() +
+                ";SESSDATA=" + config.getSessdata() +
+                ";DedeUserID=" + config.getDedeuserid() + ";");
+
+
+        return call(url, params, httpGet);
     }
 
-    private JSONObject doPost(String url, String requestBody) {
-        return doPost(url, requestBody, null);
+    private JSONObject doPost(String url, Map<String, String> params) {
+        return doPost(url, params, null);
     }
 
-    private JSONObject doPost(String url, String requestBody, Map<String, String> headers) {
-        httpRequest = HttpRequest.post(url)
-                .timeout(10000)
-                .header(Header.CONTENT_TYPE, JSONUtil.isJson(requestBody) ?
-                        MediaType.APPLICATION_JSON_VALUE : MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                .header(Header.CONNECTION, "keep-alive")
-                .header(Header.USER_AGENT, config.getUserAgent())
-                .header(Header.REFERER, "https://www.bilibili.com/")
-                .addHeaders(headers)
-                .cookie("bili_jct=" + config.getBiliJct() +
-                        ";SESSDATA=" + config.getSessdata() +
-                        ";DedeUserID=" + config.getDedeuserid() + ";");
-        if (!ObjectUtil.hasNull(proxyHost, proxyPort)) {
-            httpRequest.setHttpProxy(proxyHost, proxyPort);
-        }
+    private JSONObject doPost(String url, Map<String, String> params, Map<String, String> headers) {
+        URI uri = HttpUtil.buildUri(url, params);
+        HttpPost httpPost = new HttpPost(uri);
+        List<NameValuePair> formData = new ArrayList<>();
+        params.forEach((key, value) -> formData.add(new BasicNameValuePair(key, value)));
+        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formData, StandardCharsets.UTF_8);
+        httpPost.setEntity(entity);
 
-        return retryableCall(httpRequest.body(requestBody));
+        httpPost.setHeader("Connection", "keep-alive");
+        httpPost.setHeader("User-Agent", config.getUserAgent());
+        httpPost.setHeader("Referer", "https://www.bilibili.com/");
+        httpPost.setHeader("Cookie", "bili_jct=" + config.getBiliJct() +
+                ";SESSDATA=" + config.getSessdata() +
+                ";DedeUserID=" + config.getDedeuserid() + ";");
+        if (headers != null) {
+            headers.forEach(httpPost::setHeader);
+        }
+        return call(url, params, httpPost);
     }
 
-    private JSONObject retryableCall(HttpRequest httpRequest) {
-        Callable<String> task = () -> httpRequest.execute().body();
-        String responseBody = null;
-        try {
-            responseBody = retryer.call(task);
-        } catch (ExecutionException e) {
-            log.error("重试调用接口[{}]失败, {}", httpRequest.getUrl(), e.getMessage());
-        } catch (RetryException e) {
-            log.error("调用接口[{}]超过执行次数, {}", httpRequest.getUrl(), e.getMessage());
+    private JSONObject call(String url, Map<String, String> params, HttpUriRequest request) {
+        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient(proxyHost, proxyPort);
+             CloseableHttpResponse response = httpClient.execute(request)) {
+            String responseBody = EntityUtils.toString(response.getEntity());
+            log.debug("==============");
+            log.debug("请求 API: {}", url);
+            log.debug("请求参数: {}", params);
+            log.debug("响应结果: {}", responseBody);
+            log.debug("==============");
+            EntityUtils.consume(response.getEntity());
+            return JSONUtil.parseObj(responseBody);
+        } catch (Exception e) {
+            log.error("请求API[{}]失败", url, e);
+            throw new RequestException(url, e);
         }
-        return JSONUtil.parseObj(responseBody);
     }
 }
