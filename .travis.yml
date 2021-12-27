@@ -2,7 +2,7 @@ language: java
 os: linux
 dist: xenial
 jdk:
-  - openjdk8
+  - openjdk11
 
 before_script:
   - "curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | sudo bash"
