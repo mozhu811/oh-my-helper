@@ -10,6 +10,7 @@ import org.slf4j.MDC;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author cruii
@@ -41,6 +42,7 @@ public class TaskExecutor {
             try {
                 log.info("[{}]", task.getName());
                 task.run();
+                TimeUnit.SECONDS.sleep(1);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (BilibiliCookieExpiredException e) {
@@ -74,6 +76,8 @@ public class TaskExecutor {
 
     private BilibiliUser calExp() {
         BilibiliUser user = BilibiliUserContext.get();
+        int current = delegate.getExp();
+        user.setCurrentExp(current);
         int exp = 0;
         // 获取当日获取的经验
         JSONObject expRewardStatus = delegate.getExpRewardStatus();
@@ -96,24 +100,28 @@ public class TaskExecutor {
         }
 
         exp += coinExp;
-        if (user.getLevel() < 6) {
-            int diff = user.getNextExp() - user.getCurrentExp();
+        log.info("今日已获得[{}]点经验", exp);
+        if (exp > 0) {
+            if (user.getLevel() < 6) {
+                int diff = user.getNextExp() - user.getCurrentExp();
 
-            int days = (diff / exp) + 1;
-            user.setUpgradeDays(days);
-            if (diff <= exp) {
+                int days = (diff / exp) + 1;
+                user.setUpgradeDays(days);
+                if (diff <= exp) {
+                    user.setUpgradeDays(null);
+                }
+            } else {
                 user.setUpgradeDays(null);
             }
-        } else {
-            user.setUpgradeDays(null);
-        }
-        log.info("今日已获得[{}]点经验", exp);
 
-        if (user.getLevel() < 6) {
-            int upgradeDays = (user.getNextExp() - user.getCurrentExp()) / exp;
-            log.info("按照当前进度，升级到Lv{}还需要: {}天", user.getLevel() + 1, upgradeDays + 1);
+            if (user.getLevel() < 6) {
+                int upgradeDays = (user.getNextExp() - user.getCurrentExp()) / exp;
+                log.info("按照当前进度，升级到Lv{}还需要: {}天", user.getLevel() + 1, upgradeDays + 1);
+            } else {
+                log.info("当前等级Lv6，经验值为：{}", user.getCurrentExp());
+            }
         } else {
-            log.info("当前等级Lv6，经验值为：{}", user.getCurrentExp());
+            log.error("经验值为0，无法计算升级天数");
         }
 
         return user;

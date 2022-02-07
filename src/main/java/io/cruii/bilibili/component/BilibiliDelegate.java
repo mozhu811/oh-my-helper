@@ -211,6 +211,21 @@ public class BilibiliDelegate {
     }
 
     /**
+     * 获取当前经验值
+     *
+     * @return 当前经验值
+     */
+    public int getExp() {
+        JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_INFO);
+        JSONObject baseInfo = resp.getJSONObject("data");
+        if (resp.getInt("code") == -404 || baseInfo == null) {
+            log.error("用户[{}]不存在", config.getDedeuserid());
+            return 0;
+        }
+        return baseInfo.getInt("current_exp");
+    }
+
+    /**
      * 获取勋章墙
      *
      * @return 解析后的JSON对象 {@link JSONObject}

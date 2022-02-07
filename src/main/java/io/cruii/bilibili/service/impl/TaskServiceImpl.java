@@ -69,7 +69,7 @@ public class TaskServiceImpl implements TaskService {
             }
 
             // 初次执行任务
-            taskManager.put(config);
+            new Thread(() -> taskManager.put(config)).start();
             if (Boolean.TRUE.equals(config.getFollowDeveloper())) {
                 String devUid = "287969457";
                 JSONObject followResp = delegate.followUser(devUid);
