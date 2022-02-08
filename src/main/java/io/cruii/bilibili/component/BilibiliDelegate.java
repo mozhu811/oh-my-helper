@@ -103,26 +103,7 @@ public class BilibiliDelegate {
 
         // 登录成功，获取详细信息
         // 获取头像
-        try {
-            byte[] faces = getAvatarStream(data.getStr("face"));
-
-            String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
-            File avatarFile = new File(path);
-            if (avatarFile.exists()) {
-                String localMd5 = SecureUtil.md5().digestHex(avatarFile);
-                String remoteMd5 = SecureUtil.md5().digestHex(faces);
-                if (!localMd5.equals(remoteMd5)) {
-                    FileUtil.writeBytes(faces, avatarFile);
-                }
-            } else {
-                FileUtil.writeBytes(faces, avatarFile);
-            }
-
-            // 上传到 oss
-            CosUtil.upload(avatarFile);
-        } catch (Exception e) {
-            log.error("获取头像失败", e);
-        }
+        uploadAvatar(getAvatarStream(data.getStr("face")));
 
         String uname = data.getStr("uname");
         // 获取硬币数
@@ -184,22 +165,8 @@ public class BilibiliDelegate {
             log.error("用户[{}]不存在", userId);
             return null;
         }
-        byte[] faces = getAvatarStream(baseInfo.getStr("face"));
-
-        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
-        File avatarFile = new File(path);
-        if (avatarFile.exists()) {
-            String localMd5 = SecureUtil.md5().digestHex(avatarFile);
-            String remoteMd5 = SecureUtil.md5().digestHex(faces);
-            if (!localMd5.equals(remoteMd5)) {
-                FileUtil.writeBytes(faces, avatarFile);
-            }
-        } else {
-            FileUtil.writeBytes(faces, avatarFile);
-        }
-
-        // 上传到 oss
-        CosUtil.upload(avatarFile);
+        // 获取头像
+        uploadAvatar(getAvatarStream(baseInfo.getStr("face")));
 
         BilibiliUser info = new BilibiliUser();
         info.setDedeuserid(userId);
@@ -588,7 +555,7 @@ public class BilibiliDelegate {
             uri = new URIBuilder(avatarUrl).build();
         } catch (URISyntaxException e) {
             log.error("解析头像地址失败", e);
-            return new byte[0];
+            throw new RuntimeException("解析头像地址失败");
         }
         HttpGet httpGet = new HttpGet(uri);
 
@@ -597,7 +564,7 @@ public class BilibiliDelegate {
         } catch (Exception e) {
             log.error("获取头像文件流失败", e);
         }
-        return new byte[0];
+        throw new RuntimeException("获取头像文件流失败");
     }
 
     /**
@@ -691,6 +658,34 @@ public class BilibiliDelegate {
         } catch (Exception e) {
             log.error("请求API[{}]失败", url, e);
             throw new RequestException(url, e);
+        }
+    }
+
+    /**
+     * 上传头像
+     * @param avatar 头像文件
+     */
+    private void uploadAvatar(byte[] avatar) {
+        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
+        try {
+
+            File avatarFile = new File(path);
+            if (avatarFile.exists()) {
+                String localMd5 = SecureUtil.md5().digestHex(avatarFile);
+                String remoteMd5 = SecureUtil.md5().digestHex(avatar);
+                if (!localMd5.equals(remoteMd5)) {
+                    FileUtil.writeBytes(avatar, avatarFile);
+                }
+            } else {
+                FileUtil.writeBytes(avatar, avatarFile);
+            }
+
+            // 上传到 oss
+            CosUtil.upload(avatarFile);
+        } catch (Exception e) {
+            log.error("获取头像失败", e);
+        } finally {
+            FileUtil.del(path);
         }
     }
 }
