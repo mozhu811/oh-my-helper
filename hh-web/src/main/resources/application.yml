@@ -28,13 +28,7 @@ logging:
   config: classpath:logback-spring.xml
 
 task:
-  cron:
-tencent:
-  secret-id:
-  secret-key:
-  cos-region:
-  bucket-name:
-  folder: avatars
+  cron: 0 55 14 * * ?
 
 pulsar:
   url:
