@@ -1,0 +1,44 @@
+server:
+  port: 811
+
+db:
+  host:
+  port:
+  name:
+
+spring:
+  datasource:
+    url: jdbc:mysql://${db.host}:${db.port}/${db.name}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowMultiQueries=true&serverTimezone=Asia/Shanghai
+    username:
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 50
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 30000
+      connection-test-query: SELECT 1
+      pool-name: DatabasePool
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+logging:
+  config: classpath:logback-spring.xml
+
+task:
+  cron:
+tencent:
+  secret-id:
+  secret-key:
+  cos-region:
+  bucket-name:
+  folder: avatars
+
+pulsar:
+  url:
+  topics:
+
+push:
+  url:

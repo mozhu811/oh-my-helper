@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+logging:
+  config: classpath:logback-spring.xml
+
+pulsar:
+  url:
+  topics:
+
+tencent:
+  secret-id:
+  secret-key:
+  cos-region:
+  bucket-name:
+  folder: avatars
+
+push:
+  url:
