@@ -26,7 +26,7 @@ public class TaskSchedule {
         this.taskConfigMapper = taskConfigMapper;
     }
 
-    @Scheduled(cron = "0 0 9 * * ?")
+    @Scheduled(cron = "${task.cron:0 10 0 * * ?}")
     public void doTask() {
         taskConfigMapper.selectList(null).forEach(taskConfig -> {
             try {
