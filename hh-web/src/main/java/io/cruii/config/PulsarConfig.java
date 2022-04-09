@@ -23,10 +23,17 @@ public class PulsarConfig {
 
     private List<String> topics;
 
+    private String token;
+
+    private String clusterId;
+
+    private String namespace;
+
     @Bean
     public PulsarClient pulsarClient() throws PulsarClientException {
         return PulsarClient.builder()
                 .serviceUrl(url)
+                .authentication(AuthenticationFactory.token(token))
                 .build();
     }
 
@@ -34,7 +41,7 @@ public class PulsarConfig {
     @ConditionalOnBean(PulsarClient.class)
     public Producer<byte[]> pulsarProducer(PulsarClient pulsarClient) throws PulsarClientException {
         return pulsarClient.newProducer()
-                .topic(topics.get(0))
+                .topic("persistent://" + clusterId + "/" + namespace + "/" + topics.get(0))
                 .enableBatching(true)//是否开启批量处理消息，默认true,需要注意的是enableBatching只在异步发送sendAsync生效，同步发送send失效。因此建议生产环境若想使用批处理，则需使用异步发送，或者多线程同步发送
                 .compressionType(CompressionType.LZ4)//消息压缩（四种压缩方式：LZ4，ZLIB，ZSTD，SNAPPY），consumer端不用做改动就能消费，开启后大约可以降低3/4带宽消耗和存储（官方测试）
                 .batchingMaxPublishDelay(10, TimeUnit.MILLISECONDS) //设置将对发送的消息进行批处理的时间段,10ms；可以理解为若该时间段内批处理成功，则一个batch中的消息数量不会被该参数所影响。
@@ -51,8 +58,10 @@ public class PulsarConfig {
     @ConditionalOnBean(PulsarClient.class)
     public Consumer<byte[]> consumer(PulsarClient pulsarClient) throws PulsarClientException {
         return pulsarClient.newConsumer()
-                .topic(topics.get(1))
+                .topic("persistent://" + clusterId + "/" + namespace + "/" + topics.get(1))
                 .subscriptionName("finish-task-subscription")
+                .subscriptionType(SubscriptionType.Exclusive)
+                .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
                 .subscribe();
     }
 }

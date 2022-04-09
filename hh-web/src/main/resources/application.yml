@@ -33,6 +33,9 @@ task:
 pulsar:
   url:
   topics:
+  cluster-id:
+  namespace:
+  token:
 
 push:
   url:
