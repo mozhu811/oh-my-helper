@@ -103,7 +103,11 @@ public class BilibiliDelegate {
 
         // 登录成功，获取详细信息
         // 获取头像
-        uploadAvatar(getAvatarStream(data.getStr("face")));
+        try {
+            uploadAvatar(getAvatarStream(data.getStr("face")));
+        } catch (RuntimeException e) {
+            log.error("上传头像失败", e);
+        }
 
         String uname = data.getStr("uname");
         // 获取硬币数
@@ -671,18 +675,19 @@ public class BilibiliDelegate {
         try {
 
             File avatarFile = new File(path);
-            if (avatarFile.exists()) {
-                String localMd5 = SecureUtil.md5().digestHex(avatarFile);
-                String remoteMd5 = SecureUtil.md5().digestHex(avatar);
-                if (!localMd5.equals(remoteMd5)) {
+            if (avatar != null) {
+                if (avatarFile.exists()) {
+                    String localMd5 = SecureUtil.md5().digestHex(avatarFile);
+                    String remoteMd5 = SecureUtil.md5().digestHex(avatar);
+                    if (!localMd5.equals(remoteMd5)) {
+                        FileUtil.writeBytes(avatar, avatarFile);
+                    }
+                } else {
                     FileUtil.writeBytes(avatar, avatarFile);
                 }
-            } else {
-                FileUtil.writeBytes(avatar, avatarFile);
+                // 上传到 oss
+                CosUtil.upload(avatarFile);
             }
-
-            // 上传到 oss
-            CosUtil.upload(avatarFile);
         } catch (Exception e) {
             log.error("获取头像失败", e);
         } finally {

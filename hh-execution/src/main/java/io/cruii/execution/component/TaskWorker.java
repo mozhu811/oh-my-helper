@@ -31,7 +31,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -82,16 +81,19 @@ public class TaskWorker implements CommandLineRunner {
                     TaskConfig taskConfig = JSONUtil.parseObj(new String(msg.getData())).toBean(TaskConfig.class);
                     taskExecutor.execute(() -> {
                         BilibiliDelegate delegate = new BilibiliDelegate(taskConfig);
+                        String traceId = MDC.get("traceId");
                         try {
                             BilibiliUser user = delegate.getUser();
                             BilibiliUserContext.set(user);
                             TaskExecutor executor = new TaskExecutor(delegate);
                             user = executor.execute();
-                            String traceId = MDC.get("traceId");
-                            user.setLastRunTime(LocalDateTime.now());
-
                             // 通知调用端执行完成
                             producer.sendAsync(JSONUtil.toJsonStr(user).getBytes(StandardCharsets.UTF_8));
+                        } catch (Exception e) {
+                            log.error("任务执行失败", e);
+                            // 通知调用端执行完成
+                            producer.sendAsync(JSONUtil.toJsonStr(taskConfig.getDedeuserid()).getBytes(StandardCharsets.UTF_8));
+                        } finally {
 
                             // 日志收集
                             String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
@@ -104,9 +106,7 @@ public class TaskWorker implements CommandLineRunner {
                                     .collect(Collectors.joining("\n"));
                             // 推送
                             push(taskConfig.getDedeuserid(), content);
-                        } catch (Exception e) {
-                            log.error("任务执行失败", e);
-                        } finally {
+
                             MDC.clear();
                             BilibiliUserContext.remove();
                         }
