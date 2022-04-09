@@ -11,6 +11,8 @@ import org.apache.pulsar.client.api.PulsarClientException;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 /**
  * @author cruii
  * Created on 2022/4/6
@@ -38,11 +40,15 @@ public class UserPostProcessor implements CommandLineRunner {
 
                     assert msg != null;
                     String data = new String(msg.getData());
-                    log.debug(data);
+                    BilibiliUser bilibiliUser;
                     if (JSONUtil.isTypeJSON(data)) {
-                        BilibiliUser bilibiliUser = JSONUtil.parseObj(data).toBean(BilibiliUser.class);
-                        bilibiliUserMapper.update(bilibiliUser, Wrappers.<BilibiliUser>lambdaUpdate().eq(BilibiliUser::getDedeuserid, bilibiliUser.getDedeuserid()));
+                        bilibiliUser = JSONUtil.parseObj(data).toBean(BilibiliUser.class);
+                    } else {
+                        bilibiliUser = bilibiliUserMapper.selectOne(Wrappers.<BilibiliUser>lambdaQuery().eq(BilibiliUser::getDedeuserid, data));
                     }
+                    bilibiliUser.setLastRunTime(LocalDateTime.now());
+                    bilibiliUserMapper.update(bilibiliUser, Wrappers.<BilibiliUser>lambdaUpdate().eq(BilibiliUser::getDedeuserid, bilibiliUser.getDedeuserid()));
+
                     // Acknowledge the message so that it can be deleted by the message broker
                     consumer.acknowledge(msg);
                 } catch (PulsarClientException e) {
