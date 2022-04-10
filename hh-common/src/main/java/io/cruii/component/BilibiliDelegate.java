@@ -671,7 +671,7 @@ public class BilibiliDelegate {
      * @param avatar 头像文件
      */
     private void uploadAvatar(byte[] avatar) {
-        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
+        String path = "/root/avatars" + File.separator + config.getDedeuserid() + ".png";
         try {
 
             File avatarFile = new File(path);
