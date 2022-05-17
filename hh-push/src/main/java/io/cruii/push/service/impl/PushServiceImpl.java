@@ -36,6 +36,10 @@ public class PushServiceImpl implements PushService {
     @Override
     public void push(String dedeuserid, String content) {
         PushConfig pushConfig = pushConfigMapper.selectOne(Wrappers.lambdaQuery(PushConfig.class).eq(PushConfig::getDedeuserid, dedeuserid));
+        if (Objects.isNull(pushConfig)) {
+            log.info("该账号未配置推送或推送配置异常");
+            return;
+        }
         boolean result = false;
         if (CharSequenceUtil.isNotBlank(pushConfig.getBarkDeviceKey())) {
             BarkPusher barkPusher = new BarkPusher(pushConfig.getBarkDeviceKey());
@@ -53,7 +57,8 @@ public class PushServiceImpl implements PushService {
             log.info("该账号未配置推送或推送配置异常");
         }
 
-        log.info("用户{}, 推送结果：{}",dedeuserid, result);
+
+        log.info("用户{}, 推送结果：{}", dedeuserid, result);
     }
 
     @Override
