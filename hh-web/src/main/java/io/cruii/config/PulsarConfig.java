@@ -60,7 +60,7 @@ public class PulsarConfig {
         return pulsarClient.newConsumer()
                 .topic("persistent://" + clusterId + "/" + namespace + "/" + topics.get(1))
                 .subscriptionName("finish-task-subscription")
-                .subscriptionType(SubscriptionType.Exclusive)
+                .subscriptionType(SubscriptionType.Shared)
                 .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
                 .subscribe();
     }

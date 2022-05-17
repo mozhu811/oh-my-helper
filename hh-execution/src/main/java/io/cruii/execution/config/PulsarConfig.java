@@ -43,7 +43,7 @@ public class PulsarConfig {
         return pulsarClient.newConsumer()
                 .topic("persistent://" + clusterId + "/" + namespace + "/" + topics.get(0))
                 .subscriptionName("task-subscription")
-                .subscriptionType(SubscriptionType.Exclusive)
+                .subscriptionType(SubscriptionType.Shared)
                 .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
                 .subscribe();
     }
