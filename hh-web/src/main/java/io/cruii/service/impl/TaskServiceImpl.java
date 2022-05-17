@@ -13,12 +13,11 @@ import io.cruii.service.TaskService;
 import lombok.extern.log4j.Log4j2;
 import ma.glasnost.orika.MapperFactory;
 import org.apache.pulsar.client.api.Producer;
-import org.apache.pulsar.client.api.PulsarClientException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
@@ -27,7 +26,6 @@ import java.util.Objects;
  */
 @Service
 @Log4j2
-@Transactional(rollbackFor = Exception.class)
 public class TaskServiceImpl implements TaskService {
 
     private final TaskConfigMapper taskConfigMapper;
@@ -49,7 +47,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public boolean createTask(TaskConfigDTO taskConfig) throws PulsarClientException {
+    @Transactional(rollbackFor = Exception.class)
+    public boolean createTask(TaskConfigDTO taskConfig) {
         TaskConfig config = mapperFactory.getMapperFacade().map(taskConfig, TaskConfig.class);
         BilibiliDelegate delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct());
         // 验证并获取用户B站信息
@@ -69,6 +68,7 @@ public class TaskServiceImpl implements TaskService {
             // 持久化用户信息
             BilibiliUser existUser = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, user.getDedeuserid()));
             if (Objects.isNull(existUser)) {
+                user.setCreateTime(LocalDateTime.now());
                 bilibiliUserMapper.insert(user);
             } else {
                 user.setId(existUser.getId());

@@ -37,7 +37,7 @@ public class UserPostProcessor implements CommandLineRunner {
                 Message<byte[]> msg = null;
                 try {
                     msg = consumer.receive();
-
+                    log.info("Received message: {}", msg);
                     assert msg != null;
                     String data = new String(msg.getData());
                     BilibiliUser bilibiliUser;
@@ -54,10 +54,9 @@ public class UserPostProcessor implements CommandLineRunner {
                 } catch (PulsarClientException e) {
                     log.warn("Message failed to process, redeliver later", e);
                     consumer.negativeAcknowledge(msg);
+                    e.printStackTrace();
                 }
             }
-        }).
-
-                start();
+        }).start();
     }
 }

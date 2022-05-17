@@ -52,7 +52,8 @@ public class TaskWorker implements CommandLineRunner {
     private final ThreadPoolTaskExecutor taskExecutor;
 
     public TaskWorker(Consumer<byte[]> consumer,
-                      Producer<byte[]> producer, ThreadPoolTaskExecutor taskExecutor) {
+                      Producer<byte[]> producer,
+                      ThreadPoolTaskExecutor taskExecutor) {
         this.consumer = consumer;
         this.producer = producer;
         this.taskExecutor = taskExecutor;
@@ -73,6 +74,7 @@ public class TaskWorker implements CommandLineRunner {
                 } catch (PulsarClientException e) {
                     Thread.currentThread().interrupt();
                     log.error("TaskWorker receive error", e);
+                    e.printStackTrace();
                 }
 
                 try {
@@ -94,19 +96,21 @@ public class TaskWorker implements CommandLineRunner {
                             // 通知调用端执行完成
                             producer.sendAsync(JSONUtil.toJsonStr(taskConfig.getDedeuserid()).getBytes(StandardCharsets.UTF_8));
                         } finally {
-
                             // 日志收集
                             String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
-                            List<String> logs = FileUtil.readLines(new File("logs/execution/all-" + date + ".log"), StandardCharsets.UTF_8);
+                            File logFile = new File("logs/execution/all-" + date + ".log");
+                            String content = null;
+                            if (logFile.exists()) {
+                                List<String> logs = FileUtil.readLines(logFile, StandardCharsets.UTF_8);
 
-                            String content = logs
-                                    .stream()
-                                    .filter(line -> line.contains(traceId) && (line.contains("INFO") || line.contains("ERROR")))
-                                    .map(line -> line.split("\\|\\|")[1])
-                                    .collect(Collectors.joining("\n"));
+                                content = logs
+                                        .stream()
+                                        .filter(line -> line.contains(traceId) && (line.contains("INFO") || line.contains("ERROR")))
+                                        .map(line -> line.split("\\|\\|")[1])
+                                        .collect(Collectors.joining("\n"));
+                            }
                             // 推送
                             push(taskConfig.getDedeuserid(), content);
-
                             MDC.clear();
                             BilibiliUserContext.remove();
                         }
@@ -116,6 +120,7 @@ public class TaskWorker implements CommandLineRunner {
                     consumer.acknowledge(msg);
                 } catch (Exception e) {
                     log.warn("Message failed to process, redeliver later", e);
+                    e.printStackTrace();
                     consumer.negativeAcknowledge(msg);
                 }
             }
