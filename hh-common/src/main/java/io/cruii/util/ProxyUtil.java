@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
  */
 @Log4j2
 public class ProxyUtil {
-    private static String proxyApi;
-    private static final List<String> proxyList = new ArrayList<>();
+    private static final String PROXY_API;
+    private static final List<String> PROXY_LIST = new ArrayList<>();
 
     private ProxyUtil() {
     }
@@ -32,43 +32,43 @@ public class ProxyUtil {
             InputStream stream = ResourceUtil.getStream("proxy.properties");
             Properties properties = new Properties();
             properties.load(stream);
-            proxyApi = properties.getProperty("proxy.api");
+            PROXY_API = properties.getProperty("proxy.api");
         } catch (IOException e) {
             log.error("无法获取proxy.properties文件");
+            throw new RuntimeException("无法获取proxy.properties文件", e);
         }
     }
-    public static synchronized String get() {
-        if (proxyList.isEmpty()) {
-            log.debug("获取代理地址");
-            String body = HttpRequest.get(proxyApi)
-                    .execute().body();
-            JSONObject resp = JSONUtil.parseObj(body);
-            proxyList.addAll(resp.getJSONArray("data")
-                    .stream()
-                    .map(JSONUtil::parseObj)
-                    .map(obj -> obj.getStr("ip") + ":" + obj.getInt("port"))
-                    .collect(Collectors.toList()));
-        }
-        String proxy = proxyList.get(0);
-        proxyList.remove(proxy);
-        log.debug("本次获取代理地址: {}", proxy);
-        log.debug("当前剩余代理数: {}", proxyList.size());
 
+    public synchronized static String get() {
+        if (PROXY_LIST.isEmpty()) {
+            log.debug("获取代理地址");
+            try (HttpResponse httpResponse = HttpRequest.get(PROXY_API).execute()) {
+                JSONObject resp = JSONUtil.parseObj(httpResponse.body());
+                PROXY_LIST.addAll(resp.getJSONArray("data")
+                        .stream()
+                        .map(JSONUtil::parseObj)
+                        .map(obj -> obj.getStr("ip") + ":" + obj.getInt("port"))
+                        .collect(Collectors.toList()));
+            }
+        }
+        String proxy = PROXY_LIST.get(0);
+        PROXY_LIST.remove(proxy);
+        log.debug("本次获取代理地址: {}", proxy);
+        log.debug("当前剩余代理数: {}", PROXY_LIST.size());
         while (!checkProxy(proxy)) {
             proxy = ProxyUtil.get();
         }
-
         return proxy;
     }
 
     private static boolean checkProxy(String proxy) {
         String host = proxy.split(":")[0];
         int port = Integer.parseInt(proxy.split(":")[1]);
-        try {
-            HttpResponse response = HttpRequest.get("https://www.bilibili.com")
-                    .setHttpProxy(host, port)
-                    .setConnectionTimeout(10000)
-                    .execute();
+        try (HttpResponse response = HttpRequest.get("https://www.bilibili.com")
+                .setHttpProxy(host, port)
+                .setConnectionTimeout(10000)
+                .setReadTimeout(10000)
+                .execute()) {
             if (response.getStatus() == 200) {
                 log.debug("该代理地址可用");
                 return true;

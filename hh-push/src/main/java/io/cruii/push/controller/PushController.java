@@ -30,9 +30,10 @@ public class PushController {
     @ResponseStatus(code = HttpStatus.CREATED)
     public void push(@RequestParam String dedeuserid, @RequestParam String content) {
         if (!StrUtil.isEmpty(content)) {
+            log.info("接收到推送用户id：{}", dedeuserid);
             pushService.push(dedeuserid, content);
         } else {
-            log.error("content is empty");
+            log.error("content is empty: {}", dedeuserid);
         }
     }
 

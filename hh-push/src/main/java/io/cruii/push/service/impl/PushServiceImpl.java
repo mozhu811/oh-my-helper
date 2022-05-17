@@ -53,7 +53,7 @@ public class PushServiceImpl implements PushService {
             log.info("该账号未配置推送或推送配置异常");
         }
 
-        log.info("推送结果：{}", result);
+        log.info("用户{}, 推送结果：{}",dedeuserid, result);
     }
 
     @Override
