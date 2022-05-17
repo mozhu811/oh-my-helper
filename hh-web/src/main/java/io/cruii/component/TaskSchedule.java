@@ -39,8 +39,12 @@ public class TaskSchedule {
 
     @Scheduled(cron = "${task.cron:0 10 0 * * ?}")
     public void doTask() {
+        // 获取当日开始时间
+        LocalDateTime start = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+        // 获取当日结束时间
+        LocalDateTime end = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
         List<String> ids = userMapper.selectList(Wrappers.lambdaQuery(BilibiliUser.class)
-                        .notBetween(BilibiliUser::getLastRunTime, LocalDateTime.now().minusDays(1), LocalDateTime.now()))
+                        .notBetween(BilibiliUser::getLastRunTime, start, end))
                 .stream()
                 .map(BilibiliUser::getDedeuserid)
                 .collect(Collectors.toList());
