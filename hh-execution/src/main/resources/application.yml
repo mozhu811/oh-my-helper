@@ -3,6 +3,8 @@ server:
 
 logging:
   config: classpath:logback-spring.xml
+  level:
+    org.apache.pulsar.shade.org.asynchttpclient.netty.channel: info
 
 pulsar:
   url:
