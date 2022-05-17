@@ -40,7 +40,7 @@ public class TaskSchedule {
     @Scheduled(cron = "${task.cron:0 10 0 * * ?}")
     public void doTask() {
         List<String> ids = userMapper.selectList(Wrappers.lambdaQuery(BilibiliUser.class)
-                        .between(BilibiliUser::getLastRunTime, LocalDateTime.now().minusDays(1), LocalDateTime.now()))
+                        .notBetween(BilibiliUser::getLastRunTime, LocalDateTime.now().minusDays(1), LocalDateTime.now()))
                 .stream()
                 .map(BilibiliUser::getDedeuserid)
                 .collect(Collectors.toList());
