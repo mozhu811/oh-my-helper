@@ -44,7 +44,9 @@ public class TaskSchedule {
         // 获取当日结束时间
         LocalDateTime end = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
         List<String> ids = userMapper.selectList(Wrappers.lambdaQuery(BilibiliUser.class)
-                        .notBetween(BilibiliUser::getLastRunTime, start, end))
+                        .notBetween(BilibiliUser::getLastRunTime, start, end)
+                        .or()
+                        .isNull(BilibiliUser::getLastRunTime))
                 .stream()
                 .map(BilibiliUser::getDedeuserid)
                 .collect(Collectors.toList());
