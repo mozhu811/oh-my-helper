@@ -46,12 +46,15 @@ public class BilibiliController {
 
     @GetMapping("user")
     public BilibiliUserVO getBilibiliUser(@RequestParam String dedeuserid,
-                                          @RequestParam String sessdata) {
+                                          @RequestParam String sessdata) throws IOException {
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         sessdataCookie.setDomain(".bilibili.com");
-        String body = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV)
+        HttpResponse infoResp = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV)
                 .cookie(sessdataCookie)
-                .execute().body();
+                .execute();
+        String body = infoResp.body();
+        infoResp.close();
+
         JSONObject resp = JSONUtil.parseObj(body);
         if (resp.getInt("code") == -101) {
             throw new BilibiliCookieExpiredException(dedeuserid);
@@ -66,23 +69,22 @@ public class BilibiliController {
         }
 
         String face = data.getStr("face");
-
-        InputStream inputStream = HttpRequest
-                .get(face)
-                .execute().bodyStream();
-
-        return new BilibiliUserVO()
-                .setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream))
-                .setUsername(data.getStr("uname"))
-                .setConfigId(taskService.getTask(dedeuserid) == null ? null : taskService.getTask(dedeuserid).getId())
-                .setLevel(data.getJSONObject("level_info")
-                        .getInt("current_level"));
+        try (HttpResponse response = HttpRequest.get(face).execute();
+             InputStream inputStream = response.bodyStream()) {
+            String encode = Base64.encode(inputStream);
+            return new BilibiliUserVO()
+                    .setAvatar("data:image/jpeg;base64," + encode)
+                    .setUsername(data.getStr("uname"))
+                    .setConfigId(taskService.getTask(dedeuserid) == null ? null : taskService.getTask(dedeuserid).getId())
+                    .setLevel(data.getJSONObject("level_info")
+                            .getInt("current_level"));
+        }
     }
 
     @GetMapping("users")
     public Page<BilibiliUserVO> listUsers(@RequestParam Integer page,
                                           @RequestParam Integer size) {
-        if (page <= 0 ){
+        if (page <= 0) {
             page = 1;
         }
 
@@ -111,6 +113,7 @@ public class BilibiliController {
                 return qrCodeVO;
             }
         }
+        response.close();
         throw new RuntimeException("获取B站二维码登录链接异常");
     }
 
@@ -157,6 +160,7 @@ public class BilibiliController {
         }
 
         bilibiliLoginVO.setCode(bodyJson.getInt("data"));
+        response.close();
         return bilibiliLoginVO;
     }
 }
