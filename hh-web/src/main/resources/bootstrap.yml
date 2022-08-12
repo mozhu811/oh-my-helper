@@ -1,0 +1,24 @@
+server:
+  port: 811
+
+spring:
+  application:
+    name: hh-web-service
+  profiles:
+    active: prod
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://hk22:8848
+      config:
+        server-addr: http://hk22:8848
+        file-extension: yaml
+        group: DEFAULT_GROUP
+        prefix: ${spring.application.name}
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+logging:
+  config: classpath:logback-spring.xml
+  level:
+    org.apache.pulsar: warn
