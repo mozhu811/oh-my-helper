@@ -71,7 +71,6 @@ public class TaskController {
                  CloseableHttpResponse response = httpClient.execute(httpPost)) {
                 EntityUtils.consume(response.getEntity());
             } catch (IOException e) {
-                log.error("请求推送接口失败", e);
                 throw new RequestException("请求推送接口失败", e);
             }
         });

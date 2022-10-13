@@ -18,3 +18,14 @@ spring:
 
 logging:
   config: classpath:logback-spring.xml
+
+task:
+  cron: 0 3 14 * * ?
+
+ribbon:
+  feign:
+    client:
+      config:
+        default:
+          connectTimeout: 10000
+          readTimeout: 600000

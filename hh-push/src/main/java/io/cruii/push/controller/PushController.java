@@ -25,8 +25,8 @@ public class PushController {
 
     @PostMapping
     @ResponseStatus(code = HttpStatus.CREATED)
-    public void push(@RequestParam String dedeuserid, @RequestParam String content) {
-        pushService.push(dedeuserid, content);
+    public boolean push(@RequestParam String dedeuserid, @RequestParam String content) {
+        return pushService.push(dedeuserid, content);
     }
 
     @PostMapping("config")

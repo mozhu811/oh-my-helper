@@ -1,13 +1,9 @@
 server:
-  port: 811
-db:
-  host: 43.129.246.22
-  port: 3306
-  name: bilibili_helper_hub
+  port: 8082
 
 spring:
   application:
-    name: hh-web-service
+    name: hh-push-service
   profiles:
     active: prod
   cloud:
@@ -19,3 +15,11 @@ spring:
         file-extension: yaml
         group: DEFAULT_GROUP
         prefix: ${spring.application.name}
+
+logging:
+  level:
+    io.cruii: DEBUG
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

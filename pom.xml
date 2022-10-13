@@ -8,6 +8,7 @@
         <module>hh-push</module>
         <module>hh-web</module>
         <module>hh-execution</module>
+        <module>hh-gateway</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -21,10 +22,12 @@
     <version>1.1.6</version>
 
     <name>bilibili-helper-hub</name>
+
     <description>Bilibili Helper Hub</description>
     <properties>
         <java.version>11</java.version>
     </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -98,7 +101,7 @@
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>5.7.22</version>
+            <version>5.8.5</version>
         </dependency>
 
         <dependency>
@@ -110,13 +113,13 @@
         <dependency>
             <groupId>com.google.zxing</groupId>
             <artifactId>core</artifactId>
-            <version>3.4.1</version>
+            <version>3.5.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.google.zxing</groupId>
             <artifactId>javase</artifactId>
-            <version>3.4.1</version>
+            <version>3.5.0</version>
         </dependency>
 
         <dependency>
@@ -128,11 +131,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-logging</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
         <dependency>

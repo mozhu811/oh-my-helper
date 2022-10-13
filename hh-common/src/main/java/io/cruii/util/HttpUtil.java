@@ -43,6 +43,7 @@ public class HttpUtil {
                 .setSoTimeout(REQUEST_TIME_OUT).setSoKeepAlive(true)
                 .setTcpNoDelay(true).build();
         RequestConfig requestConfig = RequestConfig.custom()
+                .setProxy(new HttpHost("127.0.0.1", 7890))
                 .setSocketTimeout(REQUEST_TIME_OUT)
                 .setConnectTimeout(CONNECTION_TIME_OUT).build();
         /*

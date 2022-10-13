@@ -14,8 +14,8 @@ import java.util.concurrent.TimeUnit;
  * @author cruii
  * Created on 2022/4/5
  */
-@Configuration
-@ConfigurationProperties(prefix = "pulsar")
+//@Configuration
+//@ConfigurationProperties(prefix = "pulsar")
 @Data
 public class PulsarConfig {
 

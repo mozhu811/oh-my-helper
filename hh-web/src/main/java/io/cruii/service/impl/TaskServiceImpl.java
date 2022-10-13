@@ -36,20 +36,16 @@ public class TaskServiceImpl implements TaskService {
 
     private final MapperFactory mapperFactory;
 
-    private final Producer<byte[]> producer;
-
     public TaskServiceImpl(TaskConfigMapper taskConfigMapper,
                            BilibiliUserMapper bilibiliUserMapper,
-                           MapperFactory mapperFactory,
-                           Producer<byte[]> producer) {
+                           MapperFactory mapperFactory) {
         this.taskConfigMapper = taskConfigMapper;
         this.bilibiliUserMapper = bilibiliUserMapper;
         this.mapperFactory = mapperFactory;
-        this.producer = producer;
     }
 
     @Override
-    public boolean createTask(TaskConfigDTO taskConfig) throws PulsarClientException {
+    public boolean createTask(TaskConfigDTO taskConfig) {
         TaskConfig config = mapperFactory.getMapperFacade().map(taskConfig, TaskConfig.class);
         BilibiliDelegate delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct());
         // 验证并获取用户B站信息
@@ -76,7 +72,7 @@ public class TaskServiceImpl implements TaskService {
             }
 
             // 初次执行任务
-            producer.sendAsync(JSONUtil.toJsonStr(config).getBytes(StandardCharsets.UTF_8));
+            //producer.sendAsync(JSONUtil.toJsonStr(config).getBytes(StandardCharsets.UTF_8));
 
             if (Boolean.TRUE.equals(config.getFollowDeveloper())) {
                 String devUid = "287969457";

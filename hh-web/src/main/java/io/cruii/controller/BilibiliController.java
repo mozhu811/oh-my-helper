@@ -38,20 +38,16 @@ public class BilibiliController {
     private final BilibiliUserService userService;
     private final TaskService taskService;
 
-    public BilibiliController(BilibiliUserService userService,
-                              TaskService taskService) {
+    public BilibiliController(BilibiliUserService userService, TaskService taskService) {
         this.userService = userService;
         this.taskService = taskService;
     }
 
     @GetMapping("user")
-    public BilibiliUserVO getBilibiliUser(@RequestParam String dedeuserid,
-                                          @RequestParam String sessdata) {
+    public BilibiliUserVO getBilibiliUser(@RequestParam String dedeuserid, @RequestParam String sessdata) {
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         sessdataCookie.setDomain(".bilibili.com");
-        String body = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV)
-                .cookie(sessdataCookie)
-                .execute().body();
+        String body = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV).cookie(sessdataCookie).execute().body();
         JSONObject resp = JSONUtil.parseObj(body);
         if (resp.getInt("code") == -101) {
             throw new BilibiliCookieExpiredException(dedeuserid);
@@ -67,22 +63,14 @@ public class BilibiliController {
 
         String face = data.getStr("face");
 
-        InputStream inputStream = HttpRequest
-                .get(face)
-                .execute().bodyStream();
+        InputStream inputStream = HttpRequest.get(face).execute().bodyStream();
 
-        return new BilibiliUserVO()
-                .setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream))
-                .setUsername(data.getStr("uname"))
-                .setConfigId(taskService.getTask(dedeuserid) == null ? null : taskService.getTask(dedeuserid).getId())
-                .setLevel(data.getJSONObject("level_info")
-                        .getInt("current_level"));
+        return new BilibiliUserVO().setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream)).setUsername(data.getStr("uname")).setConfigId(taskService.getTask(dedeuserid) == null ? null : taskService.getTask(dedeuserid).getId()).setLevel(data.getJSONObject("level_info").getInt("current_level"));
     }
 
     @GetMapping("users")
-    public Page<BilibiliUserVO> listUsers(@RequestParam Integer page,
-                                          @RequestParam Integer size) {
-        if (page <= 0 ){
+    public Page<BilibiliUserVO> listUsers(@RequestParam Integer page, @RequestParam Integer size) {
+        if (page <= 0) {
             page = 1;
         }
 
@@ -116,8 +104,8 @@ public class BilibiliController {
 
     @GetMapping("login")
     public BilibiliLoginVO getCookie(@RequestParam String oauthKey) {
-        HttpResponse response = HttpRequest.post(BilibiliAPI.GET_QR_CODE_LOGIN_INFO_URL).body("oauthKey=" + oauthKey).execute();
-        /*
+        try (HttpResponse response = HttpRequest.post(BilibiliAPI.GET_QR_CODE_LOGIN_INFO_URL).body("oauthKey=" + oauthKey).execute()) {
+                    /*
         status: false
         data:
         -2 = oauthKey过期
@@ -128,35 +116,37 @@ public class BilibiliController {
         直接从Response的Header中获取cookie
          */
 
-        JSONObject bodyJson = JSONUtil.parseObj(response.body());
-        Boolean status = bodyJson.getBool("status");
+            JSONObject bodyJson = JSONUtil.parseObj(response.body());
+            Boolean status = bodyJson.getBool("status");
 
-        BilibiliLoginVO bilibiliLoginVO = new BilibiliLoginVO();
-        if (Boolean.TRUE.equals(status)) {
-            String biliJct = response.getCookieValue("bili_jct");
-            String dedeuserid = response.getCookieValue("DedeUserID");
-            String sessdata = response.getCookieValue("SESSDATA");
-
+            BilibiliLoginVO bilibiliLoginVO = new BilibiliLoginVO();
+            if (Boolean.TRUE.equals(status)) {
+                String biliJct = response.getCookieValue("bili_jct");
+                String dedeuserid = response.getCookieValue("DedeUserID");
+                String sessdata = response.getCookieValue("SESSDATA");
+                response.getCookies().forEach(System.out::println);
+                log.info("{}-{}-{}", biliJct, dedeuserid, sessdata);
             /*
             如果在新用户没有创建任务时就保存信息，则造成前端会显示未创建任务的用户信息
             这样不符合逻辑。
             所以，只有在老用户登录时才更新cookie，新用户直接返回即可。
              */
-            if (taskService.isExist(dedeuserid)) {
-                // 存在用户时更新cookie
-                userService.save(dedeuserid, sessdata, biliJct);
-                taskService.updateCookie(dedeuserid, sessdata, biliJct);
+                if (taskService.isExist(dedeuserid)) {
+                    // 存在用户时更新cookie
+                    userService.save(dedeuserid, sessdata, biliJct);
+                    taskService.updateCookie(dedeuserid, sessdata, biliJct);
+                }
+
+                bilibiliLoginVO.setBiliJct(biliJct);
+                bilibiliLoginVO.setDedeuserid(Integer.parseInt(dedeuserid));
+                bilibiliLoginVO.setSessdata(sessdata);
+                bilibiliLoginVO.setCode(0);
+
+                return bilibiliLoginVO;
             }
 
-            bilibiliLoginVO.setBiliJct(biliJct);
-            bilibiliLoginVO.setDedeuserid(Integer.parseInt(dedeuserid));
-            bilibiliLoginVO.setSessdata(sessdata);
-            bilibiliLoginVO.setCode(0);
-
+            bilibiliLoginVO.setCode(bodyJson.getInt("data"));
             return bilibiliLoginVO;
         }
-
-        bilibiliLoginVO.setCode(bodyJson.getInt("data"));
-        return bilibiliLoginVO;
     }
 }

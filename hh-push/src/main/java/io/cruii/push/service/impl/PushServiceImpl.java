@@ -2,7 +2,6 @@ package io.cruii.push.service.impl;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.service.IService;
 import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.po.PushConfig;
 import io.cruii.push.mapper.PushConfigMapper;
@@ -34,7 +33,7 @@ public class PushServiceImpl implements PushService {
     }
 
     @Override
-    public void push(String dedeuserid, String content) {
+    public boolean push(String dedeuserid, String content) {
         PushConfig pushConfig = pushConfigMapper.selectOne(Wrappers.lambdaQuery(PushConfig.class).eq(PushConfig::getDedeuserid, dedeuserid));
         boolean result = false;
         if (CharSequenceUtil.isNotBlank(pushConfig.getBarkDeviceKey())) {
@@ -54,6 +53,8 @@ public class PushServiceImpl implements PushService {
         }
 
         log.info("推送结果：{}", result);
+
+        return result;
     }
 
     @Override

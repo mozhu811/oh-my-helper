@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  * @author cruii
  * Created on 2022/4/6
  */
-@Component
+//@Component
 @Slf4j
 public class UserPostProcessor implements CommandLineRunner {
     private final Consumer<byte[]> consumer;
@@ -31,33 +31,33 @@ public class UserPostProcessor implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        new Thread(() -> {
-            while (true) {
-                // Wait for a message
-                Message<byte[]> msg = null;
-                try {
-                    msg = consumer.receive();
-
-                    assert msg != null;
-                    String data = new String(msg.getData());
-                    BilibiliUser bilibiliUser;
-                    if (JSONUtil.isTypeJSON(data)) {
-                        bilibiliUser = JSONUtil.parseObj(data).toBean(BilibiliUser.class);
-                    } else {
-                        bilibiliUser = bilibiliUserMapper.selectOne(Wrappers.<BilibiliUser>lambdaQuery().eq(BilibiliUser::getDedeuserid, data));
-                    }
-                    bilibiliUser.setLastRunTime(LocalDateTime.now());
-                    bilibiliUserMapper.update(bilibiliUser, Wrappers.<BilibiliUser>lambdaUpdate().eq(BilibiliUser::getDedeuserid, bilibiliUser.getDedeuserid()));
-
-                    // Acknowledge the message so that it can be deleted by the message broker
-                    consumer.acknowledge(msg);
-                } catch (PulsarClientException e) {
-                    log.warn("Message failed to process, redeliver later", e);
-                    consumer.negativeAcknowledge(msg);
-                }
-            }
-        }).
-
-                start();
+        //new Thread(() -> {
+        //    while (true) {
+        //        // Wait for a message
+        //        Message<byte[]> msg = null;
+        //        try {
+        //            msg = consumer.receive();
+        //
+        //            assert msg != null;
+        //            String data = new String(msg.getData());
+        //            BilibiliUser bilibiliUser;
+        //            if (JSONUtil.isTypeJSON(data)) {
+        //                bilibiliUser = JSONUtil.parseObj(data).toBean(BilibiliUser.class);
+        //            } else {
+        //                bilibiliUser = bilibiliUserMapper.selectOne(Wrappers.<BilibiliUser>lambdaQuery().eq(BilibiliUser::getDedeuserid, data));
+        //            }
+        //            bilibiliUser.setLastRunTime(LocalDateTime.now());
+        //            bilibiliUserMapper.update(bilibiliUser, Wrappers.<BilibiliUser>lambdaUpdate().eq(BilibiliUser::getDedeuserid, bilibiliUser.getDedeuserid()));
+        //
+        //            // Acknowledge the message so that it can be deleted by the message broker
+        //            consumer.acknowledge(msg);
+        //        } catch (PulsarClientException e) {
+        //            log.warn("Message failed to process, redeliver later", e);
+        //            consumer.negativeAcknowledge(msg);
+        //        }
+        //    }
+        //}).
+        //
+        //        start();
     }
 }
