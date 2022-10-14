@@ -1,6 +1,7 @@
 package io.cruii.controller;
 
 import cn.hutool.core.codec.Base64;
+import cn.hutool.core.util.URLUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
@@ -25,6 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpCookie;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author cruii
@@ -128,10 +133,16 @@ public class BilibiliController {
 
             BilibiliLoginVO bilibiliLoginVO = new BilibiliLoginVO();
             if (code == 0) {
+                String decodeUrl = URLUtil.decode(data.getStr("url"));
+                String sessdata;
+                try {
+                    Map<String, Object> urlParams = getUrlParams(new URL(decodeUrl).getQuery());
+                    sessdata = ((String) urlParams.get("SESSDATA"));
+                } catch (MalformedURLException e) {
+                    throw new RuntimeException(e);
+                }
                 String biliJct = response.getCookieValue("bili_jct");
                 String dedeuserid = response.getCookieValue("DedeUserID");
-                String sessdata = response.getCookieValue("SESSDATA");
-                response.getCookies().forEach(System.out::println);
                 log.info("{}-{}-{}", biliJct, dedeuserid, sessdata);
             /*
             如果在新用户没有创建任务时就保存信息，则造成前端会显示未创建任务的用户信息
@@ -155,5 +166,20 @@ public class BilibiliController {
             bilibiliLoginVO.setCode(code);
             return bilibiliLoginVO;
         }
+    }
+
+    private static Map<String, Object> getUrlParams(String param) {
+        Map<String, Object> map = new HashMap<>(0);
+        if (param.isEmpty()) {
+            return map;
+        }
+        String[] params = param.split("&");
+        for (String s : params) {
+            String[] p = s.split("=");
+            if (p.length == 2) {
+                map.put(p[0], p[1]);
+            }
+        }
+        return map;
     }
 }
