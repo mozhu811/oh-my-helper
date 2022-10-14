@@ -16,5 +16,5 @@ public class QrCodeVO implements Serializable {
 
     private String qrCodeImg;
 
-    private String oauthKey;
+    private String qrCodeKey;
 }

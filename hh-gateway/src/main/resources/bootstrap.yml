@@ -10,6 +10,7 @@ spring:
     nacos:
       discovery:
         server-addr: http://hk22:8848
+        service: hh-gateway-service
       config:
         server-addr: http://hk22:8848
         file-extension: yaml

@@ -38,7 +38,8 @@ public class BilibiliController {
     private final BilibiliUserService userService;
     private final TaskService taskService;
 
-    public BilibiliController(BilibiliUserService userService, TaskService taskService) {
+    public BilibiliController(BilibiliUserService userService,
+                              TaskService taskService) {
         this.userService = userService;
         this.taskService = taskService;
     }
@@ -81,46 +82,52 @@ public class BilibiliController {
     }
 
     @GetMapping("qrCode")
-    public QrCodeVO getLoginQrCode() throws IOException, WriterException {
-        HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_URL).execute();
-        if (response.getStatus() == 200) {
-            JSONObject jsonBody = JSONUtil.parseObj(response.body());
-            if (jsonBody.getInt("code") == 0 && Boolean.TRUE.equals(jsonBody.getBool("status"))) {
-                JSONObject data = jsonBody.getJSONObject("data");
-                String qrCodeUrl = data.getStr("url");
-                String oauthKey = data.getStr("oauthKey");
+    public QrCodeVO getLoginQrCode()  {
+        try(HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_URL).execute()) {
+            log.debug(response);
+            if (response.getStatus() == 200) {
+                JSONObject jsonBody = JSONUtil.parseObj(response.body());
+                if (jsonBody.getInt("code") == 0) {
+                    JSONObject data = jsonBody.getJSONObject("data");
+                    String qrCodeUrl = data.getStr("url");
+                    String qrCodeKey = data.getStr("qrcode_key");
 
-                QrCodeVO qrCodeVO = new QrCodeVO();
-                qrCodeVO.setQrCodeUrl(qrCodeUrl);
-                qrCodeVO.setOauthKey(oauthKey);
+                    QrCodeVO qrCodeVO = new QrCodeVO();
+                    qrCodeVO.setQrCodeUrl(qrCodeUrl);
+                    qrCodeVO.setQrCodeKey(qrCodeKey);
 
-                byte[] bytes = QrCodeGenerator.generateQrCode(qrCodeUrl, 180, true);
-                qrCodeVO.setQrCodeImg("data:image/png;base64," + Base64.encode(bytes));
-                return qrCodeVO;
+                    byte[] bytes = QrCodeGenerator.generateQrCode(qrCodeUrl, 180, true);
+                    qrCodeVO.setQrCodeImg("data:image/png;base64," + Base64.encode(bytes));
+                    return qrCodeVO;
+                }
             }
+        }catch (WriterException | IOException e) {
+            throw new RuntimeException("获取B站二维码登录链接异常", e);
         }
         throw new RuntimeException("获取B站二维码登录链接异常");
     }
 
     @GetMapping("login")
-    public BilibiliLoginVO getCookie(@RequestParam String oauthKey) {
-        try (HttpResponse response = HttpRequest.post(BilibiliAPI.GET_QR_CODE_LOGIN_INFO_URL).body("oauthKey=" + oauthKey).execute()) {
-                    /*
-        status: false
-        data:
-        -2 = oauthKey过期
-        -4 = 未扫码
-        -5 = 扫码未确认
-
-        status: true
-        直接从Response的Header中获取cookie
+    public BilibiliLoginVO login(@RequestParam String qrCodeKey) {
+        try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_INFO_URL).body("qrcode_key=" + qrCodeKey).execute()) {
+        /*
+        当密钥正确时但未扫描时code为86101
+        扫描成功但手机端未确认时code为86090
+        扫描成功手机端确认登录后，code为0，并向浏览器写入cookie
+        二维码失效时code为86038
          */
-
-            JSONObject bodyJson = JSONUtil.parseObj(response.body());
-            Boolean status = bodyJson.getBool("status");
+            log.debug(response);
+            JSONObject jsonBody = JSONUtil.parseObj(response.body());
+            /*
+                {"code":0,"message":"0","ttl":1,
+                "data":{"url":"https://passport.biligame.com/crossDomain?DedeUserID=287969457\u0026DedeUserID__ckMd5=e6f2d9a03ca037bd\u0026Expires=1681227537\u0026SESSDATA=605d4f97,1681227537,eac30*a1\u0026bili_jct=94896bdce596eff2d226d531d2b0bd85\u0026gourl=https%3A%2F%2Fwww.bilibili.com",
+                "refresh_token":"f92c6c0217805359b0c40d614462c8a1","timestamp":1665675537415,"code":0,"message":""}}
+             */
+            JSONObject data = jsonBody.getJSONObject("data");
+            int code = data.getInt("code");
 
             BilibiliLoginVO bilibiliLoginVO = new BilibiliLoginVO();
-            if (Boolean.TRUE.equals(status)) {
+            if (code == 0) {
                 String biliJct = response.getCookieValue("bili_jct");
                 String dedeuserid = response.getCookieValue("DedeUserID");
                 String sessdata = response.getCookieValue("SESSDATA");
@@ -145,7 +152,7 @@ public class BilibiliController {
                 return bilibiliLoginVO;
             }
 
-            bilibiliLoginVO.setCode(bodyJson.getInt("data"));
+            bilibiliLoginVO.setCode(code);
             return bilibiliLoginVO;
         }
     }
