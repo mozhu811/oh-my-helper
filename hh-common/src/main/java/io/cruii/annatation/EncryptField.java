@@ -16,5 +16,5 @@ import java.lang.annotation.*;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Order(Ordered.HIGHEST_PRECEDENCE)
-public @interface EncryptFiled {
+public @interface EncryptField {
 }

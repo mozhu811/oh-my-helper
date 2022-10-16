@@ -17,10 +17,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
-import org.apache.pulsar.client.api.Producer;
-import org.apache.pulsar.client.api.PulsarClientException;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -45,16 +42,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class TaskWorker implements CommandLineRunner {
-    private final Consumer<byte[]> consumer;
-
-    private final Producer<byte[]> producer;
 
     private final ThreadPoolTaskExecutor taskExecutor;
 
-    public TaskWorker(Consumer<byte[]> consumer,
-                      Producer<byte[]> producer, ThreadPoolTaskExecutor taskExecutor) {
-        this.consumer = consumer;
-        this.producer = producer;
+    public TaskWorker(ThreadPoolTaskExecutor taskExecutor) {
+
         this.taskExecutor = taskExecutor;
     }
 
@@ -68,12 +60,7 @@ public class TaskWorker implements CommandLineRunner {
             while (true) {
                 // Wait for a message
                 Message<byte[]> msg = null;
-                try {
-                    msg = consumer.receive();
-                } catch (PulsarClientException e) {
-                    Thread.currentThread().interrupt();
-                    log.error("TaskWorker receive error", e);
-                }
+                // msg = consumer.receive();
 
                 try {
                     // Do something with the message
@@ -88,11 +75,11 @@ public class TaskWorker implements CommandLineRunner {
                             TaskExecutor executor = new TaskExecutor(delegate);
                             user = executor.execute();
                             // 通知调用端执行完成
-                            producer.sendAsync(JSONUtil.toJsonStr(user).getBytes(StandardCharsets.UTF_8));
+                            //producer.sendAsync(JSONUtil.toJsonStr(user).getBytes(StandardCharsets.UTF_8));
                         } catch (Exception e) {
                             log.error("任务执行失败", e);
                             // 通知调用端执行完成
-                            producer.sendAsync(JSONUtil.toJsonStr(taskConfig.getDedeuserid()).getBytes(StandardCharsets.UTF_8));
+                            //producer.sendAsync(JSONUtil.toJsonStr(taskConfig.getDedeuserid()).getBytes(StandardCharsets.UTF_8));
                         } finally {
 
                             // 日志收集
@@ -113,10 +100,10 @@ public class TaskWorker implements CommandLineRunner {
                     });
 
                     // Acknowledge the message so that it can be deleted by the message broker
-                    consumer.acknowledge(msg);
+                    //consumer.acknowledge(msg);
                 } catch (Exception e) {
                     log.warn("Message failed to process, redeliver later", e);
-                    consumer.negativeAcknowledge(msg);
+                    //consumer.negativeAcknowledge(msg);
                 }
             }
         }).start();

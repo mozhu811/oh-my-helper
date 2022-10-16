@@ -1,24 +1,22 @@
 package io.cruii.service.impl;
 
 import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.mapper.BilibiliUserMapper;
+import io.cruii.mapper.PushConfigMapper;
 import io.cruii.mapper.TaskConfigMapper;
+import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.dto.TaskConfigDTO;
 import io.cruii.pojo.po.BilibiliUser;
+import io.cruii.pojo.po.PushConfig;
 import io.cruii.pojo.po.TaskConfig;
 import io.cruii.service.TaskService;
 import lombok.extern.log4j.Log4j2;
 import ma.glasnost.orika.MapperFactory;
-import org.apache.pulsar.client.api.Producer;
-import org.apache.pulsar.client.api.PulsarClientException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 /**
@@ -32,35 +30,55 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskConfigMapper taskConfigMapper;
 
+    private final PushConfigMapper pushConfigMapper;
+
     private final BilibiliUserMapper bilibiliUserMapper;
 
     private final MapperFactory mapperFactory;
 
     public TaskServiceImpl(TaskConfigMapper taskConfigMapper,
+                           PushConfigMapper pushConfigMapper,
                            BilibiliUserMapper bilibiliUserMapper,
                            MapperFactory mapperFactory) {
         this.taskConfigMapper = taskConfigMapper;
+        this.pushConfigMapper = pushConfigMapper;
         this.bilibiliUserMapper = bilibiliUserMapper;
         this.mapperFactory = mapperFactory;
     }
 
     @Override
-    public boolean createTask(TaskConfigDTO taskConfig) {
-        TaskConfig config = mapperFactory.getMapperFacade().map(taskConfig, TaskConfig.class);
-        BilibiliDelegate delegate = new BilibiliDelegate(config.getDedeuserid(), config.getSessdata(), config.getBiliJct());
+    public TaskConfigDTO createTask(TaskConfigDTO taskConfigDTO, PushConfigDTO pushConfigDTO){
+        TaskConfig taskConfig = mapperFactory.getMapperFacade().map(taskConfigDTO, TaskConfig.class);
+        BilibiliDelegate delegate = new BilibiliDelegate(taskConfig.getDedeuserid(), taskConfig.getSessdata(), taskConfig.getBiliJct());
         // 验证并获取用户B站信息
         BilibiliUser user = delegate.getUser();
 
         if (Boolean.TRUE.equals(user.getIsLogin())) {
             // 用户Cookie有效
             // 持久化任务配置信息
-            TaskConfig existConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, user.getDedeuserid()));
-            if (Objects.nonNull(existConfig)) {
-                config.setId(existConfig.getId());
-                taskConfigMapper.updateById(config);
+            TaskConfig existTaskConfig = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfig.class).eq(TaskConfig::getDedeuserid, user.getDedeuserid()));
+            if (Objects.nonNull(existTaskConfig)) {
+                taskConfig.setId(existTaskConfig.getId());
+                taskConfigMapper.updateById(taskConfig);
             } else {
-                taskConfigMapper.insert(config);
+                taskConfigMapper.insert(taskConfig);
             }
+
+            // 持久化推送配置信息
+            if (Objects.nonNull(pushConfigDTO)) {
+                PushConfig pushConfig = mapperFactory.getMapperFacade().map(pushConfigDTO, PushConfig.class);
+                PushConfig existPushConfig = pushConfigMapper.selectOne(Wrappers.lambdaQuery(PushConfig.class).eq(PushConfig::getDedeuserid, user.getDedeuserid()));
+
+                if (Objects.nonNull(existPushConfig)) {
+                    pushConfig.setId(existPushConfig.getId());
+                    pushConfig.setDedeuserid(user.getDedeuserid());
+                    pushConfigMapper.updateById(pushConfig);
+                } else {
+                    pushConfig.setDedeuserid(user.getDedeuserid());
+                    pushConfigMapper.insert(pushConfig);
+                }
+            }
+
 
             // 持久化用户信息
             BilibiliUser existUser = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, user.getDedeuserid()));
@@ -71,10 +89,7 @@ public class TaskServiceImpl implements TaskService {
                 bilibiliUserMapper.updateById(user);
             }
 
-            // 初次执行任务
-            //producer.sendAsync(JSONUtil.toJsonStr(config).getBytes(StandardCharsets.UTF_8));
-
-            if (Boolean.TRUE.equals(config.getFollowDeveloper())) {
+            if (Boolean.TRUE.equals(taskConfig.getFollowDeveloper())) {
                 String devUid = "287969457";
                 JSONObject followResp = delegate.followUser(devUid);
                 if (followResp.getInt("code") == 0) {
@@ -85,7 +100,8 @@ public class TaskServiceImpl implements TaskService {
             }
         }
 
-        return user.getIsLogin();
+        return mapperFactory.getMapperFacade()
+                .map(taskConfig, TaskConfigDTO.class);
     }
 
     @Override

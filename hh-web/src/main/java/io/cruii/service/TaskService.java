@@ -1,9 +1,9 @@
 package io.cruii.service;
 
 
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.dto.TaskConfigDTO;
-import org.apache.pulsar.client.api.PulsarClientException;
+import io.cruii.pojo.po.TaskConfig;
 
 /**
  * @author cruii
@@ -14,10 +14,11 @@ public interface TaskService {
     /**
      * 创建新任务
      *
-     * @param taskConfig 任务配置
+     * @param taskConfigDTO 任务配置
+     * @param pushConfigDTO 推送配置
      * @return 配置是否有效
      */
-    boolean createTask(TaskConfigDTO taskConfig) throws InterruptedException, PulsarClientException;
+    TaskConfigDTO createTask(TaskConfigDTO taskConfigDTO, PushConfigDTO pushConfigDTO);
 
     /**
      * 是否存在任务配置

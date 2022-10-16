@@ -29,7 +29,7 @@ public class ProxyUtil {
 
     static {
         try {
-            InputStream stream = ResourceUtil.getStream("proxy.properties");
+            InputStream stream = ResourceUtil.getStream("config.properties");
             Properties properties = new Properties();
             properties.load(stream);
             proxyApi = properties.getProperty("proxy.api");

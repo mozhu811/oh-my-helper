@@ -2,7 +2,6 @@ package io.cruii.push.service.impl;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.po.PushConfig;
 import io.cruii.push.mapper.PushConfigMapper;
 import io.cruii.push.pusher.impl.BarkPusher;
@@ -11,10 +10,7 @@ import io.cruii.push.pusher.impl.ServerChanPusher;
 import io.cruii.push.pusher.impl.TelegramBotPusher;
 import io.cruii.push.service.PushService;
 import lombok.extern.slf4j.Slf4j;
-import ma.glasnost.orika.MapperFactory;
 import org.springframework.stereotype.Service;
-
-import java.util.Objects;
 
 /**
  * @author cruii
@@ -24,12 +20,9 @@ import java.util.Objects;
 @Slf4j
 public class PushServiceImpl implements PushService {
     private final PushConfigMapper pushConfigMapper;
-    private final MapperFactory mapperFactory;
 
-    public PushServiceImpl(PushConfigMapper pushConfigMapper,
-                           MapperFactory mapperFactory) {
+    public PushServiceImpl(PushConfigMapper pushConfigMapper) {
         this.pushConfigMapper = pushConfigMapper;
-        this.mapperFactory = mapperFactory;
     }
 
     @Override
@@ -55,17 +48,5 @@ public class PushServiceImpl implements PushService {
         log.info("推送结果：{}", result);
 
         return result;
-    }
-
-    @Override
-    public void save(PushConfigDTO pushConfigDTO) {
-        PushConfig pushConfig = mapperFactory.getMapperFacade().map(pushConfigDTO, PushConfig.class);
-        PushConfig exist = pushConfigMapper.selectOne(Wrappers.lambdaQuery(PushConfig.class).eq(PushConfig::getDedeuserid, pushConfig.getDedeuserid()));
-        if (Objects.isNull(exist)) {
-            pushConfigMapper.insert(pushConfig);
-        } else {
-            pushConfig.setId(exist.getId());
-            pushConfigMapper.updateById(pushConfig);
-        }
     }
 }

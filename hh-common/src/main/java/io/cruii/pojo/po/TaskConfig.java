@@ -1,8 +1,10 @@
 package io.cruii.pojo.po;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import io.cruii.handler.EncryptHandler;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -12,27 +14,29 @@ import java.io.Serializable;
  * Created on 2021/6/8
  */
 @Data
-@TableName("task_config")
+@TableName(value = "task_config", autoResultMap = true)
 public class TaskConfig implements Serializable {
 
     private static final long serialVersionUID = 6151419899088396002L;
 
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
      * B站uid
      */
-    @TableId(type = IdType.INPUT)
     private String dedeuserid;
 
     /**
      * 会话标识
      */
+    @TableField(typeHandler = EncryptHandler.class)
     private String sessdata;
 
     /**
      * csrf校验
      */
+    @TableField(typeHandler = EncryptHandler.class)
     private String biliJct;
 
     /**

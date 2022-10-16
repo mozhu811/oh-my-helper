@@ -1,6 +1,5 @@
 package io.cruii.pojo.vo;
 
-import io.cruii.pojo.po.PushConfig;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -12,6 +11,16 @@ import java.io.Serializable;
 @Data
 public class TaskConfigVO implements Serializable {
     private static final long serialVersionUID = 4344616448330555244L;
+
+    /**
+     * 自增id
+     */
+    private Long id;
+
+    /**
+     * B站id
+     */
+    private String dedeuserid;
 
     /**
      * 每日投币数量,默认 5 ,为 0 时则不投币

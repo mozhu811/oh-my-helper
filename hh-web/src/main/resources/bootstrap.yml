@@ -1,9 +1,6 @@
+
 server:
   port: 811
-db:
-  host: 43.129.246.22
-  port: 3306
-  name: bilibili_helper_hub
 
 spring:
   application:
@@ -20,3 +17,6 @@ spring:
         file-extension: yaml
         group: DEFAULT_GROUP
         prefix: ${spring.application.name}
+feign:
+  hystrix:
+    enabled: true
