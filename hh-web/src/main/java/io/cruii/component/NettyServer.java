@@ -5,15 +5,14 @@ import io.cruii.handler.ServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import lombok.Getter;
+import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.C;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +22,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-public class NettyServer implements AutoCloseable, CommandLineRunner {
+public class NettyServer implements CommandLineRunner {
     private final NettyConfiguration nettyConfiguration;
     private final EventLoopGroup bossGroup = new NioEventLoopGroup();
     private final EventLoopGroup workGroup = new NioEventLoopGroup();
@@ -40,11 +39,15 @@ public class NettyServer implements AutoCloseable, CommandLineRunner {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) {
                         // 自定义服务处理
-                        socketChannel.pipeline().addLast(new ServerHandler());
+                        socketChannel.pipeline().addLast("idleState", new IdleStateHandler(5, 0, 0));
+                        socketChannel.pipeline().addLast("serverHandler", new ServerHandler());
                     }
-                });
+                })
+                .option(ChannelOption.SO_BACKLOG, 128)
+                .childOption(ChannelOption.SO_KEEPALIVE, true);
         try {
             ChannelFuture channelFuture = serverBootstrap.bind(nettyConfiguration.getHost(), nettyConfiguration.getPort()).sync();
+            log.info("Netty server started on host/port: {}/{}", nettyConfiguration.getHost(), nettyConfiguration.getPort());
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -54,13 +57,6 @@ public class NettyServer implements AutoCloseable, CommandLineRunner {
             bossGroup.shutdownGracefully();
             log.info("======Shutdown Netty Server Successful!=========");
         }
-    }
-
-    @Override
-    public void close() {
-        workGroup.shutdownGracefully();
-        bossGroup.shutdownGracefully();
-        log.info("======Shutdown Netty Server Successful!=========");
     }
 
     @Async
