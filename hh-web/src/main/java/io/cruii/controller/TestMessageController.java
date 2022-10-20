@@ -1,6 +1,9 @@
 package io.cruii.controller;
 
 import io.cruii.handler.ServerHandler;
+import io.cruii.pojo.po.TaskConfig;
+import io.cruii.service.BilibiliUserService;
+import io.cruii.service.TaskService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,12 +20,17 @@ public class TestMessageController {
 
     private final ServerHandler serverHandler;
 
-    public TestMessageController(ServerHandler serverHandler) {
+    private final BilibiliUserService bilibiliUserService;
+    private final TaskService taskService;
+    public TestMessageController(ServerHandler serverHandler, BilibiliUserService bilibiliUserService, TaskService taskService) {
         this.serverHandler = serverHandler;
+        this.bilibiliUserService = bilibiliUserService;
+        this.taskService = taskService;
     }
 
     @PostMapping
     public void testMsg() {
-        serverHandler.sendMsg("12313");
+        TaskConfig taskConfig = taskService.getTask("287969457");
+        serverHandler.sendMsg(taskConfig);
     }
 }

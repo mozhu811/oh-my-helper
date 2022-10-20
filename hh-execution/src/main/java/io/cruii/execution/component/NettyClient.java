@@ -1,7 +1,11 @@
 package io.cruii.execution.component;
 
+import cn.hutool.extra.spring.SpringUtil;
+import cn.hutool.json.JSONUtil;
 import io.cruii.execution.config.NettyConfiguration;
+import io.cruii.pojo.po.TaskConfig;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -9,6 +13,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -74,7 +79,7 @@ class ConnectionListener implements ChannelFutureListener {
 }
 
 @Slf4j
-class ClientHandler extends SimpleChannelInboundHandler<String> {
+class ClientHandler extends ChannelInboundHandlerAdapter{
     private final NettyClient nettyClient;
 
     public ClientHandler(NettyClient nettyClient) {
@@ -104,8 +109,12 @@ class ClientHandler extends SimpleChannelInboundHandler<String> {
      * 消息到来时触发
      */
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, String msg) {
-        log.info("Receive message: {} ", msg);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        ByteBuf buf = (ByteBuf) msg;
+        String jsonTaskConfig = buf.toString(StandardCharsets.UTF_8);
+        TaskConfig taskConfig = JSONUtil.toBean(jsonTaskConfig, TaskConfig.class);
+        TaskRunner taskRunner = SpringUtil.getApplicationContext().getBean(TaskRunner.class);
+        taskRunner.run(taskConfig);
     }
 
     @Override
