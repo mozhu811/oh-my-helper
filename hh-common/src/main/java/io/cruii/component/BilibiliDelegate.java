@@ -122,22 +122,25 @@ public class BilibiliDelegate {
 
         // 获取勋章墙
         JSONObject medalWallResp = getMedalWall();
-        List<JSONObject> medals = medalWallResp.getJSONObject("data")
-                .getJSONArray("list")
-                .stream()
-                .map(JSONUtil::parseObj)
-                .map(medalObj -> {
-                    JSONObject medal = JSONUtil.createObj();
-                    medal.set("name", medalObj.getByPath("medal_info.medal_name", String.class));
-                    medal.set("level", medalObj.getByPath("medal_info.level", Integer.class));
-                    medal.set("colorStart", medalObj.getByPath("medal_info.medal_color_start", Integer.class));
-                    medal.set("colorEnd", medalObj.getByPath("medal_info.medal_color_end", Integer.class));
-                    medal.set("colorBorder", medalObj.getByPath("medal_info.medal_color_border", Integer.class));
-                    return medal;
-                })
-                .sorted((o1, o2) -> o2.getInt("level") - o1.getInt("level"))
-                .limit(2L)
-                .collect(Collectors.toList());
+        List<JSONObject> medals = null;
+        if (medalWallResp != null) {
+            medals = medalWallResp.getJSONObject("data")
+                    .getJSONArray("list")
+                    .stream()
+                    .map(JSONUtil::parseObj)
+                    .map(medalObj -> {
+                        JSONObject medal = JSONUtil.createObj();
+                        medal.set("name", medalObj.getByPath("medal_info.medal_name", String.class));
+                        medal.set("level", medalObj.getByPath("medal_info.level", Integer.class));
+                        medal.set("colorStart", medalObj.getByPath("medal_info.medal_color_start", Integer.class));
+                        medal.set("colorEnd", medalObj.getByPath("medal_info.medal_color_end", Integer.class));
+                        medal.set("colorBorder", medalObj.getByPath("medal_info.medal_color_border", Integer.class));
+                        return medal;
+                    })
+                    .sorted((o1, o2) -> o2.getInt("level") - o1.getInt("level"))
+                    .limit(2L)
+                    .collect(Collectors.toList());
+        }
 
         BilibiliUser info = new BilibiliUser();
         info.setDedeuserid(config.getDedeuserid());
@@ -204,7 +207,12 @@ public class BilibiliDelegate {
     public JSONObject getMedalWall() {
         Map<String, String> params = new HashMap<>();
         params.put("target_id", config.getDedeuserid());
-        return doGet(BilibiliAPI.GET_MEDAL_WALL, params);
+        try {
+            return doGet(BilibiliAPI.GET_MEDAL_WALL, params);
+        } catch (Exception e) {
+            log.error("获取勋章墙异常", e);
+        }
+        return null;
     }
 
     /**

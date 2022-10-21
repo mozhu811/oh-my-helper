@@ -17,6 +17,7 @@ import ma.glasnost.orika.MapperFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -84,6 +85,7 @@ public class TaskConfigServiceImpl implements TaskConfigService {
             // 持久化用户信息
             BilibiliUser existUser = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, user.getDedeuserid()));
             if (Objects.isNull(existUser)) {
+                user.setCreateTime(LocalDateTime.now());
                 bilibiliUserMapper.insert(user);
             } else {
                 user.setId(existUser.getId());
