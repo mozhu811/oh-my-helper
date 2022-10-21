@@ -11,12 +11,13 @@ import io.cruii.pojo.dto.TaskConfigDTO;
 import io.cruii.pojo.po.BilibiliUser;
 import io.cruii.pojo.po.PushConfig;
 import io.cruii.pojo.po.TaskConfig;
-import io.cruii.service.TaskService;
+import io.cruii.service.TaskConfigService;
 import lombok.extern.log4j.Log4j2;
 import ma.glasnost.orika.MapperFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -26,7 +27,7 @@ import java.util.Objects;
 @Service
 @Log4j2
 @Transactional(rollbackFor = Exception.class)
-public class TaskServiceImpl implements TaskService {
+public class TaskConfigServiceImpl implements TaskConfigService {
 
     private final TaskConfigMapper taskConfigMapper;
 
@@ -36,10 +37,10 @@ public class TaskServiceImpl implements TaskService {
 
     private final MapperFactory mapperFactory;
 
-    public TaskServiceImpl(TaskConfigMapper taskConfigMapper,
-                           PushConfigMapper pushConfigMapper,
-                           BilibiliUserMapper bilibiliUserMapper,
-                           MapperFactory mapperFactory) {
+    public TaskConfigServiceImpl(TaskConfigMapper taskConfigMapper,
+                                 PushConfigMapper pushConfigMapper,
+                                 BilibiliUserMapper bilibiliUserMapper,
+                                 MapperFactory mapperFactory) {
         this.taskConfigMapper = taskConfigMapper;
         this.pushConfigMapper = pushConfigMapper;
         this.bilibiliUserMapper = bilibiliUserMapper;
@@ -142,5 +143,11 @@ public class TaskServiceImpl implements TaskService {
             taskConfig.setBiliJct(biliJct);
             taskConfigMapper.updateById(taskConfig);
         }
+    }
+
+    @Override
+    public List<TaskConfig> getTask(List<String> dedeuseridList) {
+        return taskConfigMapper.selectList(Wrappers.lambdaQuery(TaskConfig.class)
+                .in(TaskConfig::getDedeuserid, dedeuseridList));
     }
 }

@@ -15,27 +15,3 @@ spring:
         file-extension: yaml
         group: DEFAULT_GROUP
         prefix: ${spring.application.name}
-
-logging:
-  config: classpath:logback-spring.xml
-  level:
-    com.alibaba: info
-
-ribbon:
-  feign:
-    client:
-      config:
-        default:
-          connectTimeout: 10000
-          readTimeout: 600000
-
-netty:
-  websocket:
-    # Websocket服务端口
-    port: 1024
-    # 绑定的网卡
-    host: 0.0.0.0
-    # 消息帧最大体积
-    max-frame-size: 10240
-    # URI路径
-    path: /task-channel

@@ -101,4 +101,9 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
 
         return bilibiliUserVOPage;
     }
+
+    @Override
+    public List<String> listNotRunUserId() {
+        return bilibiliUserMapper.listNotRunUser().stream().map(BilibiliUser::getDedeuserid).collect(Collectors.toList());
+    }
 }

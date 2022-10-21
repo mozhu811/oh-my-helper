@@ -11,17 +11,17 @@ import com.google.zxing.WriterException;
 import io.cruii.constant.BilibiliAPI;
 import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.exception.BilibiliUserNotFoundException;
+import io.cruii.pojo.dto.BilibiliUserDTO;
 import io.cruii.pojo.vo.BilibiliLoginVO;
 import io.cruii.pojo.vo.BilibiliUserVO;
 import io.cruii.pojo.vo.QrCodeVO;
 import io.cruii.service.BilibiliUserService;
-import io.cruii.service.TaskService;
+import io.cruii.service.TaskConfigService;
 import io.cruii.util.QrCodeGenerator;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import ma.glasnost.orika.MapperFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,25 +41,45 @@ import java.util.Map;
 public class BilibiliController {
 
     private final BilibiliUserService userService;
-    private final TaskService taskService;
+    private final TaskConfigService taskConfigService;
 
+    private final MapperFactory mapperFactory;
     public BilibiliController(BilibiliUserService userService,
-                              TaskService taskService) {
+                              TaskConfigService taskConfigService, MapperFactory mapperFactory) {
         this.userService = userService;
-        this.taskService = taskService;
+        this.taskConfigService = taskConfigService;
+        this.mapperFactory = mapperFactory;
+    }
+
+    private static Map<String, Object> getUrlParams(String param) {
+        Map<String, Object> map = new HashMap<>(0);
+        if (param.isEmpty()) {
+            return map;
+        }
+        String[] params = param.split("&");
+        for (String s : params) {
+            String[] p = s.split("=");
+            if (p.length == 2) {
+                map.put(p[0], p[1]);
+            }
+        }
+        return map;
     }
 
     @GetMapping("user")
     public BilibiliUserVO getBilibiliUser(@RequestParam String dedeuserid, @RequestParam String sessdata) {
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         sessdataCookie.setDomain(".bilibili.com");
-        String body = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV).cookie(sessdataCookie).execute().body();
-        JSONObject resp = JSONUtil.parseObj(body);
-        if (resp.getInt("code") == -101) {
-            throw new BilibiliCookieExpiredException(dedeuserid);
+        JSONObject data;
+        try(HttpResponse response = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV).cookie(sessdataCookie).execute()) {
+            String body = response.body();
+            JSONObject resp = JSONUtil.parseObj(body);
+            if (resp.getInt("code") == -101) {
+                throw new BilibiliCookieExpiredException(dedeuserid);
+            }
+            data = resp.getJSONObject("data");
         }
 
-        JSONObject data = resp.getJSONObject("data");
         String mid = data.getStr("mid");
 
         // 找不到用户
@@ -68,10 +88,18 @@ public class BilibiliController {
         }
 
         String face = data.getStr("face");
+        try (HttpResponse response = HttpRequest.get(face).execute()) {
+            InputStream inputStream = response.bodyStream();
+            return new BilibiliUserVO().setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream)).setUsername(data.getStr("uname"))
+                    .setConfigId(taskConfigService.getTask(dedeuserid) == null ? null : taskConfigService.getTask(dedeuserid).getId()).setLevel(data.getJSONObject("level_info").getInt("current_level"));
+        }
 
-        InputStream inputStream = HttpRequest.get(face).execute().bodyStream();
+    }
 
-        return new BilibiliUserVO().setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream)).setUsername(data.getStr("uname")).setConfigId(taskService.getTask(dedeuserid) == null ? null : taskService.getTask(dedeuserid).getId()).setLevel(data.getJSONObject("level_info").getInt("current_level"));
+    @PutMapping("user")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void updateUser(@RequestBody BilibiliUserVO bilibiliUserVO) {
+        userService.save(mapperFactory.getMapperFacade().map(bilibiliUserVO, BilibiliUserDTO.class));
     }
 
     @GetMapping("users")
@@ -87,8 +115,8 @@ public class BilibiliController {
     }
 
     @GetMapping("qrCode")
-    public QrCodeVO getLoginQrCode()  {
-        try(HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_URL).execute()) {
+    public QrCodeVO getLoginQrCode() {
+        try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_URL).execute()) {
             log.debug(response);
             if (response.getStatus() == 200) {
                 JSONObject jsonBody = JSONUtil.parseObj(response.body());
@@ -106,7 +134,7 @@ public class BilibiliController {
                     return qrCodeVO;
                 }
             }
-        }catch (WriterException | IOException e) {
+        } catch (WriterException | IOException e) {
             throw new RuntimeException("获取B站二维码登录链接异常", e);
         }
         throw new RuntimeException("获取B站二维码登录链接异常");
@@ -149,10 +177,10 @@ public class BilibiliController {
             这样不符合逻辑。
             所以，只有在老用户登录时才更新cookie，新用户直接返回即可。
              */
-                if (taskService.isExist(dedeuserid)) {
+                if (taskConfigService.isExist(dedeuserid)) {
                     // 存在用户时更新cookie
                     userService.save(dedeuserid, sessdata, biliJct);
-                    taskService.updateCookie(dedeuserid, sessdata, biliJct);
+                    taskConfigService.updateCookie(dedeuserid, sessdata, biliJct);
                 }
 
                 bilibiliLoginVO.setBiliJct(biliJct);
@@ -166,20 +194,5 @@ public class BilibiliController {
             bilibiliLoginVO.setCode(code);
             return bilibiliLoginVO;
         }
-    }
-
-    private static Map<String, Object> getUrlParams(String param) {
-        Map<String, Object> map = new HashMap<>(0);
-        if (param.isEmpty()) {
-            return map;
-        }
-        String[] params = param.split("&");
-        for (String s : params) {
-            String[] p = s.split("=");
-            if (p.length == 2) {
-                map.put(p[0], p[1]);
-            }
-        }
-        return map;
     }
 }

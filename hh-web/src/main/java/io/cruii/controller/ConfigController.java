@@ -4,7 +4,7 @@ import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.dto.TaskConfigDTO;
 import io.cruii.pojo.vo.TaskConfigVO;
 import io.cruii.service.PushConfigService;
-import io.cruii.service.TaskService;
+import io.cruii.service.TaskConfigService;
 import lombok.extern.log4j.Log4j2;
 import ma.glasnost.orika.MapperFactory;
 import org.springframework.http.HttpStatus;
@@ -21,17 +21,17 @@ import java.util.Objects;
 @RequestMapping("configs")
 public class ConfigController {
 
-    private final TaskService taskService;
+    private final TaskConfigService taskConfigService;
 
     private final MapperFactory mapperFactory;
 
     private final PushConfigService pushConfigService;
 
 
-    public ConfigController(TaskService taskService,
+    public ConfigController(TaskConfigService taskConfigService,
                             MapperFactory mapperFactory,
                             PushConfigService pushConfigService) {
-        this.taskService = taskService;
+        this.taskConfigService = taskConfigService;
         this.mapperFactory = mapperFactory;
         this.pushConfigService = pushConfigService;
     }
@@ -52,7 +52,7 @@ public class ConfigController {
         taskConfigDTO.setSessdata(sessdata);
         taskConfigDTO.setBiliJct(biliJct);
 
-        return taskService.createTask(taskConfigDTO, pushConfigDTO);
+        return taskConfigService.createTask(taskConfigDTO, pushConfigDTO);
     }
 
     @PostMapping("push")
@@ -69,7 +69,7 @@ public class ConfigController {
         //BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
         //BilibiliUser user = delegate.getUser();
         //if (Boolean.TRUE.equals(user.getIsLogin())) {
-            taskService.removeTask(dedeuserid);
+            taskConfigService.removeTask(dedeuserid);
         //}
     }
 }

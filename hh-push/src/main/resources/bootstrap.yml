@@ -15,11 +15,3 @@ spring:
         file-extension: yaml
         group: DEFAULT_GROUP
         prefix: ${spring.application.name}
-
-logging:
-  level:
-    io.cruii: DEBUG
-
-mybatis-plus:
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

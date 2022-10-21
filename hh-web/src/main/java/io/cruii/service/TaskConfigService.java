@@ -5,11 +5,13 @@ import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.dto.TaskConfigDTO;
 import io.cruii.pojo.po.TaskConfig;
 
+import java.util.List;
+
 /**
  * @author cruii
  * Created on 2021/6/6
  */
-public interface TaskService {
+public interface TaskConfigService {
 
     /**
      * 创建新任务
@@ -35,4 +37,6 @@ public interface TaskService {
     TaskConfig getTask(String dedeuserId);
 
     void updateCookie(String dedeuserid, String sessdata, String biliJct);
+
+    List<TaskConfig> getTask(List<String> dedeuseridList);
 }

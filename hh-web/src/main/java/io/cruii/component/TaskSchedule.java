@@ -1,14 +1,11 @@
 package io.cruii.component;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.cruii.handler.ServerHandler;
 import io.cruii.mapper.TaskConfigMapper;
-import io.cruii.pojo.po.TaskConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.sql.Wrapper;
 
 /**
  * @author cruii
@@ -16,6 +13,7 @@ import java.sql.Wrapper;
  */
 @Component
 @Slf4j
+@RefreshScope
 public class TaskSchedule {
     private final TaskConfigMapper taskConfigMapper;
 
@@ -26,11 +24,9 @@ public class TaskSchedule {
         this.serverHandler = serverHandler;
     }
 
-    //@Scheduled(cron = "${task.cron:0 20 17 * * ?}")
-    @Scheduled(cron = "0 24 17 * * ?")
+    @Scheduled(cron = "${task.cron:0 0 9 * * ?}")
     public void doTask() {
-        taskConfigMapper.selectList(Wrappers.lambdaQuery(TaskConfig.class)
-                        .eq(TaskConfig::getDedeuserid, "287969457"))
+        taskConfigMapper.selectList(null)
                 .forEach(serverHandler::sendMsg);
     }
 }
