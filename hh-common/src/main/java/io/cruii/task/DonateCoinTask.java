@@ -24,9 +24,14 @@ public class DonateCoinTask extends VideoTask {
     private final TaskConfig config;
     private int counter = 0;
 
+    private int coinNum;
+
     public DonateCoinTask(BilibiliDelegate delegate) {
         super(delegate);
         this.config = delegate.getConfig();
+        Integer donateCoins = config.getDonateCoins();
+        log.info("配置投币数为：{}", donateCoins);
+        coinNum = calDiff();
     }
 
     @Override
@@ -47,20 +52,11 @@ public class DonateCoinTask extends VideoTask {
             return;
         }
 
-        Integer donateCoins = config.getDonateCoins();
-        log.info("配置投币数为：{}", donateCoins);
-        int actual = calDiff();
-        if (actual <= 0) {
-            log.info("今日投币任务已完成 ✔️");
-            return;
-        } else {
-            log.info("距完成任务还需投币{}个", actual);
-        }
         // 获取账户余额
         int current = getCoin();
         log.info("当前账户余额：{}", current);
         if (current <= config.getReserveCoins() ||
-                actual > current) {
+                coinNum > current) {
             log.info("当前余额不足或触发硬币保护阈值，取消执行投币任务。❌");
             return;
         }
@@ -68,7 +64,7 @@ public class DonateCoinTask extends VideoTask {
         List<String> bvidList;
         // 热榜投币
         Collections.shuffle(trend);
-        bvidList = trend.stream().limit(actual).collect(Collectors.toList());
+        bvidList = trend.stream().limit(coinNum).collect(Collectors.toList());
 
         boolean done = doDonate(bvidList);
 
@@ -131,14 +127,15 @@ public class DonateCoinTask extends VideoTask {
                     String videoTitle = getVideoTitle(bvid);
                     if (resp.getInt(CODE) == 0) {
                         log.info("为视频[{}]投币成功 ✔️", videoTitle);
+                        --coinNum;
                     } else {
                         log.error("为视频[{}]投币失败 ❌", resp.getStr(MESSAGE));
                     }
                     try {
                         TimeUnit.SECONDS.sleep(3);
                     } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
                         log.error(e);
+                        Thread.currentThread().interrupt();
                     }
                 });
 

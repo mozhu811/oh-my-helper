@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * @author cruii
@@ -34,6 +35,8 @@ public class BilibiliUserVO implements Serializable {
     private JSONArray medals;
 
     private Integer vipStatus;
+
+    private LocalDateTime lastRunTime;
 
     private Boolean isLogin;
 

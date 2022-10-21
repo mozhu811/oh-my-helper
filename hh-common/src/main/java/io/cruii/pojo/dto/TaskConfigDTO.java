@@ -8,6 +8,10 @@ import lombok.Data;
  */
 @Data
 public class TaskConfigDTO {
+    /**
+     * 自增id
+     */
+    private Long id;
 
     /**
      * B站uid

@@ -1,0 +1,17 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: hh-execution-service
+  profiles:
+    active: prod
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://hk22:8848
+      config:
+        server-addr: http://hk22:8848
+        file-extension: yaml
+        group: DEFAULT_GROUP
+        prefix: ${spring.application.name}

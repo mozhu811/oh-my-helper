@@ -6,6 +6,7 @@ import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.pojo.po.BilibiliUser;
 import io.cruii.task.*;
 import lombok.extern.log4j.Log4j2;
+import org.slf4j.MDC;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +50,7 @@ public class TaskExecutor {
                 break;
             } catch (Exception e) {
                 log.error("[{}]任务执行失败",  task.getName(), e);
+                //throw new RuntimeException(e);
             }
         }
 

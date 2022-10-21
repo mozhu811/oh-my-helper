@@ -5,9 +5,17 @@ package io.cruii.constant;
  * Created on 2021/08/13
  */
 public interface BilibiliAPI {
-    String GET_QR_CODE_LOGIN_URL = "http://passport.bilibili.com/qrcode/getLoginUrl";
+    String GET_QR_CODE_LOGIN_URL_OLD = "http://passport.bilibili.com/qrcode/getLoginUrl";
+    /**
+     * 申请二维码
+     */
+    String GET_QR_CODE_LOGIN_URL = "http://passport.bilibili.com/x/passport-login/web/qrcode/generate";
 
-    String GET_QR_CODE_LOGIN_INFO_URL = "http://passport.bilibili.com/qrcode/getLoginInfo";
+    String GET_QR_CODE_LOGIN_INFO_URL_OLD = "http://passport.bilibili.com/qrcode/getLoginInfo";
+    /**
+     * 扫码登录
+     */
+    String GET_QR_CODE_LOGIN_INFO_URL = "http://passport.bilibili.com/x/passport-login/web/qrcode/poll";
 
     /**
      * 导航栏用户信息

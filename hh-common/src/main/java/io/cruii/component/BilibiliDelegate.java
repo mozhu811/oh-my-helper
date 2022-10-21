@@ -679,10 +679,12 @@ public class BilibiliDelegate {
      * @param avatar 头像文件
      */
     private void uploadAvatar(byte[] avatar) {
-        String path = "/root/avatars" + File.separator + config.getDedeuserid() + ".png";
+        String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         try {
-
             File avatarFile = new File(path);
+            if (!avatarFile.getParentFile().exists()){
+                FileUtil.mkParentDirs(avatarFile);
+            }
             if (avatar != null) {
                 if (avatarFile.exists()) {
                     String localMd5 = SecureUtil.md5().digestHex(avatarFile);

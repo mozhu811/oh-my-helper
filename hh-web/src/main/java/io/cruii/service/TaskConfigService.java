@@ -1,23 +1,26 @@
 package io.cruii.service;
 
 
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.dto.TaskConfigDTO;
-import org.apache.pulsar.client.api.PulsarClientException;
+import io.cruii.pojo.po.TaskConfig;
+
+import java.util.List;
 
 /**
  * @author cruii
  * Created on 2021/6/6
  */
-public interface TaskService {
+public interface TaskConfigService {
 
     /**
      * 创建新任务
      *
-     * @param taskConfig 任务配置
+     * @param taskConfigDTO 任务配置
+     * @param pushConfigDTO 推送配置
      * @return 配置是否有效
      */
-    boolean createTask(TaskConfigDTO taskConfig) throws InterruptedException, PulsarClientException;
+    TaskConfigDTO createTask(TaskConfigDTO taskConfigDTO, PushConfigDTO pushConfigDTO);
 
     /**
      * 是否存在任务配置
@@ -34,4 +37,6 @@ public interface TaskService {
     TaskConfig getTask(String dedeuserId);
 
     void updateCookie(String dedeuserid, String sessdata, String biliJct);
+
+    List<TaskConfig> getTask(List<String> dedeuseridList);
 }

@@ -1,0 +1,18 @@
+server:
+  port: 811
+
+spring:
+  application:
+    name: hh-web-service
+  profiles:
+    active: prod
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://hk22:8848
+        service: hh-web-service
+      config:
+        server-addr: http://hk22:8848
+        file-extension: yaml
+        group: DEFAULT_GROUP
+        prefix: ${spring.application.name}

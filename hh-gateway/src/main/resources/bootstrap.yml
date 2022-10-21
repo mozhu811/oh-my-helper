@@ -1,0 +1,21 @@
+server:
+  port: 9999
+
+spring:
+  application:
+    name: hh-gateway-service
+  profiles:
+    active: prod
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://hk22:8848
+        service: hh-gateway-service
+      config:
+        server-addr: http://hk22:8848
+        file-extension: yaml
+        group: DEFAULT_GROUP
+        prefix: ${spring.application.name}
+
+logging:
+  config: classpath:logback-spring.xml

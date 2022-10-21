@@ -20,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author cruii
@@ -101,5 +100,10 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
                 .collect(Collectors.toList()));
 
         return bilibiliUserVOPage;
+    }
+
+    @Override
+    public List<String> listNotRunUserId() {
+        return bilibiliUserMapper.listNotRunUser().stream().map(BilibiliUser::getDedeuserid).collect(Collectors.toList());
     }
 }
