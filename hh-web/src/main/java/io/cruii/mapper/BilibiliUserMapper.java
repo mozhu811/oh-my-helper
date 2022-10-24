@@ -9,6 +9,6 @@ import java.util.List;
 
 @Mapper
 public interface BilibiliUserMapper extends BaseMapper<BilibiliUser> {
-    @Select("select * from bilibili_user where to_days(now()) - to_days(last_run_time) >= 1")
+    @Select("select * from bilibili_user where to_days(now()) - to_days(last_run_time) >= 1 or last_run_time is null")
     List<BilibiliUser> listNotRunUser();
 }
