@@ -2,6 +2,8 @@ package io.cruii.pojo.dto;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
  * @author cruii
  * Created on 2021/9/30
@@ -26,6 +28,8 @@ public class BilibiliUserDTO {
     private String medals;
 
     private Integer vipStatus;
+
+    private LocalDateTime lastRunTime;
 
     private Boolean isLogin;
 }
