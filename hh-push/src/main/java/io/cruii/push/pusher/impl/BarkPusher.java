@@ -8,6 +8,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 
 import java.net.URI;
@@ -36,7 +37,8 @@ public class BarkPusher implements Pusher {
         stringEntity.setContentType("application/json");
         httpPost.setEntity(stringEntity);
 
-        try (CloseableHttpResponse httpResponse = HttpUtil.buildHttpClient().execute(httpPost)) {
+        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient();
+             CloseableHttpResponse httpResponse = httpClient.execute(httpPost)) {
             if (httpResponse.getStatusLine().getStatusCode() == 200) {
                 log.info("Bark推送成功");
                 EntityUtils.consume(httpResponse.getEntity());

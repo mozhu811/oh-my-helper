@@ -7,6 +7,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
@@ -40,7 +41,8 @@ public class TelegramBotPusher implements Pusher {
         HttpPost httpPost = new HttpPost(uri);
         httpPost.setEntity(entity);
 
-        try (CloseableHttpResponse httpResponse = HttpUtil.buildHttpClient().execute(httpPost)) {
+        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient();
+             CloseableHttpResponse httpResponse = httpClient.execute(httpPost)) {
             if (httpResponse.getStatusLine().getStatusCode() == 200) {
                 log.info("Telegram推送成功");
                 EntityUtils.consume(httpResponse.getEntity());
