@@ -5,15 +5,16 @@ import cn.hutool.json.JSONUtil;
 import io.cruii.execution.config.NettyConfiguration;
 import io.cruii.pojo.po.TaskConfig;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
+import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.C;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -47,18 +48,19 @@ public class NettyClient implements CommandLineRunner {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
                         // 自定义处理程序
-                        socketChannel.pipeline().addLast("idleState", new IdleStateHandler(0, 0, 5));
+                        socketChannel.pipeline().addLast("lineBasedFrameDecoder", new LineBasedFrameDecoder(1024));
+                        socketChannel.pipeline().addLast("stringDecoder", new StringDecoder());
                         socketChannel.pipeline().addLast("clientHandler", new ClientHandler(NettyClient.this));
+                        socketChannel.pipeline().addLast("idleState", new IdleStateHandler(0, 0, 5));
                     }
-                })
-                .option(ChannelOption.SO_BACKLOG, 128);
-
+                });
         // 绑定端口并同步等待
         ChannelFuture channelFuture = bootstrap.connect(nettyConfig.getHost(), nettyConfig.getPort());
         channelFuture.addListener(new ConnectionListener(this));
     }
 }
 
+@Slf4j
 class ConnectionListener implements ChannelFutureListener {
     private final NettyClient nettyClient;
 
@@ -69,18 +71,20 @@ class ConnectionListener implements ChannelFutureListener {
     @Override
     public void operationComplete(ChannelFuture channelFuture) throws Exception {
         if (!channelFuture.isSuccess()) {
-            System.out.println("Reconnect");
+            log.debug("Reconnecting");
             final EventLoop loop = channelFuture.channel().eventLoop();
             loop.schedule(() -> {
                 nettyClient.doConnect(new Bootstrap(), loop);
-            }, 30L, TimeUnit.SECONDS);
+            }, 5L, TimeUnit.SECONDS);
         }
     }
 }
 
-@Slf4j
+@Log4j2
 class ClientHandler extends ChannelInboundHandlerAdapter{
     private final NettyClient nettyClient;
+
+    TaskRunner taskRunner = SpringUtil.getApplicationContext().getBean(TaskRunner.class);
 
     public ClientHandler(NettyClient nettyClient) {
         this.nettyClient = nettyClient;
@@ -91,13 +95,12 @@ class ClientHandler extends ChannelInboundHandlerAdapter{
      */
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ctx.writeAndFlush(Unpooled.copiedBuffer("hello netty.", StandardCharsets.UTF_8));
+        ctx.writeAndFlush(Unpooled.copiedBuffer("hello netty.\n".getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         log.warn(">>> The server [{}] is disconnected. <<<", ctx.channel());
-        log.debug(">>> Starting reconnect to the server. <<<");
         EventLoop eventLoop = ctx.channel().eventLoop();
         eventLoop.schedule(() -> {
             log.debug(">>> Reconnecting to the server. <<<");
@@ -110,10 +113,7 @@ class ClientHandler extends ChannelInboundHandlerAdapter{
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ByteBuf buf = (ByteBuf) msg;
-        String jsonTaskConfig = buf.toString(StandardCharsets.UTF_8);
-        TaskConfig taskConfig = JSONUtil.toBean(jsonTaskConfig, TaskConfig.class);
-        TaskRunner taskRunner = SpringUtil.getApplicationContext().getBean(TaskRunner.class);
+        TaskConfig taskConfig = JSONUtil.toBean(((String) msg), TaskConfig.class);
         taskRunner.run(taskConfig);
     }
 

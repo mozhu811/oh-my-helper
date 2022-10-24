@@ -1,7 +1,7 @@
 package io.cruii.handler;
 
 import cn.hutool.json.JSONUtil;
-import io.netty.buffer.ByteBuf;
+import io.cruii.pojo.po.TaskConfig;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -9,7 +9,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,8 +32,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        ByteBuf buf = (ByteBuf) msg;
-        log.info("Receive message from client [{}] : {}", ctx.channel().remoteAddress(), buf.toString(StandardCharsets.UTF_8));
+        log.info("Receive message from client [{}] : {}", ctx.channel().remoteAddress(), msg);
     }
 
     @Override
@@ -54,8 +52,9 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     public void sendMsg(Object msg) {
-        byte[] taskConfig = JSONUtil.toJsonStr(msg).getBytes();
-        log.debug(">>> Sending message, the num of channel: {} <<<", CHANNELS.size());
+        String jsonConfig = JSONUtil.toJsonStr(msg)  + "\n";
+        byte[] taskConfig = jsonConfig.getBytes();
+        log.debug(">>> Sending message, dedeuserid: {} <<<", ((TaskConfig) msg).getDedeuserid());
         CHANNELS.forEach(c -> c.writeAndFlush(Unpooled.copiedBuffer(taskConfig)));
     }
 }

@@ -10,6 +10,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -39,11 +41,12 @@ public class NettyServer implements CommandLineRunner {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) {
                         // 自定义服务处理
-                        socketChannel.pipeline().addLast("idleState", new IdleStateHandler(5, 0, 0));
+                        socketChannel.pipeline().addLast("lineBasedFrameDecoder", new LineBasedFrameDecoder(1024));
+                        socketChannel.pipeline().addLast("stringDecoder", new StringDecoder());
                         socketChannel.pipeline().addLast("serverHandler", new ServerHandler());
+                        socketChannel.pipeline().addLast("idleState", new IdleStateHandler(5, 0, 0));
                     }
                 })
-                .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
         try {
             ChannelFuture channelFuture = serverBootstrap.bind(nettyConfiguration.getHost(), nettyConfiguration.getPort()).sync();
