@@ -38,6 +38,9 @@ public class TaskSchedule {
         List<String> notRunUsers = bilibiliUserMapper.listNotRunUser().stream()
                 .map(BilibiliUser::getDedeuserid)
                 .limit(10).collect(Collectors.toList());
+        if (notRunUsers.isEmpty()) {
+            return;
+        }
         log.debug(notRunUsers);
         List<TaskConfig> taskConfigs = taskConfigMapper.selectList(Wrappers.lambdaQuery(TaskConfig.class).in(TaskConfig::getDedeuserid, notRunUsers));
         log.debug(taskConfigs);
