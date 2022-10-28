@@ -1,17 +1,44 @@
 server:
   port: 8082
-
 spring:
+  profiles:
+    active: dev
   application:
     name: hh-push-service
-  profiles:
-    active: prod
+---
+spring:
   cloud:
     nacos:
       discovery:
         server-addr: http://hk22:8848
+        service: ${spring.application.name}
+        namespace: public
+        group: DEFAULT_GROUP
       config:
         server-addr: http://hk22:8848
         file-extension: yaml
+        namespace: public
         group: DEFAULT_GROUP
         prefix: ${spring.application.name}
+  config:
+    activate:
+      on-profile: prod
+
+---
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://hk22:8848
+        service: ${spring.application.name}
+        namespace: dev
+        group: dev
+      config:
+        server-addr: http://hk22:8848
+        file-extension: yaml
+        namespace: dev
+        group: dev
+        prefix: ${spring.application.name}
+  config:
+    activate:
+      on-profile: dev
