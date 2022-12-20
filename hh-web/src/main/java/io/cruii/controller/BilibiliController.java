@@ -90,7 +90,10 @@ public class BilibiliController {
         String face = data.getStr("face");
         try (HttpResponse response = HttpRequest.get(face).execute()) {
             InputStream inputStream = response.bodyStream();
-            return new BilibiliUserVO().setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream)).setUsername(data.getStr("uname"))
+            return new BilibiliUserVO()
+                    .setDedeuserid(dedeuserid)
+                    .setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream))
+                    .setUsername(data.getStr("uname"))
                     .setConfigId(taskConfigService.getTask(dedeuserid) == null ? null : taskConfigService.getTask(dedeuserid).getId()).setLevel(data.getJSONObject("level_info").getInt("current_level"));
         }
 

@@ -49,20 +49,24 @@ public class TaskRunner {
 
     public void run(TaskConfig taskConfig) {
         taskExecutor.execute(() -> {
-            BilibiliDelegate delegate = new BilibiliDelegate(taskConfig);
             String traceId = MDC.get("traceId");
-            BilibiliUser user = delegate.getUser();
-            BilibiliUserContext.set(user);
-            TaskExecutor executor = new TaskExecutor(delegate);
             try {
+                BilibiliDelegate delegate = new BilibiliDelegate(taskConfig);
+                BilibiliUser user = delegate.getUser();
+                BilibiliUserContext.set(user);
+                TaskExecutor executor = new TaskExecutor(delegate);
                 BilibiliUser retUser = executor.execute();
                 retUser.setLastRunTime(LocalDateTime.now());
+                BilibiliUserContext.set(retUser);
+
+            } catch (Exception e) {
+                throw new RuntimeException("执行任务发生异常", e);
+            } finally {
                 MDC.clear();
+                BilibiliUser retUser = BilibiliUserContext.get();
                 BilibiliUserVO bilibiliUserVO = mapperFactory.getMapperFacade().map(retUser, BilibiliUserVO.class);
                 bilibiliFeignService.updateUser(bilibiliUserVO);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            } finally {
+
                 BilibiliUserContext.remove();
                 // 日志收集
                 String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
