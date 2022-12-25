@@ -1,6 +1,7 @@
 package io.cruii.execution.config;
 
 import io.cruii.component.TaskThreadPoolExecutor;
+import lombok.Data;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -12,9 +13,10 @@ import java.util.concurrent.ThreadPoolExecutor;
  * Created on 2022/4/6
  */
 @Configuration
-public class TreadPoolConfig {
+@Data
+public class TaskThreadPoolConfig {
     @Bean
-    public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
+    public ThreadPoolTaskExecutor taskExecutor() {
         ThreadPoolTaskExecutor executor = new TaskThreadPoolExecutor();
         // 核心线程数：线程池创建时候初始化的线程数
         executor.setCorePoolSize(10);
@@ -27,7 +29,7 @@ public class TreadPoolConfig {
         // 线程池名的前缀：设置好了之后可以方便我们定位处理任务所在的线程池
         executor.setThreadNamePrefix("task-");
         // 缓冲队列满了之后的拒绝策略：当缓冲队列满了，新任务进来的时候有三种策略：1、直接丢弃 2、保留最老的任务 3、保留最老的任务并且执行新任务
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardOldestPolicy());
         executor.initialize();
 
         return executor;

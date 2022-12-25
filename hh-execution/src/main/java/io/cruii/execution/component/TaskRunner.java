@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class TaskRunner {
 
     private final ThreadPoolTaskExecutor taskExecutor;
-
+    private final ThreadPoolTaskExecutor pushExecutor;
     private final BilibiliFeignService bilibiliFeignService;
 
     private final PushFeignService pushFeignService;
@@ -38,10 +38,12 @@ public class TaskRunner {
     private final MapperFactory mapperFactory;
 
     public TaskRunner(ThreadPoolTaskExecutor taskExecutor,
+                      ThreadPoolTaskExecutor pushExecutor,
                       BilibiliFeignService bilibiliFeignService,
                       PushFeignService pushFeignService,
                       MapperFactory mapperFactory) {
         this.taskExecutor = taskExecutor;
+        this.pushExecutor = pushExecutor;
         this.bilibiliFeignService = bilibiliFeignService;
         this.pushFeignService = pushFeignService;
         this.mapperFactory = mapperFactory;
@@ -49,7 +51,6 @@ public class TaskRunner {
 
     public void run(TaskConfig taskConfig) {
         taskExecutor.execute(() -> {
-            String traceId = MDC.get("traceId");
             try {
                 BilibiliDelegate delegate = new BilibiliDelegate(taskConfig);
                 BilibiliUser user = delegate.getUser();
@@ -62,32 +63,35 @@ public class TaskRunner {
             } catch (Exception e) {
                 throw new RuntimeException("执行任务发生异常", e);
             } finally {
-                MDC.clear();
-                BilibiliUser retUser = BilibiliUserContext.get();
-                BilibiliUserVO bilibiliUserVO = mapperFactory.getMapperFacade().map(retUser, BilibiliUserVO.class);
-                bilibiliFeignService.updateUser(bilibiliUserVO);
-
-                BilibiliUserContext.remove();
-                // 日志收集
-                String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
-                File logFile = new File("logs/execution/all-" + date + ".log");
-                String content = null;
-                if (logFile.exists()) {
-                    List<String> logs = FileUtil.readLines(logFile, StandardCharsets.UTF_8);
-
-                    content = logs
-                            .stream()
-                            .filter(line -> line.contains(traceId) && (line.contains("INFO") || line.contains("ERROR")))
-                            .map(line -> line.split("\\|\\|")[1])
-                            .collect(Collectors.joining("\n"));
-                }
+                String traceId = MDC.get("traceId");
                 // 推送
-                push(taskConfig.getDedeuserid(), content);
+                push(taskConfig.getDedeuserid(), traceId);
+                MDC.clear();
             }
         });
     }
 
-    private void push(String dedeuserid, String content) {
-        pushFeignService.push(dedeuserid, content);
+    private void push(String dedeuserid, String traceId) {
+        pushExecutor.execute(() -> {
+            BilibiliUser retUser = BilibiliUserContext.get();
+            BilibiliUserVO bilibiliUserVO = mapperFactory.getMapperFacade().map(retUser, BilibiliUserVO.class);
+            bilibiliFeignService.updateUser(bilibiliUserVO);
+
+            BilibiliUserContext.remove();
+            // 日志收集
+            String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
+            File logFile = new File("logs/execution/all-" + date + ".log");
+            String content = null;
+            if (logFile.exists()) {
+                List<String> logs = FileUtil.readLines(logFile, StandardCharsets.UTF_8);
+
+                content = logs
+                        .stream()
+                        .filter(line -> line.contains(traceId) && (line.contains("INFO") || line.contains("ERROR")))
+                        .map(line -> line.split("\\|\\|")[1])
+                        .collect(Collectors.joining("\n"));
+            }
+            pushFeignService.push(dedeuserid, content);
+        });
     }
 }
