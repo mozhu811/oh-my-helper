@@ -2,8 +2,10 @@ package io.cruii.util;
 
 import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.io.resource.ResourceUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.log4j.Log4j2;
@@ -13,6 +15,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -23,6 +26,8 @@ import java.util.stream.Collectors;
 public class ProxyUtil {
     private static String proxyApi;
     private static final List<String> proxyList = new ArrayList<>();
+
+    private static final ReentrantLock LOCK = new ReentrantLock();
 
     private ProxyUtil() {
     }
@@ -37,30 +42,36 @@ public class ProxyUtil {
             log.error("无法获取proxy.properties文件");
         }
     }
-    public static synchronized String get() {
-        if (proxyList.isEmpty()) {
-            log.debug("获取代理地址");
-            String body = HttpRequest.get(proxyApi)
-                    .execute().body();
-            JSONObject resp = JSONUtil.parseObj(body);
-            proxyList.addAll(resp.getJSONArray("data")
-                    .stream()
-                    .map(JSONUtil::parseObj)
-                    .map(obj -> obj.getStr("ip") + ":" + obj.getInt("port"))
-                    .collect(Collectors.toList()));
-        }
-        String proxy = proxyList.get(0);
-        proxyList.remove(proxy);
-        log.debug("本次获取代理地址: {}", proxy);
-        log.debug("当前剩余代理数: {}", proxyList.size());
 
-        while (!checkProxy(proxy)) {
-            proxy = ProxyUtil.get();
-        }
+    public static String get() {
+        try {
+            LOCK.lock();
+            int size = proxyList.size();
+            if (proxyList.isEmpty()) {
+                log.debug("获取代理地址");
+                String body = HttpRequest.get(proxyApi)
+                        .execute().body();
+                JSONObject resp = JSONUtil.parseObj(body);
+                JSONArray data = resp.getJSONArray("data");
+                size = data.size();
+                proxyList.addAll(data
+                        .stream()
+                        .map(JSONUtil::parseObj)
+                        .map(obj -> obj.getStr("ip") + ":" + obj.getInt("port"))
+                        .collect(Collectors.toList()));
+            }
+            String proxy = proxyList.get(RandomUtil.randomInt(size - 1));
+            proxyList.remove(proxy);
+            log.debug("本次获取代理地址: {}", proxy);
+            log.debug("当前剩余代理数: {}", proxyList.size());
 
-        return proxy;
+            return proxy;
+        } finally {
+            LOCK.unlock();
+        }
     }
 
+    @Deprecated
     private static boolean checkProxy(String proxy) {
         String host = proxy.split(":")[0];
         int port = Integer.parseInt(proxy.split(":")[1]);
