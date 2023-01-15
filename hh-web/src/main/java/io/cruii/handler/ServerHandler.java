@@ -1,12 +1,17 @@
 package io.cruii.handler;
 
 import cn.hutool.json.JSONUtil;
+import io.cruii.mapper.BilibiliUserMapper;
+import io.cruii.pojo.po.BilibiliUser;
 import io.cruii.pojo.po.TaskConfig;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.SocketChannel;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -18,13 +23,30 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@ChannelHandler.Sharable
 public class ServerHandler extends ChannelInboundHandlerAdapter {
     private static final List<Channel> CHANNELS = new ArrayList<>();
 
+    private BilibiliUserMapper bilibiliUserMapper;
+
+    @Autowired
+    public void setBilibiliUserMapper(BilibiliUserMapper bilibiliUserMapper) {
+        this.bilibiliUserMapper = bilibiliUserMapper;
+    }
+
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        log.debug("{} is online.", ctx.channel().remoteAddress());
+        SocketChannel channel = (SocketChannel) ctx.channel();
+        log.debug("新客户端加入: {}", channel.localAddress().getHostString());
         CHANNELS.add(ctx.channel());
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        SocketChannel channel = (SocketChannel) ctx.channel();
+        log.debug("客户端断开连接: {}", channel.localAddress().getHostString());
+        CHANNELS.remove(ctx.channel());
     }
 
     /**
@@ -32,7 +54,12 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        log.info("Receive message from client [{}] : {}", ctx.channel().remoteAddress(), msg);
+        log.debug("Received message: {}", msg);
+        if (JSONUtil.isTypeJSON(((String) msg))) {
+            BilibiliUser retUser = JSONUtil.toBean(((String) msg), BilibiliUser.class);
+            log.debug("Update user: {}", retUser.getDedeuserid());
+            bilibiliUserMapper.updateById(retUser);
+        }
     }
 
     @Override
@@ -52,7 +79,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     public void sendMsg(Object msg) {
-        String jsonConfig = JSONUtil.toJsonStr(msg)  + "\n";
+        String jsonConfig = JSONUtil.toJsonStr(msg) + "\n";
         byte[] taskConfig = jsonConfig.getBytes();
         log.debug(">>> Sending message, dedeuserid: {} <<<", ((TaskConfig) msg).getDedeuserid());
         CHANNELS.forEach(c -> c.writeAndFlush(Unpooled.copiedBuffer(taskConfig)));
