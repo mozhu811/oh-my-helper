@@ -6,7 +6,6 @@ import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.pojo.po.BilibiliUser;
 import io.cruii.task.*;
 import lombok.extern.log4j.Log4j2;
-import org.slf4j.MDC;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,16 +40,15 @@ public class TaskExecutor {
         for (Task task : taskList) {
             try {
                 log.info("[{}]", task.getName());
+                TimeUnit.SECONDS.sleep(2);
                 task.run();
-                TimeUnit.SECONDS.sleep(1);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (BilibiliCookieExpiredException e) {
                 expired = true;
                 break;
             } catch (Exception e) {
-                log.error("[{}]任务执行失败",  task.getName(), e);
-                //throw new RuntimeException(e);
+                log.error("[{}]任务执行失败: {}", task.getName(), e.getCause(), e);
             }
         }
 
@@ -79,7 +77,8 @@ public class TaskExecutor {
         Boolean share = body.getBool("share", false);
         Boolean watch = body.getBool("watch", false);
         Boolean login = body.getBool("login", false);
-        Integer coinExp = body.getInt("coins", 0);
+        JSONObject coinExpToday = delegate.getCoinExpToday();
+        Integer coinExp = coinExpToday.getInt("data", 0);
 
         if (Boolean.TRUE.equals(share)) {
             exp += 5;
