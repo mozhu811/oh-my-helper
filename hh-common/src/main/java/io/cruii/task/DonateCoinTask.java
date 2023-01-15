@@ -36,9 +36,6 @@ public class DonateCoinTask extends VideoTask {
 
     @Override
     public void run() {
-        checkAttemptsAndChangeProxy();
-        addAttempts();
-
         // 防止全部都投过币而导致任务卡死
         counter++;
         if (counter > 3) {
@@ -58,6 +55,13 @@ public class DonateCoinTask extends VideoTask {
         if (current <= config.getReserveCoins() ||
                 coinNum > current) {
             log.info("当前余额不足或触发硬币保护阈值，取消执行投币任务。❌");
+            return;
+        }
+
+        JSONObject coinExpToday = delegate.getCoinExpToday();
+        Integer curCoinExp = coinExpToday.getInt("data", 0);
+        if (curCoinExp / 10 - config.getDonateCoins() >= 0) {
+            log.info("今日投币任务已完成，取消执行投币任务");
             return;
         }
 

@@ -71,7 +71,7 @@ public abstract class VideoTask extends AbstractTask {
      * @param bvid 视频的BVID
      * @return 视频标题
      */
-    public String getVideoTitle(String bvid) {
+    protected String getVideoTitle(String bvid) {
         String title;
         JSONObject detailsResp = delegate.getVideoDetails(bvid);
         if (detailsResp.getInt(CODE) == 0) {
@@ -83,5 +83,13 @@ public abstract class VideoTask extends AbstractTask {
         }
 
         return title;
+    }
+
+    protected int getVideoDuration(String bvid) {
+        JSONObject detailsResp = delegate.getVideoDetails(bvid);
+        if (detailsResp.getInt(CODE) == 0) {
+            return detailsResp.getByPath("data.pages[0].cid", Integer.class);
+        }
+        return 0;
     }
 }

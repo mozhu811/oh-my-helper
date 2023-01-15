@@ -24,15 +24,12 @@ public class CheckCookieTask extends AbstractTask {
 
     @Override
     public void run() {
-        checkAttemptsAndChangeProxy();
-        addAttempts();
-
         JSONObject resp = delegate.checkCookie();
         if (resp.getInt("code") == 0 &&
                 Boolean.TRUE.equals(resp.getByPath("data.isLogin"))) {
             log.info("账号[{}]登陆成功 ✔️", config.getDedeuserid());
         } else {
-            log.error("账号[{}]登录失败，请更新Cookie ❌", config.getDedeuserid());
+            log.error("账号[{}]登录失败，请访问 https://ohmyhelper.com/bilibili/ 扫码更新Cookie ❌", config.getDedeuserid());
             throw new BilibiliCookieExpiredException(config.getDedeuserid());
         }
     }

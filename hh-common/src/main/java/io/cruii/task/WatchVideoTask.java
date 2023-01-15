@@ -17,9 +17,6 @@ public class WatchVideoTask extends VideoTask {
 
     @Override
     public void run() {
-        checkAttemptsAndChangeProxy();
-        addAttempts();
-
         JSONObject resp = delegate.getExpRewardStatus();
         // 从热榜中随机选取一个视频
         String bvid = trend.get(random.nextInt(trend.size()));
@@ -32,6 +29,7 @@ public class WatchVideoTask extends VideoTask {
 
         if (Boolean.FALSE.equals(resp.getByPath("data.share", Boolean.class))) {
             shareVideo(bvid);
+        } else {
             log.info("今日分享视频任务已完成 ✔️");
         }
     }
@@ -47,11 +45,13 @@ public class WatchVideoTask extends VideoTask {
     private void playVideo(String bvid) {
         int playedTime = random.nextInt(90) + 10;
         JSONObject resp = delegate.playVideo(bvid, playedTime);
+        //int playedTime = 1400;
+        //JSONObject resp = delegate.playVideo("990019235","961398845", playedTime);
         if (resp.getInt(CODE) == 0) {
             String title = getVideoTitle(bvid);
             log.info("播放视频[{}]成功,已观看至{}秒 ✔️", title, playedTime);
         } else {
-            log.error("播放视频[{}]出错：{} ❌", bvid, resp.getStr(MESSAGE));
+            log.error("播放视频[{}]出错 ❌", bvid);
         }
     }
 
@@ -67,7 +67,7 @@ public class WatchVideoTask extends VideoTask {
         if (resp.getInt(CODE) == 0) {
             log.info("分享视频[{}]成功 ✔️", title);
         } else {
-            log.error("分享视频[{}]失败：{} ❌", title, resp.getStr(MESSAGE));
+            log.error("分享视频[{}]失败 ❌", title);
         }
     }
 }

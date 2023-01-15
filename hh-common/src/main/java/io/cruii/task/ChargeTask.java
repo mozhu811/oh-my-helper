@@ -26,9 +26,6 @@ public class ChargeTask extends AbstractTask {
 
     @Override
     public void run() throws Exception {
-        checkAttemptsAndChangeProxy();
-        addAttempts();
-
         BilibiliUser user = BilibiliUserContext.get();
 
         Integer vipType = user.getVipType();

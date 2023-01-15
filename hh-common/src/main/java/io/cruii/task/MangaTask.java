@@ -18,9 +18,6 @@ public class MangaTask extends AbstractTask {
 
     @Override
     public void run() {
-        checkAttemptsAndChangeProxy();
-        addAttempts();
-
         JSONObject resp = delegate.mangaCheckIn(delegate.getConfig().getDevicePlatform());
         if (resp != null && "0".equals(resp.getStr(CODE).trim())) {
             log.info("漫画签到成功 ✔️");

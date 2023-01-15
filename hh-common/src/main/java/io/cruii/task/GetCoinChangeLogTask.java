@@ -20,9 +20,6 @@ public class GetCoinChangeLogTask extends AbstractTask {
 
     @Override
     public void run() {
-        checkAttemptsAndChangeProxy();
-        addAttempts();
-
         JSONObject resp = delegate.getCoinChangeLog();
         log.info("最近一周共产生{}条变更日志", resp.getByPath("data.count"));
         JSONArray records = resp.getJSONObject("data").getJSONArray("list");

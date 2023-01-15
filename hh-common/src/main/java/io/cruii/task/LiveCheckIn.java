@@ -16,9 +16,6 @@ public class LiveCheckIn extends AbstractTask {
 
     @Override
     public void run() {
-        checkAttemptsAndChangeProxy();
-        addAttempts();
-
         JSONObject resp = delegate.liveCheckIn();
         if (resp.getInt(CODE) == 0) {
             log.info("直播签到成功，本次获得{},{} ✔️", resp.getByPath("data.text", String.class),

@@ -1,7 +1,6 @@
 package io.cruii.task;
 
 import io.cruii.component.BilibiliDelegate;
-import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -17,21 +16,9 @@ public abstract class AbstractTask implements Task {
 
     public final BilibiliDelegate delegate;
 
-    @Getter
-    private int attempts = 1;
 
     AbstractTask(BilibiliDelegate delegate) {
         this.delegate = delegate;
     }
 
-    public void addAttempts() {
-        this.attempts++;
-    }
-
-    public void checkAttemptsAndChangeProxy() {
-        if (attempts % 3 == 0 && attempts <= 9) {
-            log.info("切换代理");
-            delegate.setProxy();
-        }
-    }
 }
