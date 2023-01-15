@@ -33,17 +33,20 @@ public class TaskSchedule {
         this.serverHandler = serverHandler;
     }
 
-    @Scheduled(cron = "${task.cron:0 0/5 * * * ?}")
+    /**
+     * 0 0/30 9-17 * * ?    早上9点至下午17点内每30分钟一次
+     * 0 0/5 * * * ?        每隔5分钟执行一次
+     */
+    //@Scheduled(cron = "${task.cron:0 0 0/1 * * ?}")
+    @Scheduled(initialDelayString = "${task.initial-delay:60 * 1000}", fixedRateString = "${task.fixed-rate:60000 * 60 * 2}")
     public void doTask() {
         List<String> notRunUsers = bilibiliUserMapper.listNotRunUser().stream()
                 .map(BilibiliUser::getDedeuserid)
-                .limit(10).collect(Collectors.toList());
+                .collect(Collectors.toList());
         if (notRunUsers.isEmpty()) {
             return;
         }
-        log.debug(notRunUsers);
         List<TaskConfig> taskConfigs = taskConfigMapper.selectList(Wrappers.lambdaQuery(TaskConfig.class).in(TaskConfig::getDedeuserid, notRunUsers));
-        log.debug(taskConfigs);
         taskConfigs
                 .forEach(serverHandler::sendMsg);
     }
