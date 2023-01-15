@@ -12,9 +12,9 @@ import io.cruii.pojo.po.BilibiliUser;
 import io.cruii.pojo.po.TaskConfig;
 import io.cruii.util.CosUtil;
 import io.cruii.util.HttpUtil;
-import io.cruii.util.ProxyUtil;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import org.apache.http.HttpHeaders;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -48,10 +49,6 @@ public class BilibiliDelegate {
     @Getter
     private final TaskConfig config;
 
-    private String proxyHost;
-
-    private Integer proxyPort;
-
     public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct) {
         TaskConfig taskConfig = new TaskConfig();
         taskConfig.setDedeuserid(dedeuserid);
@@ -59,7 +56,6 @@ public class BilibiliDelegate {
         taskConfig.setBiliJct(biliJct);
         taskConfig.setUserAgent(UA);
         this.config = taskConfig;
-        setProxy();
     }
 
     public BilibiliDelegate(TaskConfig config) {
@@ -67,18 +63,6 @@ public class BilibiliDelegate {
         if (CharSequenceUtil.isBlank(config.getUserAgent())) {
             config.setUserAgent(UA);
         }
-        setProxy();
-    }
-
-    public void setProxy() {
-        String proxy = ProxyUtil.get();
-
-        setProxy(proxy);
-    }
-
-    private void setProxy(String proxy) {
-        this.proxyHost = proxy.split(":")[0];
-        this.proxyPort = Integer.parseInt(proxy.split(":")[1]);
     }
 
     /**
@@ -168,7 +152,8 @@ public class BilibiliDelegate {
         params.put("mid", userId);
         JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_INFO, params);
         JSONObject baseInfo = resp.getJSONObject("data");
-        if (resp.getInt("code") == -404 || baseInfo == null) {
+        Integer code = resp.getInt("code");
+        if (code == -404 || code == -401 || baseInfo == null) {
             log.error("用户[{}]信息获取异常", userId);
             return null;
         }
@@ -239,7 +224,13 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getExpRewardStatus() {
-        return doGet(BilibiliAPI.GET_EXP_REWARD_STATUS);
+        Map<String, String> params = new HashMap<>();
+        params.put("csrf", config.getBiliJct());
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put(HttpHeaders.REFERER, "https://account.bilibili.com/");
+        headers.put("Origin", "https://account.bilibili.com/");
+        return doGet(BilibiliAPI.GET_EXP_REWARD_STATUS, params, headers);
     }
 
     /**
@@ -271,19 +262,40 @@ public class BilibiliDelegate {
         return doGet(BilibiliAPI.GET_TREND_VIDEO, params);
     }
 
+    public JSONObject playVideo(String aid, int playedTime) {
+        return playVideo(aid, null, playedTime);
+    }
+
     /**
      * 观看视频
      *
-     * @param bvid       视频的BVID
+     * @param vid        视频的id
      * @param playedTime 播放时长，秒
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject playVideo(String bvid, int playedTime) {
+    public JSONObject playVideo(String vid, String cid, int playedTime) {
         Map<String, String> params = new HashMap<>();
-        params.put("bvid", bvid);
+        params.put("mid", config.getDedeuserid());
+        if (CharSequenceUtil.isNumeric(vid)) {
+            params.put("aid", vid);
+        } else {
+            params.put("bvid", vid);
+        }
+        params.put("cid", cid);
+        params.put("type", "4");
+        params.put("sub_type", "1");
+        params.put("play_type", "2");
         params.put("played_time", String.valueOf(playedTime));
+        params.put("real_played_time", String.valueOf(playedTime));
+        params.put("csrf", config.getBiliJct());
         return doPost(BilibiliAPI.REPORT_HEARTBEAT, params);
     }
+
+    //public JSONObject reportHistory(String bvid, int playedTime) {
+    //    Map<String, String> params = new HashMap<>();
+    //    params.put("bvid", bvid);
+    //    params.put("played_time", String.valueOf(playedTime));
+    //}
 
     /**
      * 分享视频
@@ -323,12 +335,16 @@ public class BilibiliDelegate {
     /**
      * 获取视频详细信息
      *
-     * @param bvid 视频BVID
+     * @param vid 视频ID
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject getVideoDetails(String bvid) {
+    public JSONObject getVideoDetails(String vid) {
         Map<String, String> params = new HashMap<>();
-        params.put("bvid", bvid);
+        if (CharSequenceUtil.isNumeric(vid)) {
+            params.put("aid", vid);
+        } else {
+            params.put("bvid", vid);
+        }
         return doGet(BilibiliAPI.GET_VIDEO_DETAILS, params);
     }
 
@@ -542,6 +558,7 @@ public class BilibiliDelegate {
         params.put("comic_id", "26009");
         params.put("ep_id", "300318");
 
+
         return doPost(BilibiliAPI.READ_MANGA, params);
     }
 
@@ -571,7 +588,8 @@ public class BilibiliDelegate {
         }
         HttpGet httpGet = new HttpGet(uri);
 
-        try (CloseableHttpResponse response = HttpUtil.buildHttpClient().execute(httpGet)) {
+        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient();
+             CloseableHttpResponse response = httpClient.execute(httpGet)) {
             return EntityUtils.toByteArray(response.getEntity());
         } catch (Exception e) {
             log.error("获取头像文件流失败", e);
@@ -607,7 +625,11 @@ public class BilibiliDelegate {
     }
 
     private JSONObject doGet(String url) {
-        return doGet(url, MapUtil.empty());
+        return doGet(url, MapUtil.empty(), MapUtil.empty());
+    }
+
+    private JSONObject doGet(String url, Map<String, String> params) {
+        return doGet(url, params, MapUtil.empty());
     }
 
     /**
@@ -617,18 +639,23 @@ public class BilibiliDelegate {
      * @param params 查询字符串参数 {@link MultiValueMap}
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    private JSONObject doGet(String url, Map<String, String> params) {
+    private JSONObject doGet(String url, Map<String, String> params, Map<String, String> headers) {
 
         URI uri = HttpUtil.buildUri(url, params);
 
         HttpGet httpGet = new HttpGet(uri);
-        httpGet.setHeader("User-Agent", config.getUserAgent());
-        httpGet.setHeader("Connection", "keep-alive");
+        //httpGet.setHeader("User-Agent", config.getUserAgent());
+        httpGet.setHeader(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36");
+        httpGet.setHeader("Content-Type", "application/x-www-form-urlencoded");
+        httpGet.setHeader(HttpHeaders.REFERER, "https://www.bilibili.com/");
+        httpGet.setHeader("Origin", "https://www.bilibili.com/");
         httpGet.setHeader("Cookie", "bili_jct=" + config.getBiliJct() +
                 ";SESSDATA=" + config.getSessdata() +
                 ";DedeUserID=" + config.getDedeuserid() + ";");
 
-
+        if (headers != null && !headers.isEmpty()) {
+            headers.forEach(httpGet::setHeader);
+        }
         return call(url, params, httpGet);
     }
 
@@ -644,20 +671,28 @@ public class BilibiliDelegate {
         UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formData, StandardCharsets.UTF_8);
         httpPost.setEntity(entity);
 
-        httpPost.setHeader("Connection", "keep-alive");
-        httpPost.setHeader("User-Agent", config.getUserAgent());
+        //httpPost.setHeader("User-Agent", config.getUserAgent());
+        httpPost.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36");
+        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded");
         httpPost.setHeader("Referer", "https://www.bilibili.com/");
         httpPost.setHeader("Cookie", "bili_jct=" + config.getBiliJct() +
                 ";SESSDATA=" + config.getSessdata() +
                 ";DedeUserID=" + config.getDedeuserid() + ";");
-        if (headers != null) {
+
+        if (headers != null && !headers.isEmpty()) {
             headers.forEach(httpPost::setHeader);
         }
         return call(url, params, httpPost);
     }
 
     private JSONObject call(String url, Map<String, String> params, HttpUriRequest request) {
-        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient(proxyHost, proxyPort);
+        try {
+            TimeUnit.SECONDS.sleep(3);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
+        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient();
              CloseableHttpResponse response = httpClient.execute(request)) {
             String responseBody = EntityUtils.toString(response.getEntity());
             log.debug("==============");
@@ -682,7 +717,7 @@ public class BilibiliDelegate {
         String path = "avatars" + File.separator + config.getDedeuserid() + ".png";
         try {
             File avatarFile = new File(path);
-            if (!avatarFile.getParentFile().exists()){
+            if (!avatarFile.getParentFile().exists()) {
                 FileUtil.mkParentDirs(avatarFile);
             }
             if (avatar != null) {
