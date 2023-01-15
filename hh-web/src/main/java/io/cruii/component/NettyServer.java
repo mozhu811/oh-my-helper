@@ -12,6 +12,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -26,11 +27,15 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class NettyServer implements CommandLineRunner {
     private final NettyConfiguration nettyConfiguration;
+
+    private final ServerHandler serverHandler;
+
     private final EventLoopGroup bossGroup = new NioEventLoopGroup();
     private final EventLoopGroup workGroup = new NioEventLoopGroup();
 
-    public NettyServer(NettyConfiguration nettyConfiguration) {
+    public NettyServer(NettyConfiguration nettyConfiguration, ServerHandler serverHandler) {
         this.nettyConfiguration = nettyConfiguration;
+        this.serverHandler = serverHandler;
     }
 
     public void start() {
@@ -42,8 +47,9 @@ public class NettyServer implements CommandLineRunner {
                     protected void initChannel(SocketChannel socketChannel) {
                         // 自定义服务处理
                         socketChannel.pipeline().addLast("lineBasedFrameDecoder", new LineBasedFrameDecoder(1024));
+                        socketChannel.pipeline().addLast("stringEncoder", new StringEncoder());
                         socketChannel.pipeline().addLast("stringDecoder", new StringDecoder());
-                        socketChannel.pipeline().addLast("serverHandler", new ServerHandler());
+                        socketChannel.pipeline().addLast("serverHandler", serverHandler);
                         socketChannel.pipeline().addLast("idleState", new IdleStateHandler(5, 0, 0));
                     }
                 })
@@ -64,7 +70,7 @@ public class NettyServer implements CommandLineRunner {
 
     @Async
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         start();
     }
 }

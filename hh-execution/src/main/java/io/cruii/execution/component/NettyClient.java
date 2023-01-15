@@ -3,6 +3,7 @@ package io.cruii.execution.component;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import io.cruii.execution.config.NettyConfiguration;
+import io.cruii.pojo.po.BilibiliUser;
 import io.cruii.pojo.po.TaskConfig;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -12,13 +13,21 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.net.ConnectException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -34,14 +43,14 @@ public class NettyClient implements CommandLineRunner {
         this.nettyConfig = nettyConfig;
     }
 
+    private Bootstrap bootstrap;
+
+    private volatile Channel clientChannel;
+
     @Override
     public void run(String... args) {
-        Bootstrap bootstrap = new Bootstrap();
+        bootstrap = new Bootstrap();
         EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
-        doConnect(bootstrap, eventLoopGroup);
-    }
-
-    public void doConnect(Bootstrap bootstrap, EventLoopGroup eventLoopGroup) {
         bootstrap.group(eventLoopGroup)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<SocketChannel>() {
@@ -49,42 +58,80 @@ public class NettyClient implements CommandLineRunner {
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
                         // 自定义处理程序
                         socketChannel.pipeline().addLast("lineBasedFrameDecoder", new LineBasedFrameDecoder(1024));
+                        socketChannel.pipeline().addLast("stringEncoder", new StringEncoder());
                         socketChannel.pipeline().addLast("stringDecoder", new StringDecoder());
                         socketChannel.pipeline().addLast("clientHandler", new ClientHandler(NettyClient.this));
                         socketChannel.pipeline().addLast("idleState", new IdleStateHandler(0, 0, 5));
                     }
                 });
+        connect();
+    }
+
+    public boolean connect() {
         // 绑定端口并同步等待
-        ChannelFuture channelFuture = bootstrap.connect(nettyConfig.getHost(), nettyConfig.getPort());
-        channelFuture.addListener(new ConnectionListener(this));
-    }
-}
-
-@Slf4j
-class ConnectionListener implements ChannelFutureListener {
-    private final NettyClient nettyClient;
-
-    public ConnectionListener(NettyClient nettyClient) {
-        this.nettyClient = nettyClient;
-    }
-
-    @Override
-    public void operationComplete(ChannelFuture channelFuture) throws Exception {
-        if (!channelFuture.isSuccess()) {
-            log.debug("Reconnecting");
-            final EventLoop loop = channelFuture.channel().eventLoop();
-            loop.schedule(() -> {
-                nettyClient.doConnect(new Bootstrap(), loop);
-            }, 5L, TimeUnit.SECONDS);
+        try {
+            ChannelFuture channelFuture = bootstrap.connect(nettyConfig.getHost(), nettyConfig.getPort());
+            boolean notTimeout = channelFuture.awaitUninterruptibly(30, TimeUnit.SECONDS);
+            clientChannel = channelFuture.channel();
+            if (notTimeout) {
+                if (clientChannel != null && clientChannel.isActive()) {
+                    log.info("netty client started !!! {} connect to server", clientChannel.localAddress());
+                    return true;
+                }
+                Throwable cause = channelFuture.cause();
+                if (cause != null) {
+                    exceptionHandler(cause);
+                }
+            } else {
+                log.warn("connect remote host[{}] timeout {}s", clientChannel.remoteAddress(), 30);
+            }
+        } catch (Exception e) {
+            exceptionHandler(e);
         }
+        clientChannel.close();
+        return false;
+    }
+
+
+    private void exceptionHandler(Throwable cause) {
+        if (cause instanceof ConnectException) {
+            log.error("connect error:{}", cause.getMessage());
+        } else if (cause instanceof ClosedChannelException) {
+            log.error("connect error:{}", "client has destroy");
+        } else {
+            log.error("connect error:", cause);
+        }
+    }
+
+    public Channel getChannel() {
+        return clientChannel;
     }
 }
 
 @Log4j2
-class ClientHandler extends ChannelInboundHandlerAdapter{
+class ClientHandler extends ChannelInboundHandlerAdapter {
     private final NettyClient nettyClient;
 
-    TaskRunner taskRunner = SpringUtil.getApplicationContext().getBean(TaskRunner.class);
+    private final TaskRunner taskRunner = SpringUtil.getApplicationContext().getBean(TaskRunner.class);
+
+    private static final List<String> UNDONE_USER = new ArrayList<>();
+
+
+    private static volatile ScheduledExecutorService scheduledExecutor;
+
+    private void initScheduledExecutor() {
+        if (scheduledExecutor == null) {
+            synchronized (ClientHandler.class) {
+                if (scheduledExecutor == null) {
+                    scheduledExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+                        Thread t = new Thread(r, "Client-Reconnect-1");
+                        t.setDaemon(true);
+                        return t;
+                    });
+                }
+            }
+        }
+    }
 
     public ClientHandler(NettyClient nettyClient) {
         this.nettyClient = nettyClient;
@@ -101,11 +148,9 @@ class ClientHandler extends ChannelInboundHandlerAdapter{
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         log.warn(">>> The server [{}] is disconnected. <<<", ctx.channel());
-        EventLoop eventLoop = ctx.channel().eventLoop();
-        eventLoop.schedule(() -> {
-            log.debug(">>> Reconnecting to the server. <<<");
-            nettyClient.doConnect(new Bootstrap(), eventLoop);
-        }, 30L, TimeUnit.SECONDS);
+        ctx.pipeline().remove(this);
+        ctx.channel().close();
+        reconnection(ctx);
     }
 
     /**
@@ -113,8 +158,16 @@ class ClientHandler extends ChannelInboundHandlerAdapter{
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        log.debug("[exe] Received message: {}", msg);
         TaskConfig taskConfig = JSONUtil.toBean(((String) msg), TaskConfig.class);
-        taskRunner.run(taskConfig);
+        if (!UNDONE_USER.contains(taskConfig.getDedeuserid())) {
+            UNDONE_USER.add(taskConfig.getDedeuserid());
+            BilibiliUser ret = taskRunner.run(taskConfig);
+            if (ret != null) {
+                ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(ret) + "\n").getBytes(StandardCharsets.UTF_8)));
+            }
+            UNDONE_USER.remove(taskConfig.getDedeuserid());
+        }
     }
 
     @Override
@@ -128,7 +181,29 @@ class ClientHandler extends ChannelInboundHandlerAdapter{
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
-        ctx.close();
+        if (cause instanceof IOException) {
+            log.warn("exceptionCaught:客户端[{}]和远程断开连接", ctx.channel().localAddress());
+        } else {
+            log.error(cause);
+        }
+        ctx.pipeline().remove(this);
+        ctx.channel().close();
+        reconnection(ctx);
+    }
+
+    private void reconnection(ChannelHandlerContext ctx) {
+        log.info("The client will reconnect after 3 seconds");
+        initScheduledExecutor();
+
+        scheduledExecutor.schedule(() -> {
+            log.debug(">>> Reconnecting to the server. <<<");
+            boolean connected = nettyClient.connect();
+            if (connected) {
+                scheduledExecutor.shutdown();
+                log.info("Netty server connected.");
+            } else {
+                reconnection(ctx);
+            }
+        }, 3, TimeUnit.SECONDS);
     }
 }
