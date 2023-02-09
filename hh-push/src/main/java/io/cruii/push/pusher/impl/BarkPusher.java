@@ -3,15 +3,15 @@ package io.cruii.push.pusher.impl;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.push.pusher.Pusher;
-import io.cruii.util.HttpUtil;
+import io.cruii.util.OkHttpUtil;
 import lombok.extern.log4j.Log4j2;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.util.EntityUtils;
+import okhttp3.MediaType;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
-import java.net.URI;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author cruii
@@ -31,23 +31,21 @@ public class BarkPusher implements Pusher {
         body.set("body", content)
                 .set("device_key", deviceKey)
                 .set("title", "Bilibili Helper Hub任务日志");
-        URI uri = HttpUtil.buildUri("https://api.day.app/push", null);
-        HttpPost httpPost = new HttpPost(uri);
-        StringEntity stringEntity = new StringEntity(body.toJSONString(0), "utf-8");
-        stringEntity.setContentType("application/json");
-        httpPost.setEntity(stringEntity);
+        Request request = new Request.Builder()
+                .url("https://api.day.app/push")
+                .post(RequestBody.create(body.toJSONString(0).getBytes(StandardCharsets.UTF_8),
+                        MediaType.parse("application/json")))
+                .build();
 
-        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient();
-             CloseableHttpResponse httpResponse = httpClient.execute(httpPost)) {
-            if (httpResponse.getStatusLine().getStatusCode() == 200) {
+        try (Response response = OkHttpUtil.executeWithRetry(request)) {
+            if (response.isSuccessful()) {
                 log.info("Bark推送成功");
-                EntityUtils.consume(httpResponse.getEntity());
                 return true;
+            } else {
+                log.error("Bark推送失败: {}", response.body().string());
             }
-            log.error("Bark推送失败: {}", EntityUtils.toString(httpResponse.getEntity()));
-            EntityUtils.consume(httpResponse.getEntity());
-        } catch (Exception e) {
-            log.error("Bark推送失败", e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         return false;
     }
