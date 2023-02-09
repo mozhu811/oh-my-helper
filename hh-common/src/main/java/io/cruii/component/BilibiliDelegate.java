@@ -11,30 +11,18 @@ import io.cruii.exception.RequestException;
 import io.cruii.pojo.po.BilibiliUser;
 import io.cruii.pojo.po.TaskConfig;
 import io.cruii.util.CosUtil;
-import io.cruii.util.HttpUtil;
+import io.cruii.util.OkHttpUtil;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import okhttp3.*;
+import okio.Buffer;
 import org.apache.http.HttpHeaders;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
 import org.springframework.util.MultiValueMap;
 
 import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -227,10 +215,10 @@ public class BilibiliDelegate {
         Map<String, String> params = new HashMap<>();
         params.put("csrf", config.getBiliJct());
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put(HttpHeaders.REFERER, "https://account.bilibili.com/");
-        headers.put("Origin", "https://account.bilibili.com/");
-        return doGet(BilibiliAPI.GET_EXP_REWARD_STATUS, params, headers);
+        Headers.Builder headerBuilder = new Headers.Builder();
+        headerBuilder.add(HttpHeaders.REFERER, "https://account.bilibili.com/")
+                .add("Origin", "https://account.bilibili.com/");
+        return doGet(BilibiliAPI.GET_EXP_REWARD_STATUS, params, headerBuilder.build());
     }
 
     /**
@@ -308,7 +296,7 @@ public class BilibiliDelegate {
         params.put("bvid", bvid);
         params.put("csrf", config.getBiliJct());
 
-        return doPost(BilibiliAPI.SHARE_VIDEO, params);
+        return doPost(BilibiliAPI.SHARE_VIDEO, params, null, null);
     }
 
 
@@ -320,7 +308,9 @@ public class BilibiliDelegate {
     public JSONObject mangaCheckIn(String platform) {
         Map<String, String> params = new HashMap<>();
         params.put("platform", platform);
-        return doPost(BilibiliAPI.MANGA_SIGN, params);
+        Headers.Builder headerBuilder = new Headers.Builder()
+                .add("Origin", "https://manga.bilibili.com");
+        return doPost(BilibiliAPI.MANGA_SIGN, params, headerBuilder.build());
     }
 
     /**
@@ -385,11 +375,10 @@ public class BilibiliDelegate {
         params.put("cross_domain", "true");
         params.put("csrf", config.getBiliJct());
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Referer", "https://www.bilibili.com/video/" + bvid);
-        headers.put("Origin", "https://www.bilibili.com");
-
-        return doPost(BilibiliAPI.DONATE_COIN, params, headers);
+        Headers.Builder headerBuilder = new Headers.Builder();
+        headerBuilder.add("Referer", "https://www.bilibili.com/video/" + bvid)
+                .add("Origin", "https://www.bilibili.com");
+        return doPost(BilibiliAPI.DONATE_COIN, params, headerBuilder.build());
     }
 
     /**
@@ -529,7 +518,9 @@ public class BilibiliDelegate {
         Map<String, String> params = new HashMap<>();
         params.put("reason_id", "1");
 
-        return doPost(BilibiliAPI.GET_MANGA_VIP_REWARD, params);
+        Headers.Builder headerBuilder = new Headers.Builder()
+                .add("Origin", "https://manga.bilibili.com");
+        return doPost(BilibiliAPI.GET_MANGA_VIP_REWARD, params, headerBuilder.build());
     }
 
     /**
@@ -558,8 +549,9 @@ public class BilibiliDelegate {
         params.put("comic_id", "26009");
         params.put("ep_id", "300318");
 
-
-        return doPost(BilibiliAPI.READ_MANGA, params);
+        Headers.Builder headerBuilder = new Headers.Builder()
+                .add("Origin", "https://manga.bilibili.com");
+        return doPost(BilibiliAPI.READ_MANGA, params, headerBuilder.build());
     }
 
     public JSONObject followUser(String uid) {
@@ -572,6 +564,47 @@ public class BilibiliDelegate {
         return doPost(BilibiliAPI.RELATION_MODIFY, params);
     }
 
+    public JSONObject receiveVipQuest(String code) {
+        Map<String, String> params = new HashMap<>();
+        params.put("taskCode", code);
+
+        Headers.Builder headerBuilder = new Headers.Builder();
+        headerBuilder.add(HttpHeaders.CONTENT_TYPE, "application/json")
+                .add(HttpHeaders.REFERER, "https://big.bilibili.com/mobile/bigPoint/task")
+                .add(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Linux; Android 6.0.1; MuMu Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.158 Mobile Safari/537.36 os/android model/MuMu build/6720300 osVer/6.0.1 sdkInt/23 network/2 BiliApp/6720300 mobi_app/android channel/html5_search_baidu Buvid/XZFC135F5263B6897C8A4BE7AEB125BBF10F8 sessionID/72d3f4c9 innerVer/6720310 c_locale/zh_CN s_locale/zh_CN disable_rcmd/0 6.72.0 os/android model/MuMu mobi_app/android build/6720300 channel/html5_search_baidu innerVer/6720310 osVer/6.0.1 network/2" +
+                        "Accept: application/json; q=0.001, application/xml; q=0.001")
+                .add("Origin", "https://www.bilibili.com");
+        return doPost(BilibiliAPI.VIP_QUEST_RECEIVE, params, headerBuilder.build());
+    }
+
+    public JSONObject vipQuestInfo() {
+        return doGet(BilibiliAPI.VIP_QUEST_INFO);
+    }
+
+    public JSONObject checkIn() {
+        return null;
+    }
+
+    private final Set<String> dailyQuests = Set.of("animatetab", "filmtab",
+            "vipmallview", "ogvwatch", "tvodbuy", "vipmallbuy");
+
+    public JSONObject doBigVipQuest(String code) {
+        Map<String, String> params = new HashMap<>();
+        params.put("taskCode", code);
+
+        Headers.Builder headerBuilder = new Headers.Builder();
+        headerBuilder.add(HttpHeaders.CONTENT_TYPE, "application/json")
+                .add(HttpHeaders.REFERER, "https://big.bilibili.com/mobile/bigPoint/task")
+                .add(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Linux; Android 6.0.1; MuMu Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.158 Mobile Safari/537.36 os/android model/MuMu build/6720300 osVer/6.0.1 sdkInt/23 network/2 BiliApp/6720300 mobi_app/android channel/html5_search_baidu Buvid/XZFC135F5263B6897C8A4BE7AEB125BBF10F8 sessionID/72d3f4c9 innerVer/6720310 c_locale/zh_CN s_locale/zh_CN disable_rcmd/0 6.72.0 os/android model/MuMu mobi_app/android build/6720300 channel/html5_search_baidu innerVer/6720310 osVer/6.0.1 network/2" +
+                        "Accept: application/json; q=0.001, application/xml; q=0.001")
+                .add("Origin", "https://www.bilibili.com");
+
+        if (dailyQuests.contains(code)) {
+            return doPost(BilibiliAPI.VIP_QUEST_VIEW_COMPLETE, params, headerBuilder.build());
+        }
+        return doPost(BilibiliAPI.VIP_QUEST_COMPLETE, params, headerBuilder.build());
+    }
+
     /**
      * 获取B站用户头像文件流
      *
@@ -579,22 +612,17 @@ public class BilibiliDelegate {
      * @return 头像文件流
      */
     private byte[] getAvatarStream(String avatarUrl) {
-        URI uri;
-        try {
-            uri = new URIBuilder(avatarUrl).build();
-        } catch (URISyntaxException e) {
-            log.error("解析头像地址失败", e);
-            throw new RuntimeException("解析头像地址失败", e);
-        }
-        HttpGet httpGet = new HttpGet(uri);
-
-        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient();
-             CloseableHttpResponse response = httpClient.execute(httpGet)) {
-            return EntityUtils.toByteArray(response.getEntity());
-        } catch (Exception e) {
+        Request.Builder builder = new Request.Builder()
+                .url(avatarUrl)
+                .get();
+        try (Response response = OkHttpUtil.executeWithRetry(builder.build())) {
+            if (response.isSuccessful() && response.body() != null) {
+                return response.body().bytes();
+            }
+        } catch (IOException e) {
             log.error("获取头像文件流失败", e);
-            throw new RuntimeException("获取头像文件流失败", e);
         }
+        throw new RuntimeException("获取头像文件流失败");
     }
 
     /**
@@ -625,11 +653,11 @@ public class BilibiliDelegate {
     }
 
     private JSONObject doGet(String url) {
-        return doGet(url, MapUtil.empty(), MapUtil.empty());
+        return doGet(url, MapUtil.empty(), null);
     }
 
     private JSONObject doGet(String url, Map<String, String> params) {
-        return doGet(url, params, MapUtil.empty());
+        return doGet(url, params, null);
     }
 
     /**
@@ -639,72 +667,74 @@ public class BilibiliDelegate {
      * @param params 查询字符串参数 {@link MultiValueMap}
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    private JSONObject doGet(String url, Map<String, String> params, Map<String, String> headers) {
+    private JSONObject doGet(String url, Map<String, String> params, Headers headers) {
+        HttpUrl httpUrl = HttpUrl.parse(url);
+        assert httpUrl != null;
+        HttpUrl.Builder urlBuilder = httpUrl.newBuilder();
+        Request request = buildRequest(headers, urlBuilder, params, "GET");
+        return call(request);
+    }
 
-        URI uri = HttpUtil.buildUri(url, params);
+    private JSONObject doPost(String url, Map<String, String> requestBody) {
+        return doPost(url, null, null, requestBody);
+    }
 
-        HttpGet httpGet = new HttpGet(uri);
-        //httpGet.setHeader("User-Agent", config.getUserAgent());
-        httpGet.setHeader(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36");
-        httpGet.setHeader("Content-Type", "application/x-www-form-urlencoded");
-        httpGet.setHeader(HttpHeaders.REFERER, "https://www.bilibili.com/");
-        httpGet.setHeader("Origin", "https://www.bilibili.com/");
-        httpGet.setHeader("Cookie", "bili_jct=" + config.getBiliJct() +
-                ";SESSDATA=" + config.getSessdata() +
-                ";DedeUserID=" + config.getDedeuserid() + ";");
+    private JSONObject doPost(String url, Map<String, String> requestBody, Headers headers) {
+        return doPost(url, null, headers, requestBody);
+    }
 
-        if (headers != null && !headers.isEmpty()) {
-            headers.forEach(httpGet::setHeader);
+    private JSONObject doPost(String url, Map<String, String> params, Headers headers, Map<String, String> requestBody) {
+        HttpUrl httpUrl = HttpUrl.parse(url);
+        assert httpUrl != null;
+        HttpUrl.Builder urlBuilder = httpUrl.newBuilder();
+
+        String contentType = headers != null && headers.get("HttpHeaders.CONTENT_TYPE") != null ?
+                headers.get(HttpHeaders.CONTENT_TYPE) : "application/x-www-form-urlencoded";
+        assert contentType != null;
+        try (Buffer buffer = new Buffer()) {
+            RequestBody body;
+            if (requestBody == null || requestBody.isEmpty()) {
+                body = RequestBody.create(new byte[0], null);
+            } else {
+                if (Objects.equals(contentType, "application/x-www-form-urlencoded")) {
+                    for (Map.Entry<String, String> entry : requestBody.entrySet()) {
+                        buffer.writeUtf8(entry.getKey());
+                        buffer.writeUtf8("=");
+                        buffer.writeUtf8(entry.getValue());
+                        buffer.writeUtf8("&");
+                    }
+                } else if (Objects.equals(contentType, "application/json")) {
+                    JSONObject jsonBody = new JSONObject();
+                    jsonBody.putAll(requestBody);
+                    buffer.write(jsonBody.toJSONString(0).getBytes(StandardCharsets.UTF_8));
+                }
+
+                body = RequestBody.create(buffer.readByteArray(), MediaType.parse(contentType));
+            }
+            Request request = buildRequest(headers, urlBuilder, params, body, "POST");
+            return call(request);
         }
-        return call(url, params, httpGet);
     }
 
-    private JSONObject doPost(String url, Map<String, String> params) {
-        return doPost(url, params, null);
-    }
 
-    private JSONObject doPost(String url, Map<String, String> params, Map<String, String> headers) {
-        URI uri = HttpUtil.buildUri(url, params);
-        HttpPost httpPost = new HttpPost(uri);
-        List<NameValuePair> formData = new ArrayList<>();
-        params.forEach((key, value) -> formData.add(new BasicNameValuePair(key, value)));
-        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formData, StandardCharsets.UTF_8);
-        httpPost.setEntity(entity);
-
-        //httpPost.setHeader("User-Agent", config.getUserAgent());
-        httpPost.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36");
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded");
-        httpPost.setHeader("Referer", "https://www.bilibili.com/");
-        httpPost.setHeader("Cookie", "bili_jct=" + config.getBiliJct() +
-                ";SESSDATA=" + config.getSessdata() +
-                ";DedeUserID=" + config.getDedeuserid() + ";");
-
-        if (headers != null && !headers.isEmpty()) {
-            headers.forEach(httpPost::setHeader);
-        }
-        return call(url, params, httpPost);
-    }
-
-    private JSONObject call(String url, Map<String, String> params, HttpUriRequest request) {
+    private JSONObject call(Request request) {
+        String uri = request.url().uri().toString();
         try {
             TimeUnit.SECONDS.sleep(3);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
+            log.error("请求API[{}]失败", uri, e);
+            throw new RequestException(uri, e);
         }
-        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient();
-             CloseableHttpResponse response = httpClient.execute(request)) {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            log.debug("==============");
-            log.debug("请求 API: {}", url);
-            log.debug("请求参数: {}", params);
-            log.debug("响应结果: {}", responseBody);
-            log.debug("==============");
-            EntityUtils.consume(response.getEntity());
-            return JSONUtil.parseObj(responseBody);
+
+        try (Response response = OkHttpUtil.executeWithRetry(request)) {
+            if (response.body() != null) {
+                String body = response.body().string();
+                return JSONUtil.parseObj(body);
+            }
+            throw new RuntimeException("请求失败:" + response.code());
         } catch (Exception e) {
-            log.error("请求API[{}]失败", url, e);
-            throw new RequestException(url, e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -738,5 +768,39 @@ public class BilibiliDelegate {
         } finally {
             FileUtil.del(path);
         }
+    }
+
+    private Request buildRequest(Headers headers,
+                                 HttpUrl.Builder urlBuilder,
+                                 Map<String, String> queryParams,
+                                 String method) {
+        return buildRequest(headers, urlBuilder, queryParams, null, method);
+    }
+
+    private Request buildRequest(Headers headers,
+                                 HttpUrl.Builder urlBuilder,
+                                 Map<String, String> queryParams,
+                                 RequestBody requestBody,
+                                 String method) {
+        Request.Builder requestBuilder = new Request.Builder()
+                .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
+                .header(HttpHeaders.REFERER, "https://www.bilibili.com/")
+                .header("Origin", "https://www.bilibili.com/")
+                .header("Cookie", "bili_jct=" + config.getBiliJct() +
+                        ";SESSDATA=" + config.getSessdata() +
+                        ";DedeUserID=" + config.getDedeuserid() +
+                        ";buvid3=helper-hub" +
+                        ";innersign=0" + ";");
+        if (headers != null) {
+            headers.forEach(header-> requestBuilder.header(header.getFirst(), header.getSecond()));
+        }
+
+        if (queryParams != null) {
+            for (Map.Entry<String, String> param : queryParams.entrySet()) {
+                urlBuilder.addQueryParameter(param.getKey(), param.getValue());
+            }
+        }
+
+        return requestBuilder.url(urlBuilder.build()).method(method, requestBody).build();
     }
 }
