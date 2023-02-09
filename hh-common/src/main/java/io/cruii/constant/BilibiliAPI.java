@@ -117,7 +117,10 @@ public interface BilibiliAPI {
     /**
      * 获取直播间信息
      */
-    String GET_LIVE_ROOM_INFO = "https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld";
+    @Deprecated
+    String GET_LIVE_ROOM_INFO_OLD = "https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld";
+
+    String GET_LIVE_ROOM_INFO = "https://api.bilibili.com/x/space/acc/info";
 
     /**
      * 送出直播间礼物
@@ -167,4 +170,18 @@ public interface BilibiliAPI {
     String GET_JURY_CASE = "https://api.bilibili.com/x/credit/v2/jury/case/next";
 
     String JURY_VOTE = "https://api.bilibili.com/x/credit/v2/jury/vote";
+
+    String VIP_QUEST_RECEIVE = "https://api.biliapi.com/pgc/activity/score/task/receive";
+
+    String VIP_QUEST_INFO ="https://api.biliapi.com/x/vip_point/task/combine";
+
+    String VIP_QUEST_VIEW_COMPLETE="https://api.bilibili.com/pgc/activity/deliver/task/complete";
+
+    String VIP_QUEST_COMPLETE ="https://api.bilibili.com/pgc/activity/score/task/complete";
+
+    String GET_QUESTIONS = "https://api.bilibili.com/x/esports/guess/collection/question";
+
+    String GET_GUESS_INFO = "https://api.bilibili.com/x/esports/guess/collection/statis";
+
+    String GUESS_ADD = "https://api.bilibili.com/x/esports/guess/add";
 }
