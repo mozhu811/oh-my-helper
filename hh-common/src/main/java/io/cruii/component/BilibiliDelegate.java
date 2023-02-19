@@ -7,15 +7,16 @@ import cn.hutool.crypto.SecureUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.constant.BilibiliAPI;
+import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.exception.RequestException;
-import io.cruii.pojo.po.BilibiliUser;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.model.MedalWall;
+import io.cruii.model.BiliUser;
+import io.cruii.pojo.entity.TaskConfigDO;
 import io.cruii.util.CosUtil;
 import io.cruii.util.OkHttpUtil;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import okhttp3.*;
-import okio.Buffer;
 import org.apache.http.HttpHeaders;
 import org.springframework.util.MultiValueMap;
 
@@ -24,7 +25,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * @author cruii
@@ -35,18 +35,18 @@ public class BilibiliDelegate {
     private static final String UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
 
     @Getter
-    private final TaskConfig config;
+    private final TaskConfigDO config;
 
     public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct) {
-        TaskConfig taskConfig = new TaskConfig();
-        taskConfig.setDedeuserid(dedeuserid);
-        taskConfig.setSessdata(sessdata);
-        taskConfig.setBiliJct(biliJct);
-        taskConfig.setUserAgent(UA);
-        this.config = taskConfig;
+        TaskConfigDO taskConfigDO = new TaskConfigDO();
+        taskConfigDO.setDedeuserid(dedeuserid);
+        taskConfigDO.setSessdata(sessdata);
+        taskConfigDO.setBiliJct(biliJct);
+        taskConfigDO.setUserAgent(UA);
+        this.config = taskConfigDO;
     }
 
-    public BilibiliDelegate(TaskConfig config) {
+    public BilibiliDelegate(TaskConfigDO config) {
         this.config = config;
         if (CharSequenceUtil.isBlank(config.getUserAgent())) {
             config.setUserAgent(UA);
@@ -55,87 +55,26 @@ public class BilibiliDelegate {
 
     /**
      * 获取用户B站导航栏状态信息
-     *
-     * @return B站用户信息 {@link BilibiliUser}
      */
-    public BilibiliUser getUser() {
-        JSONObject resp = doGet(BilibiliAPI.GET_USER_INFO_NAV);
+    public BiliUser getUserDetails() {
+        JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_DETAILS_INFO);
 
-        // 解析响应信息
-        JSONObject data = resp.getJSONObject("data");
-        // 是否登录成功
-        Boolean isLogin = data.getBool("isLogin");
-
-        if (Boolean.FALSE.equals(isLogin)) {
-            log.warn("账号Cookie已失效, {}, {}", config.getDedeuserid(), config.getSessdata());
-
-            // 如果没有登录成功，则返回简要信息
-            return getUser(config.getDedeuserid());
+        int code = resp.getInt("code");
+        if (code != 0) {
+            //log.warn("账号Cookie已失效, {}, {}", config.getDedeuserid(), config.getSessdata());
+            //return getUserDetails(config.getDedeuserid());
+            throw new BilibiliCookieExpiredException(config.getDedeuserid());
         }
 
-        // 登录成功，获取详细信息
-        // 获取头像
-        try {
-            uploadAvatar(getAvatarStream(data.getStr("face")));
-        } catch (RuntimeException e) {
-            log.error("上传头像失败", e);
-        }
-
-        String uname = data.getStr("uname");
-        // 获取硬币数
-        String coins = data.getStr("money");
-
-        // 获取大会员信息
-        JSONObject vip = data.getJSONObject("vip");
-
-        // 获取等级信息
-        JSONObject levelInfo = data.getJSONObject("level_info");
-        Integer currentLevel = levelInfo.getInt("current_level");
-
-        // 获取勋章墙
-        JSONObject medalWallResp = getMedalWall();
-        List<JSONObject> medals = null;
-        if (medalWallResp != null) {
-            medals = medalWallResp.getJSONObject("data")
-                    .getJSONArray("list")
-                    .stream()
-                    .map(JSONUtil::parseObj)
-                    .map(medalObj -> {
-                        JSONObject medal = JSONUtil.createObj();
-                        medal.set("name", medalObj.getByPath("medal_info.medal_name", String.class));
-                        medal.set("level", medalObj.getByPath("medal_info.level", Integer.class));
-                        medal.set("colorStart", medalObj.getByPath("medal_info.medal_color_start", Integer.class));
-                        medal.set("colorEnd", medalObj.getByPath("medal_info.medal_color_end", Integer.class));
-                        medal.set("colorBorder", medalObj.getByPath("medal_info.medal_color_border", Integer.class));
-                        return medal;
-                    })
-                    .sorted((o1, o2) -> o2.getInt("level") - o1.getInt("level"))
-                    .limit(2L)
-                    .collect(Collectors.toList());
-        }
-
-        BilibiliUser info = new BilibiliUser();
-        info.setDedeuserid(config.getDedeuserid());
-        info.setUsername(uname);
-        info.setCoins(coins);
-        info.setLevel(currentLevel);
-        info.setCurrentExp(levelInfo.getInt("current_exp"));
-        info.setNextExp(currentLevel == 6 ? 0 : levelInfo.getInt("next_exp"));
-        info.setMedals(JSONUtil.toJsonStr(medals));
-        info.setVipType(vip.getInt("type"));
-        info.setVipStatus(vip.getInt("status"));
-        info.setIsLogin(true);
-
-        return info;
+        return resp.getJSONObject("data").toBean(BiliUser.class);
     }
 
     /**
-     * 当Cookie过期时获取用户的部分信息
+     * 获取用户空间信息
      *
      * @param userId B站uid
-     * @return B站用户信息 {@link BilibiliUser}
      */
-    public BilibiliUser getUser(String userId) {
+    public JSONObject getSpaceAccInfo(String userId) {
         Map<String, String> params = new HashMap<>();
         params.put("mid", userId);
         JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_INFO, params);
@@ -145,31 +84,22 @@ public class BilibiliDelegate {
             log.error("用户[{}]信息获取异常", userId);
             return null;
         }
-        // 获取头像
-        uploadAvatar(getAvatarStream(baseInfo.getStr("face")));
-
-        BilibiliUser info = new BilibiliUser();
-        info.setDedeuserid(userId);
-        info.setUsername(baseInfo.getStr("name"));
-        info.setLevel(baseInfo.getInt("level"));
-        info.setIsLogin(false);
-
-        return info;
+        return baseInfo;
     }
 
     /**
-     * 获取当前经验值
+     * 获取当前等级信息
      *
-     * @return 当前经验值
+     * @return 当前等级信息
      */
-    public int getExp() {
+    public JSONObject getLevelInfo() {
         JSONObject resp = doGet(BilibiliAPI.GET_USER_INFO_NAV);
         JSONObject baseInfo = resp.getJSONObject("data");
         if (resp.getInt("code") == -404 || baseInfo == null) {
             log.error("用户[{}]不存在", config.getDedeuserid());
-            return 0;
+            return null;
         }
-        return baseInfo.getByPath("level_info.current_exp", Integer.class);
+        return baseInfo.getJSONObject("level_info");
     }
 
     /**
@@ -177,11 +107,14 @@ public class BilibiliDelegate {
      *
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject getMedalWall() {
+    public MedalWall getMedalWall() {
         Map<String, String> params = new HashMap<>();
         params.put("target_id", config.getDedeuserid());
         try {
-            return doGet(BilibiliAPI.GET_MEDAL_WALL, params);
+            JSONObject resp = doGet(BilibiliAPI.GET_MEDAL_WALL, params);
+            if (resp.getInt("code") == 0) {
+                return resp.getJSONObject("data").toBean(MedalWall.class);
+            }
         } catch (Exception e) {
             log.error("获取勋章墙异常", e);
         }
@@ -250,10 +183,6 @@ public class BilibiliDelegate {
         return doGet(BilibiliAPI.GET_TREND_VIDEO, params);
     }
 
-    public JSONObject playVideo(String aid, int playedTime) {
-        return playVideo(aid, null, playedTime);
-    }
-
     /**
      * 观看视频
      *
@@ -261,22 +190,22 @@ public class BilibiliDelegate {
      * @param playedTime 播放时长，秒
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject playVideo(String vid, String cid, int playedTime) {
-        Map<String, String> params = new HashMap<>();
-        params.put("mid", config.getDedeuserid());
+    public JSONObject playVideo(String vid, int playedTime) {
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("mid", config.getDedeuserid())
+                .add("type", "4")
+                .add("sub_type", "1")
+                .add("play_type", "2")
+                .add("played_time", String.valueOf(playedTime))
+                .add("real_played_time", String.valueOf(playedTime))
+                .add("csrf", config.getBiliJct());
+
         if (CharSequenceUtil.isNumeric(vid)) {
-            params.put("aid", vid);
+            fbb.add("aid", vid);
         } else {
-            params.put("bvid", vid);
+            fbb.add("bvid", vid);
         }
-        params.put("cid", cid);
-        params.put("type", "4");
-        params.put("sub_type", "1");
-        params.put("play_type", "2");
-        params.put("played_time", String.valueOf(playedTime));
-        params.put("real_played_time", String.valueOf(playedTime));
-        params.put("csrf", config.getBiliJct());
-        return doPost(BilibiliAPI.REPORT_HEARTBEAT, params);
+        return doPost(BilibiliAPI.REPORT_HEARTBEAT, fbb.build());
     }
 
     //public JSONObject reportHistory(String bvid, int playedTime) {
@@ -292,11 +221,11 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject shareVideo(String bvid) {
-        Map<String, String> params = new HashMap<>();
-        params.put("bvid", bvid);
-        params.put("csrf", config.getBiliJct());
+        FormBody requestBody = new FormBody.Builder()
+                .add("bvid", bvid)
+                .add("csrf", config.getBiliJct()).build();
 
-        return doPost(BilibiliAPI.SHARE_VIDEO, params, null, null);
+        return doPost(BilibiliAPI.SHARE_VIDEO, requestBody);
     }
 
 
@@ -306,11 +235,11 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject mangaCheckIn(String platform) {
-        Map<String, String> params = new HashMap<>();
-        params.put("platform", platform);
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("platform", platform);
         Headers.Builder headerBuilder = new Headers.Builder()
                 .add("Origin", "https://manga.bilibili.com");
-        return doPost(BilibiliAPI.MANGA_SIGN, params, headerBuilder.build());
+        return doPost(BilibiliAPI.MANGA_SIGN, headerBuilder.build(), fbb.build());
     }
 
     /**
@@ -368,17 +297,17 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject donateCoin(String bvid, int numCoin, int isLike) {
-        Map<String, String> params = new HashMap<>();
-        params.put("bvid", bvid);
-        params.put("multiply", String.valueOf(numCoin));
-        params.put("select_like", String.valueOf(isLike));
-        params.put("cross_domain", "true");
-        params.put("csrf", config.getBiliJct());
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("bvid", bvid);
+        fbb.add("multiply", String.valueOf(numCoin));
+        fbb.add("select_like", String.valueOf(isLike));
+        fbb.add("cross_domain", "true");
+        fbb.add("csrf", config.getBiliJct());
 
         Headers.Builder headerBuilder = new Headers.Builder();
         headerBuilder.add("Referer", "https://www.bilibili.com/video/" + bvid)
                 .add("Origin", "https://www.bilibili.com");
-        return doPost(BilibiliAPI.DONATE_COIN, params, headerBuilder.build());
+        return doPost(BilibiliAPI.DONATE_COIN, headerBuilder.build(), fbb.build());
     }
 
     /**
@@ -396,11 +325,11 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject silver2Coin() {
-        Map<String, String> params = new HashMap<>();
-        params.put("csrf_token", config.getBiliJct());
-        params.put("csrf", config.getBiliJct());
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("csrf_token", config.getBiliJct());
+        fbb.add("csrf", config.getBiliJct());
 
-        return doPost(BilibiliAPI.SILVER_2_COIN, params);
+        return doPost(BilibiliAPI.SILVER_2_COIN, fbb.build());
     }
 
     /**
@@ -444,23 +373,23 @@ public class BilibiliDelegate {
      * @param giftNum 礼物数量
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject donateGift(String userId, String roomId,
+    public JSONObject donateGift(String userId, Integer roomId,
                                  String bagId, String giftId, int giftNum) {
-        Map<String, String> params = new HashMap<>();
-        params.put("biz_id", roomId);
-        params.put("ruid", userId);
-        params.put("gift_id", giftId);
-        params.put("bag_id", bagId);
-        params.put("gift_num", String.valueOf(giftNum));
-        params.put("uid", config.getDedeuserid());
-        params.put("csrf", config.getBiliJct());
-        params.put("send_ruid", "0");
-        params.put("storm_beat_id", "0");
-        params.put("price", "0");
-        params.put("platform", "pc");
-        params.put("biz_code", "live");
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("biz_id", String.valueOf(roomId));
+        fbb.add("ruid", userId);
+        fbb.add("gift_id", giftId);
+        fbb.add("bag_id", bagId);
+        fbb.add("gift_num", String.valueOf(giftNum));
+        fbb.add("uid", config.getDedeuserid());
+        fbb.add("csrf", config.getBiliJct());
+        fbb.add("send_ruid", "0");
+        fbb.add("storm_beat_id", "0");
+        fbb.add("price", "0");
+        fbb.add("platform", "pc");
+        fbb.add("biz_code", "live");
 
-        return doPost(BilibiliAPI.SEND_GIFT, params);
+        return doPost(BilibiliAPI.SEND_GIFT, fbb.build());
     }
 
     /**
@@ -483,15 +412,15 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject doCharge(int couponBalance, String upUserId) {
-        Map<String, String> params = new HashMap<>();
-        params.put("bp_num", String.valueOf(couponBalance));
-        params.put("is_bp_remains_prior", "true");
-        params.put("up_mid", upUserId);
-        params.put("otype", "up");
-        params.put("oid", config.getDedeuserid());
-        params.put("csrf", config.getBiliJct());
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("bp_num", String.valueOf(couponBalance));
+        fbb.add("is_bp_remains_prior", "true");
+        fbb.add("up_mid", upUserId);
+        fbb.add("otype", "up");
+        fbb.add("oid", config.getDedeuserid());
+        fbb.add("csrf", config.getBiliJct());
 
-        return doPost(BilibiliAPI.CHARGE, params);
+        return doPost(BilibiliAPI.CHARGE, fbb.build());
     }
 
     /**
@@ -501,12 +430,12 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject doChargeComment(String orderNo) {
-        Map<String, String> params = new HashMap<>();
-        params.put("order_id", orderNo);
-        params.put("message", "up的作品很棒");
-        params.put("csrf", config.getBiliJct());
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("order_id", orderNo);
+        fbb.add("message", "up的作品很棒");
+        fbb.add("csrf", config.getBiliJct());
 
-        return doPost(BilibiliAPI.COMMIT_CHARGE_COMMENT, params);
+        return doPost(BilibiliAPI.COMMIT_CHARGE_COMMENT, fbb.build());
     }
 
     /**
@@ -515,12 +444,12 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getMangaVipReward() {
-        Map<String, String> params = new HashMap<>();
-        params.put("reason_id", "1");
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("reason_id", "1");
 
         Headers.Builder headerBuilder = new Headers.Builder()
                 .add("Origin", "https://manga.bilibili.com");
-        return doPost(BilibiliAPI.GET_MANGA_VIP_REWARD, params, headerBuilder.build());
+        return doPost(BilibiliAPI.GET_MANGA_VIP_REWARD, headerBuilder.build(), fbb.build());
     }
 
     /**
@@ -530,11 +459,11 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject getVipReward(int type) {
-        Map<String, String> params = new HashMap<>();
-        params.put("type", String.valueOf(type));
-        params.put("csrf", config.getBiliJct());
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("type", String.valueOf(type));
+        fbb.add("csrf", config.getBiliJct());
 
-        return doPost(BilibiliAPI.GET_VIP_REWARD, params);
+        return doPost(BilibiliAPI.GET_VIP_REWARD, fbb.build());
     }
 
     /**
@@ -543,28 +472,29 @@ public class BilibiliDelegate {
      * @return 解析后的JSON对象 {@link JSONObject}
      */
     public JSONObject readManga() {
-        Map<String, String> params = new HashMap<>(4);
-        params.put("device", "pc");
-        params.put("platform", "web");
-        params.put("comic_id", "26009");
-        params.put("ep_id", "300318");
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("device", "pc");
+        fbb.add("platform", "web");
+        fbb.add("comic_id", "26009");
+        fbb.add("ep_id", "300318");
 
         Headers.Builder headerBuilder = new Headers.Builder()
                 .add("Origin", "https://manga.bilibili.com");
-        return doPost(BilibiliAPI.READ_MANGA, params, headerBuilder.build());
+        return doPost(BilibiliAPI.READ_MANGA, headerBuilder.build(), fbb.build());
     }
 
     public JSONObject followUser(String uid) {
-        Map<String, String> params = new HashMap<>();
-        params.put("fid", uid);
-        params.put("act", "1");
-        params.put("re_src", "11");
-        params.put("csrf", config.getBiliJct());
+        FormBody.Builder fbb = new FormBody.Builder();
+        fbb.add("fid", uid);
+        fbb.add("act", "1");
+        fbb.add("re_src", "11");
+        fbb.add("csrf", config.getBiliJct());
 
-        return doPost(BilibiliAPI.RELATION_MODIFY, params);
+        return doPost(BilibiliAPI.RELATION_MODIFY, fbb.build());
     }
 
     public JSONObject receiveVipQuest(String code) {
+
         Map<String, String> params = new HashMap<>();
         params.put("taskCode", code);
 
@@ -574,7 +504,10 @@ public class BilibiliDelegate {
                 .add(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Linux; Android 6.0.1; MuMu Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.158 Mobile Safari/537.36 os/android model/MuMu build/6720300 osVer/6.0.1 sdkInt/23 network/2 BiliApp/6720300 mobi_app/android channel/html5_search_baidu Buvid/XZFC135F5263B6897C8A4BE7AEB125BBF10F8 sessionID/72d3f4c9 innerVer/6720310 c_locale/zh_CN s_locale/zh_CN disable_rcmd/0 6.72.0 os/android model/MuMu mobi_app/android build/6720300 channel/html5_search_baidu innerVer/6720310 osVer/6.0.1 network/2" +
                         "Accept: application/json; q=0.001, application/xml; q=0.001")
                 .add("Origin", "https://www.bilibili.com");
-        return doPost(BilibiliAPI.VIP_QUEST_RECEIVE, params, headerBuilder.build());
+
+        RequestBody requestBody = RequestBody.create(JSONUtil.toJsonStr(params).getBytes(StandardCharsets.UTF_8),
+                MediaType.parse("application/json"));
+        return doPost(BilibiliAPI.VIP_QUEST_RECEIVE, headerBuilder.build(), requestBody);
     }
 
     public JSONObject vipQuestInfo() {
@@ -585,26 +518,50 @@ public class BilibiliDelegate {
         return null;
     }
 
-    private final Set<String> dailyQuests = Set.of("animatetab", "filmtab",
+    private final Set<String> dailyQuests = Set.of("jp_channel", "tv_channel",
             "vipmallview", "ogvwatch", "tvodbuy", "vipmallbuy");
 
     public JSONObject doBigVipQuest(String code) {
+
+        Headers headers = new Headers.Builder()
+                .add(HttpHeaders.REFERER, "https://big.bilibili.com/mobile/bigPoint/task")
+                .add(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Linux; Android 6.0.1; MuMu Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.158 Mobile Safari/537.36 os/android model/MuMu build/6720300 osVer/6.0.1 sdkInt/23 network/2 BiliApp/6720300 mobi_app/android channel/html5_search_baidu Buvid/XZFC135F5263B6897C8A4BE7AEB125BBF10F8 sessionID/72d3f4c9 innerVer/6720310 c_locale/zh_CN s_locale/zh_CN disable_rcmd/0 6.72.0 os/android model/MuMu mobi_app/android build/6720300 channel/html5_search_baidu innerVer/6720310 osVer/6.0.1 network/2").build();
+
+        if (dailyQuests.contains(code)) {
+            JSONObject statistics = new JSONObject();
+            statistics.set("appId", 1)
+                    .set("platform", 3)
+                    .set("version", "6.85.0")
+                    .set("abtest", "");
+            FormBody requestBody = new FormBody.Builder()
+                    .add("position", code)
+                    .add("c_locale", "zh_CN")
+                    .add("channel", "html5_search_baidu")
+                    .add("disable_rcmd", "0")
+                    .add("mobi_app", "android")
+                    .add("platform", "android")
+                    .add("s_locale", "zh_CN")
+                    .add("statistics", statistics.toJSONString(0))
+                    .build();
+
+            return doPost(BilibiliAPI.VIP_QUEST_VIEW_COMPLETE, headers, requestBody);
+        }
         Map<String, String> params = new HashMap<>();
         params.put("taskCode", code);
 
-        Headers.Builder headerBuilder = new Headers.Builder();
-        headerBuilder.add(HttpHeaders.CONTENT_TYPE, "application/json")
-                .add(HttpHeaders.REFERER, "https://big.bilibili.com/mobile/bigPoint/task")
-                .add(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Linux; Android 6.0.1; MuMu Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.158 Mobile Safari/537.36 os/android model/MuMu build/6720300 osVer/6.0.1 sdkInt/23 network/2 BiliApp/6720300 mobi_app/android channel/html5_search_baidu Buvid/XZFC135F5263B6897C8A4BE7AEB125BBF10F8 sessionID/72d3f4c9 innerVer/6720310 c_locale/zh_CN s_locale/zh_CN disable_rcmd/0 6.72.0 os/android model/MuMu mobi_app/android build/6720300 channel/html5_search_baidu innerVer/6720310 osVer/6.0.1 network/2" +
-                        "Accept: application/json; q=0.001, application/xml; q=0.001")
-                .add("Origin", "https://www.bilibili.com");
-
-        if (dailyQuests.contains(code)) {
-            return doPost(BilibiliAPI.VIP_QUEST_VIEW_COMPLETE, params, headerBuilder.build());
-        }
-        return doPost(BilibiliAPI.VIP_QUEST_COMPLETE, params, headerBuilder.build());
+        RequestBody requestBody = RequestBody.create(JSONUtil.toJsonStr(params).getBytes(StandardCharsets.UTF_8),
+                MediaType.parse("application/json"));
+        return doPost(BilibiliAPI.VIP_QUEST_COMPLETE, headers, requestBody);
     }
 
+
+    public JSONObject doVipSign() {
+        Headers headers = new Headers.Builder()
+                .add(HttpHeaders.REFERER, "https://big.bilibili.com/mobile/bigPoint/task")
+                .add(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Linux; Android 6.0.1; MuMu Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.158 Mobile Safari/537.36 os/android model/MuMu build/6720300 osVer/6.0.1 sdkInt/23 network/2 BiliApp/6720300 mobi_app/android channel/html5_search_baidu Buvid/XZFC135F5263B6897C8A4BE7AEB125BBF10F8 sessionID/72d3f4c9 innerVer/6720310 c_locale/zh_CN s_locale/zh_CN disable_rcmd/0 6.72.0 os/android model/MuMu mobi_app/android build/6720300 channel/html5_search_baidu innerVer/6720310 osVer/6.0.1 network/2").build();
+
+        return doPost(BilibiliAPI.VIP_SIGN, headers, RequestBody.create(new byte[0]));
+    }
     /**
      * 获取B站用户头像文件流
      *
@@ -674,46 +631,20 @@ public class BilibiliDelegate {
         Request request = buildRequest(headers, urlBuilder, params, "GET");
         return call(request);
     }
-
-    private JSONObject doPost(String url, Map<String, String> requestBody) {
+    private JSONObject doPost(String url, RequestBody requestBody) {
         return doPost(url, null, null, requestBody);
     }
 
-    private JSONObject doPost(String url, Map<String, String> requestBody, Headers headers) {
+    private JSONObject doPost(String url, Headers headers, RequestBody requestBody) {
         return doPost(url, null, headers, requestBody);
     }
 
-    private JSONObject doPost(String url, Map<String, String> params, Headers headers, Map<String, String> requestBody) {
+    private JSONObject doPost(String url, Map<String, String> params, Headers headers, RequestBody requestBody) {
         HttpUrl httpUrl = HttpUrl.parse(url);
         assert httpUrl != null;
         HttpUrl.Builder urlBuilder = httpUrl.newBuilder();
-
-        String contentType = headers != null && headers.get("HttpHeaders.CONTENT_TYPE") != null ?
-                headers.get(HttpHeaders.CONTENT_TYPE) : "application/x-www-form-urlencoded";
-        assert contentType != null;
-        try (Buffer buffer = new Buffer()) {
-            RequestBody body;
-            if (requestBody == null || requestBody.isEmpty()) {
-                body = RequestBody.create(new byte[0], null);
-            } else {
-                if (Objects.equals(contentType, "application/x-www-form-urlencoded")) {
-                    for (Map.Entry<String, String> entry : requestBody.entrySet()) {
-                        buffer.writeUtf8(entry.getKey());
-                        buffer.writeUtf8("=");
-                        buffer.writeUtf8(entry.getValue());
-                        buffer.writeUtf8("&");
-                    }
-                } else if (Objects.equals(contentType, "application/json")) {
-                    JSONObject jsonBody = new JSONObject();
-                    jsonBody.putAll(requestBody);
-                    buffer.write(jsonBody.toJSONString(0).getBytes(StandardCharsets.UTF_8));
-                }
-
-                body = RequestBody.create(buffer.readByteArray(), MediaType.parse(contentType));
-            }
-            Request request = buildRequest(headers, urlBuilder, params, body, "POST");
-            return call(request);
-        }
+        Request request = buildRequest(headers, urlBuilder, params, requestBody, "POST");
+        return call(request);
     }
 
 
@@ -785,14 +716,14 @@ public class BilibiliDelegate {
         Request.Builder requestBuilder = new Request.Builder()
                 .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
                 .header(HttpHeaders.REFERER, "https://www.bilibili.com/")
-                .header("Origin", "https://www.bilibili.com/")
+                //.header("Origin", "https://www.bilibili.com/")
                 .header("Cookie", "bili_jct=" + config.getBiliJct() +
                         ";SESSDATA=" + config.getSessdata() +
                         ";DedeUserID=" + config.getDedeuserid() +
                         ";buvid3=helper-hub" +
                         ";innersign=0" + ";");
         if (headers != null) {
-            headers.forEach(header-> requestBuilder.header(header.getFirst(), header.getSecond()));
+            headers.forEach(header -> requestBuilder.header(header.getFirst(), header.getSecond()));
         }
 
         if (queryParams != null) {

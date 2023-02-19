@@ -1,9 +1,9 @@
 package io.cruii.task;
 
 import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.context.BilibiliUserContext;
-import io.cruii.pojo.po.BilibiliUser;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -18,9 +18,9 @@ public class CalExpTask extends AbstractTask {
 
     @Override
     public void run() throws Exception {
-        BilibiliUser user = BilibiliUserContext.get();
-        int current = delegate.getExp();
-        user.setCurrentExp(current);
+        //JSONObject user = BilibiliUserContext.get();
+        JSONObject user = JSONUtil.createObj();
+        JSONObject levelInfo = delegate.getLevelInfo();
         int exp = 0;
         // 获取当日获取的经验
         JSONObject expRewardStatus = delegate.getExpRewardStatus();
@@ -46,29 +46,25 @@ public class CalExpTask extends AbstractTask {
         exp += coinExp;
         log.info("今日已获得[{}]点经验", exp);
         if (exp > 0) {
-            if (user.getLevel() < 6) {
-                int diff = user.getNextExp() - user.getCurrentExp();
+            Integer currentLevel = levelInfo.getInt("current_level");
+            if (currentLevel < 6) {
+                int diff = levelInfo.getInt("next_exp") - levelInfo.getInt("current_exp");
 
                 int days = (diff / exp) + 1;
-                user.setUpgradeDays(days);
+                user.set("upgradeDays", days);
                 if (diff <= exp) {
-                    user.setUpgradeDays(null);
+                    user.set("upgradeDays", null);
                 }
+                log.info("按照当前进度，升级到Lv{}还需要: {}天", currentLevel + 1, days + 1);
             } else {
-                user.setUpgradeDays(null);
+                user.set("upgradeDays", null);
+                log.info("当前等级Lv6，经验值为：{}", levelInfo.getInt("current_exp"));
             }
 
-            if (user.getLevel() < 6) {
-                int upgradeDays = (user.getNextExp() - user.getCurrentExp()) / exp;
-                log.info("按照当前进度，升级到Lv{}还需要: {}天", user.getLevel() + 1, upgradeDays + 1);
-            } else {
-                log.info("当前等级Lv6，经验值为：{}", user.getCurrentExp());
-            }
         } else {
             log.error("经验值为0，无法计算升级天数");
         }
 
-        BilibiliUserContext.set(user);
     }
 
     @Override

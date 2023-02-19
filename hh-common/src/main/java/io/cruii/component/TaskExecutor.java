@@ -1,8 +1,9 @@
 package io.cruii.component;
 
+import cn.hutool.json.JSONObject;
 import io.cruii.context.BilibiliUserContext;
 import io.cruii.exception.BilibiliCookieExpiredException;
-import io.cruii.pojo.po.BilibiliUser;
+import io.cruii.model.BiliUser;
 import io.cruii.task.*;
 import lombok.extern.log4j.Log4j2;
 
@@ -31,10 +32,10 @@ public class TaskExecutor {
         taskList.add(new MangaTask(delegate));
         taskList.add(new ReadMangaTask(delegate));
         taskList.add(new BigVipTask(delegate));
-        taskList.add(new CalExpTask(delegate));
+        //taskList.add(new CalExpTask(delegate));
     }
 
-    public BilibiliUser execute() throws Exception {
+    public BiliUser execute() throws Exception {
         log.info("------开始------");
         for (Task task : taskList) {
             try {
@@ -50,6 +51,8 @@ public class TaskExecutor {
             }
         }
         log.info("------结束------");
+
+        // todo 计算经验值
         return BilibiliUserContext.get();
     }
 }

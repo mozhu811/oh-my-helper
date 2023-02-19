@@ -1,4 +1,4 @@
-package io.cruii.pojo.po;
+package io.cruii.pojo.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -11,12 +11,12 @@ import java.io.Serializable;
  */
 @Data
 @TableName("push_config")
-public class PushConfig implements Serializable {
+public class PushConfigDO implements Serializable {
     private static final long serialVersionUID = -4986884028136127740L;
 
-    @TableId(type = IdType.AUTO)
     private Long id;
 
+    @TableId(type = IdType.INPUT)
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String dedeuserid;
 

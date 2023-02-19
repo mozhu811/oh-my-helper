@@ -1,15 +1,18 @@
-package io.cruii.pojo.dto;
+package io.cruii.pojo.vo;
 
 import lombok.Data;
+import lombok.experimental.Accessors;
 
-import java.time.LocalDateTime;
+import java.io.Serializable;
 
 /**
  * @author cruii
- * Created on 2021/9/30
+ * Created on 2021/6/10
  */
 @Data
-public class BilibiliUserDTO {
+@Accessors(chain = true)
+public class BiliTaskUserVO implements Serializable {
+    private static final long serialVersionUID = -4960479906705315906L;
 
     private String dedeuserid;
 
@@ -29,7 +32,7 @@ public class BilibiliUserDTO {
 
     private Integer vipStatus;
 
-    private LocalDateTime lastRunTime;
+    private String sign;
 
     private Boolean isLogin;
 }

@@ -1,23 +1,23 @@
 package io.cruii.context;
 
 
-import io.cruii.pojo.po.BilibiliUser;
+import io.cruii.model.BiliUser;
 
 /**
  * @author cruii
  * Created on 2021/10/05
  */
 public class BilibiliUserContext {
-    private static final InheritableThreadLocal<BilibiliUser> threadLocal = new InheritableThreadLocal<>();
+    private static final InheritableThreadLocal<BiliUser> threadLocal = new InheritableThreadLocal<>();
 
     private BilibiliUserContext() {
     }
 
-    public static void set(BilibiliUser user) {
+    public static void set(BiliUser user) {
         threadLocal.set(user);
     }
 
-    public static BilibiliUser get() {
+    public static BiliUser get() {
         return threadLocal.get();
     }
 

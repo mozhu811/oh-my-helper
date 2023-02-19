@@ -4,7 +4,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.context.BilibiliUserContext;
-import io.cruii.pojo.po.BilibiliUser;
+import io.cruii.model.BiliUser;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -25,10 +25,17 @@ public class BigVipTask extends AbstractTask {
     @Override
     public void run() throws Exception {
         // 判断是否是大会员
-        BilibiliUser user = BilibiliUserContext.get();
-        if (user.getVipType() != 1 && user.getVipType() != 2) {
+        BiliUser.Vip vip = BilibiliUserContext.get().getVip();
+        if (vip.getType() != 1 && vip.getType() != 2) {
             log.error("账号非B站大会员，停止执行大会员中心每日任务 ❌");
             return;
+        }
+        // 签到
+        JSONObject resp = delegate.doVipSign();
+        if (resp.getInt("code") == 0) {
+            log.info("大会员中心签到成功 ✔️");
+        } else {
+            log.warn("大会员中心签到失败 ❌");
         }
         // 列出任务
         JSONObject vipQuestInfo = delegate.vipQuestInfo();
@@ -61,7 +68,7 @@ public class BigVipTask extends AbstractTask {
                 iterator.remove();
             }
         }
-        // 完成任务
+        // 执行任务
         doTask(codes);
         // 获取当前积分
         vipQuestInfo = delegate.vipQuestInfo();
@@ -71,6 +78,11 @@ public class BigVipTask extends AbstractTask {
 
     private void doTask(Set<String> codes) {
         codes.forEach(c -> {
+            if (Objects.equals("animatetab", c)) {
+                c = "jp_channel";
+            } else if (Objects.equals("filmtab", c)) {
+                c = "tv_channel";
+            }
             JSONObject resp = delegate.doBigVipQuest(c);
             String taskTitle = getTaskTitle(c);
             if (resp.getInt(CODE) == 0) {
@@ -90,8 +102,10 @@ public class BigVipTask extends AbstractTask {
             case "getrights":
                 return "领取大会员卡券包权益";
             case "animatetab":
+            case "jp_channel":
                 return "浏览追番频道页10秒";
             case "filmtab":
+            case "tv_channel":
                 return "浏览影视频道页10秒";
             case "vipmallview":
                 return "浏览会员购页面10秒";

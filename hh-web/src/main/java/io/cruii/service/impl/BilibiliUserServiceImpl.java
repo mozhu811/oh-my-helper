@@ -1,24 +1,25 @@
 package io.cruii.service.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.cruii.component.BiliUserStructMapper;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.mapper.BilibiliUserMapper;
 import io.cruii.mapper.TaskConfigMapper;
-import io.cruii.pojo.dto.BilibiliUserDTO;
-import io.cruii.pojo.po.BilibiliUser;
-import io.cruii.pojo.po.TaskConfig;
-import io.cruii.pojo.vo.BilibiliUserVO;
+import io.cruii.model.MedalWall;
+import io.cruii.model.BiliUser;
+import io.cruii.pojo.dto.BiliTaskUserDTO;
+import io.cruii.pojo.entity.BiliTaskUserDO;
+import io.cruii.pojo.vo.BiliTaskUserVO;
 import io.cruii.service.BilibiliUserService;
 import lombok.extern.log4j.Log4j2;
-import ma.glasnost.orika.MapperFacade;
-import ma.glasnost.orika.MapperFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -30,80 +31,98 @@ import java.util.stream.Collectors;
 public class BilibiliUserServiceImpl implements BilibiliUserService {
     private final BilibiliUserMapper bilibiliUserMapper;
     private final TaskConfigMapper taskConfigMapper;
-    private final MapperFactory mapperFactory;
+    private final BiliUserStructMapper biliUserStructMapper;
 
     public BilibiliUserServiceImpl(BilibiliUserMapper bilibiliUserMapper,
                                    TaskConfigMapper taskConfigMapper,
-                                   MapperFactory mapperFactory) {
+                                   BiliUserStructMapper biliUserStructMapper) {
         this.bilibiliUserMapper = bilibiliUserMapper;
         this.taskConfigMapper = taskConfigMapper;
-        this.mapperFactory = mapperFactory;
+        this.biliUserStructMapper = biliUserStructMapper;
     }
 
     @Override
     public void save(String dedeuserid, String sessdata, String biliJct) {
         BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
-        BilibiliUser user = delegate.getUser();
-        BilibiliUser exist = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, dedeuserid));
-        if (Objects.isNull(exist)) {
-            user.setCreateTime(LocalDateTime.now());
-            bilibiliUserMapper.insert(user);
+
+        // 从B站获取最新用户信息
+        BiliUser biliUser = delegate.getUserDetails();
+        MedalWall medalWall = delegate.getMedalWall();
+
+        BiliTaskUserDO biliUserDO = new BiliTaskUserDO();
+        biliUserDO.setDedeuserid(String.valueOf(biliUser.getMid()))
+                .setUsername(biliUser.getName())
+                .setCoins(String.valueOf(biliUser.getCoins()))
+                .setLevel(biliUser.getLevel())
+                .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
+                .setNextExp(biliUser.getLevel() == 6 ? 0 : biliUser.getLevelExp().getNextExp())
+                .setSign(CharSequenceUtil.isBlank(biliUser.getSign().trim()) ?
+                        "这个人非常懒，什么也没有写~\\(≧▽≦)/~" : biliUser.getSign())
+                .setVipType(biliUser.getVip().getType())
+                .setVipStatus(biliUser.getVip().getStatus())
+                .setIsLogin(true);
+
+        List<MedalWall.Medal> medals = medalWall.getList();
+        String medalWallStr = JSONUtil.toJsonStr(
+                medals.stream()
+                        .map(MedalWall.Medal::getMedalInfo)
+                        .sorted((m1, m2) -> m2.getLevel() - m1.getLevel())
+                        .limit(2L)
+                        .map(mi -> {
+                            JSONObject obj = JSONUtil.createObj();
+                            obj.set("name", mi.getMedalName())
+                                    .set("level", mi.getLevel())
+                                    .set("colorStart", mi.getMedalColorStart())
+                                    .set("colorEnd", mi.getMedalColorEnd())
+                                    .set("colorBorder", mi.getMedalColorBorder());
+                            return obj;
+                        }).collect(Collectors.toList())
+        );
+        biliUserDO.setMedals(medalWallStr);
+
+        // 是否已存在
+        boolean exist = bilibiliUserMapper
+                .exists(Wrappers.lambdaQuery(BiliTaskUserDO.class)
+                        .eq(BiliTaskUserDO::getDedeuserid, dedeuserid));
+
+        if (!exist) {
+            biliUserDO.setCreateTime(LocalDateTime.now());
+            bilibiliUserMapper.insert(biliUserDO);
         } else {
-            user.setId(exist.getId());
-            bilibiliUserMapper.updateById(user);
+            bilibiliUserMapper.updateById(biliUserDO);
         }
     }
 
     @Override
-    public void save(BilibiliUserDTO user) {
-        BilibiliUser bilibiliUser = mapperFactory.getMapperFacade().map(user, BilibiliUser.class);
-        BilibiliUser exist = bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, user.getDedeuserid()));
-        if (Objects.isNull(exist)) {
-            bilibiliUserMapper.insert(bilibiliUser);
+    public void save(BiliTaskUserDTO userDTO) {
+        BiliTaskUserDO biliTaskUserDO = biliUserStructMapper.toDO(userDTO);
+        boolean exists = bilibiliUserMapper.exists(Wrappers.lambdaQuery(BiliTaskUserDO.class)
+                .eq(BiliTaskUserDO::getDedeuserid, userDTO.getDedeuserid()));
+        if (!exists) {
+            bilibiliUserMapper.insert(biliTaskUserDO);
         } else {
-            bilibiliUser.setId(exist.getId());
-            bilibiliUserMapper.updateById(bilibiliUser);
+            bilibiliUserMapper.updateById(biliTaskUserDO);
         }
     }
 
     @Override
     public boolean isExist(String dedeuserid) {
-        return Objects.nonNull(bilibiliUserMapper.selectOne(Wrappers.lambdaQuery(BilibiliUser.class).eq(BilibiliUser::getDedeuserid, dedeuserid)));
+        return bilibiliUserMapper.exists(Wrappers.lambdaQuery(BiliTaskUserDO.class).eq(BiliTaskUserDO::getDedeuserid, dedeuserid));
     }
 
     @Override
-    public Page<BilibiliUserVO> list(Integer page, Integer size) {
-        Page<BilibiliUser> resultPage = bilibiliUserMapper.selectPage(new Page<>(page, size), Wrappers.lambdaQuery(BilibiliUser.class).orderByDesc(BilibiliUser::getCurrentExp));
-        List<TaskConfig> taskConfigs = taskConfigMapper
-                .selectList(Wrappers.lambdaQuery(TaskConfig.class)
-                        .in(TaskConfig::getDedeuserid, resultPage.getRecords()
-                                .stream()
-                                .map(BilibiliUser::getDedeuserid)
-                                .collect(Collectors.toList())));
-        Page<BilibiliUserVO> bilibiliUserVOPage = new Page<>(page, size);
-        BeanUtils.copyProperties(resultPage, bilibiliUserVOPage, "records");
-        bilibiliUserVOPage.setRecords(resultPage
-                .getRecords()
-                .stream()
-                .map(user -> {
-                    MapperFacade mapper = mapperFactory.getMapperFacade();
-                    BilibiliUserVO userVO = mapper.map(user, BilibiliUserVO.class);
-                    taskConfigs.stream()
-                            .filter(config -> config.getDedeuserid().equals(user.getDedeuserid()))
-                            .findFirst()
-                            .ifPresent(config -> userVO.setConfigId(config.getId()));
-                    if (user.getLevel() < 6) {
-                        userVO.setDiffExp(user.getNextExp() - user.getCurrentExp());
-                    }
-                    return userVO;
-                })
-                .collect(Collectors.toList()));
+    public Page<BiliTaskUserVO> list(Integer page, Integer size) {
+        Page<BiliTaskUserDO> resultPage = bilibiliUserMapper.selectPage(new Page<>(page, size),
+                Wrappers.lambdaQuery(BiliTaskUserDO.class)
+                        .orderByDesc(BiliTaskUserDO::getIsLogin)
+                        .orderByDesc(BiliTaskUserDO::getLevel)
+                        .orderByDesc(BiliTaskUserDO::getCurrentExp));
 
-        return bilibiliUserVOPage;
+        return biliUserStructMapper.toVOPage(resultPage);
     }
 
     @Override
     public List<String> listNotRunUserId() {
-        return bilibiliUserMapper.listNotRunUser().stream().map(BilibiliUser::getDedeuserid).collect(Collectors.toList());
+        return bilibiliUserMapper.listNotRunUser().stream().map(BiliTaskUserDO::getDedeuserid).collect(Collectors.toList());
     }
 }

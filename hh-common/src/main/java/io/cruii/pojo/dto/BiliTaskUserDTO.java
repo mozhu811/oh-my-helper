@@ -1,28 +1,21 @@
-package io.cruii.pojo.vo;
+package io.cruii.pojo.dto;
 
-import cn.hutool.json.JSONArray;
 import lombok.Data;
-import lombok.experimental.Accessors;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
  * @author cruii
- * Created on 2021/6/10
+ * Created on 2021/9/30
  */
 @Data
-@Accessors(chain = true)
-public class BilibiliUserVO implements Serializable {
-    private static final long serialVersionUID = -4960479906705315906L;
+public class BiliTaskUserDTO {
 
     private String dedeuserid;
 
     private String username;
 
     private Integer level;
-
-    private String avatar;
 
     private String coins;
 
@@ -32,13 +25,13 @@ public class BilibiliUserVO implements Serializable {
 
     private Integer upgradeDays;
 
-    private JSONArray medals;
+    private String medals;
 
     private Integer vipStatus;
+
+    private String sign;
 
     private LocalDateTime lastRunTime;
 
     private Boolean isLogin;
-
-    private Long configId;
 }

@@ -5,8 +5,8 @@ import io.cruii.component.BilibiliDelegate;
 import io.cruii.component.TaskExecutor;
 import io.cruii.context.BilibiliUserContext;
 import io.cruii.execution.feign.PushFeignService;
-import io.cruii.pojo.po.BilibiliUser;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.model.BiliUser;
+import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -15,10 +15,12 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -69,18 +71,17 @@ public class TaskRunner {
         }).start();
     }
 
-    public BilibiliUser run(TaskConfig taskConfig) {
-        AtomicReference<BilibiliUser> ret = new AtomicReference<>();
+    public BiliUser run(TaskConfigDO taskConfigDO) {
+        AtomicReference<BiliUser> ret = new AtomicReference<>();
         log.debug("Current task thread pool queue size: {}", taskExecutor.getThreadPoolExecutor().getQueue().size());
         log.debug("Current task thread pool active count: {}", taskExecutor.getActiveCount());
         log.debug("Current task thread pool size: {}", taskExecutor.getPoolSize());
         log.debug("Current task thread pool completed task count: {}", taskExecutor.getThreadPoolExecutor().getCompletedTaskCount());
         Future<String> future = taskExecutor.submit(() -> {
             try {
-                BilibiliDelegate delegate = new BilibiliDelegate(taskConfig);
-                BilibiliUser user = delegate.getUser();
+                BilibiliDelegate delegate = new BilibiliDelegate(taskConfigDO);
+                BiliUser user = delegate.getUserDetails();
                 if (user != null) {
-                    user.setLastRunTime(LocalDateTime.now());
                     BilibiliUserContext.set(user);
                     TaskExecutor executor = new TaskExecutor(delegate);
                     ret.set(executor.execute());
@@ -100,7 +101,7 @@ public class TaskRunner {
         try {
             String traceId = future.get();
             if (traceId != null) {
-                PUSH_QUEUE.put(taskConfig.getDedeuserid() + ":" + traceId);
+                PUSH_QUEUE.put(taskConfigDO.getDedeuserid() + ":" + traceId);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

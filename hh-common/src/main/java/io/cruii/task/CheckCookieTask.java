@@ -3,7 +3,7 @@ package io.cruii.task;
 import cn.hutool.json.JSONObject;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.exception.BilibiliCookieExpiredException;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -15,7 +15,7 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class CheckCookieTask extends AbstractTask {
 
-    private final TaskConfig config;
+    private final TaskConfigDO config;
 
     public CheckCookieTask(BilibiliDelegate delegate) {
         super(delegate);

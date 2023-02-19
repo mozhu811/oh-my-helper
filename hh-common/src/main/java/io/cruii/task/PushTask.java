@@ -2,7 +2,7 @@ package io.cruii.task;
 
 import cn.hutool.core.io.FileUtil;
 import io.cruii.component.BilibiliDelegate;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
@@ -40,20 +40,20 @@ public class PushTask {
         return push(delegate.getConfig(), content);
     }
 
-    private boolean push(TaskConfig taskConfig, String content) {
+    private boolean push(TaskConfigDO taskConfigDO, String content) {
         return false;
         //boolean result = false;
-        //if (CharSequenceUtil.isNotBlank(taskConfig.getBarkDeviceKey())) {
-        //    BarkPusher barkPusher = new BarkPusher(taskConfig.getBarkDeviceKey());
+        //if (CharSequenceUtil.isNotBlank(taskConfigDO.getBarkDeviceKey())) {
+        //    BarkPusher barkPusher = new BarkPusher(taskConfigDO.getBarkDeviceKey());
         //    result = barkPusher.push(content);
-        //} else if (!CharSequenceUtil.hasBlank(taskConfig.getCorpId(), taskConfig.getCorpSecret(), taskConfig.getAgentId(), taskConfig.getMediaId())) {
-        //    QyWechatPusher pusher = new QyWechatPusher(taskConfig.getCorpId(), taskConfig.getCorpSecret(), taskConfig.getAgentId(), taskConfig.getMediaId());
+        //} else if (!CharSequenceUtil.hasBlank(taskConfigDO.getCorpId(), taskConfigDO.getCorpSecret(), taskConfigDO.getAgentId(), taskConfigDO.getMediaId())) {
+        //    QyWechatPusher pusher = new QyWechatPusher(taskConfigDO.getCorpId(), taskConfigDO.getCorpSecret(), taskConfigDO.getAgentId(), taskConfigDO.getMediaId());
         //    result = pusher.push(content.replace("\n", "<br>"));
-        //} else if (!CharSequenceUtil.hasBlank(taskConfig.getTgBotToken(), taskConfig.getTgBotChatId())) {
-        //    TelegramBotPusher pusher = new TelegramBotPusher(taskConfig.getTgBotToken(), taskConfig.getTgBotChatId());
+        //} else if (!CharSequenceUtil.hasBlank(taskConfigDO.getTgBotToken(), taskConfigDO.getTgBotChatId())) {
+        //    TelegramBotPusher pusher = new TelegramBotPusher(taskConfigDO.getTgBotToken(), taskConfigDO.getTgBotChatId());
         //    result = pusher.push(content);
-        //} else if (CharSequenceUtil.isNotBlank(taskConfig.getScKey())) {
-        //    ServerChanPusher pusher = new ServerChanPusher(taskConfig.getScKey());
+        //} else if (CharSequenceUtil.isNotBlank(taskConfigDO.getScKey())) {
+        //    ServerChanPusher pusher = new ServerChanPusher(taskConfigDO.getScKey());
         //    result = pusher.push(content);
         //} else {
         //    log.info("该账号未配置推送或推送配置异常");

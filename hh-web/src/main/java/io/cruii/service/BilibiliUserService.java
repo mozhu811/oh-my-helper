@@ -2,8 +2,8 @@ package io.cruii.service;
 
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import io.cruii.pojo.dto.BilibiliUserDTO;
-import io.cruii.pojo.vo.BilibiliUserVO;
+import io.cruii.pojo.dto.BiliTaskUserDTO;
+import io.cruii.pojo.vo.BiliTaskUserVO;
 
 import java.util.List;
 
@@ -14,11 +14,11 @@ import java.util.List;
 public interface BilibiliUserService {
     void save(String dedeuserid, String sessdata, String biliJct);
 
-    void save(BilibiliUserDTO user);
+    void save(BiliTaskUserDTO user);
 
     boolean isExist(String dedeuserid);
 
-    Page<BilibiliUserVO> list(Integer page, Integer size);
+    Page<BiliTaskUserVO> list(Integer page, Integer size);
 
     List<String> listNotRunUserId();
 }

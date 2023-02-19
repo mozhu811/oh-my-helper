@@ -1,9 +1,9 @@
 package io.cruii.service;
 
 
-import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.dto.TaskConfigDTO;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.pojo.entity.TaskConfigDO;
+import io.cruii.pojo.vo.TaskConfigVO;
 
 import java.util.List;
 
@@ -12,15 +12,6 @@ import java.util.List;
  * Created on 2021/6/6
  */
 public interface TaskConfigService {
-
-    /**
-     * 创建新任务
-     *
-     * @param taskConfigDTO 任务配置
-     * @param pushConfigDTO 推送配置
-     * @return 配置是否有效
-     */
-    TaskConfigDTO createTask(TaskConfigDTO taskConfigDTO, PushConfigDTO pushConfigDTO);
 
     /**
      * 是否存在任务配置
@@ -32,11 +23,13 @@ public interface TaskConfigService {
 
     void removeTask(String dedeuserid);
 
-    TaskConfig getTask(String dedeuserId, String sessdata, String biliJct);
+    TaskConfigVO getTask(String dedeuserId, String sessdata, String biliJct);
 
-    TaskConfig getTask(String dedeuserId);
+    TaskConfigVO getTask(String dedeuserId);
 
     void updateCookie(String dedeuserid, String sessdata, String biliJct);
 
-    List<TaskConfig> getTask(List<String> dedeuseridList);
+    List<TaskConfigDO> getTask(List<String> dedeuseridList);
+
+    void createTask(String dedeuserid, String sessdata, String biliJct, TaskConfigDTO taskConfigDTO);
 }

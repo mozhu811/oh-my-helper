@@ -3,7 +3,7 @@ package io.cruii.task;
 import cn.hutool.json.JSONObject;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.context.BilibiliUserContext;
-import io.cruii.pojo.po.BilibiliUser;
+import io.cruii.model.BiliUser;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -18,10 +18,9 @@ public class GetVipPrivilegeTask extends AbstractTask {
 
     @Override
     public void run() {
-        BilibiliUser user = BilibiliUserContext.get();
 
-        Integer vipType = user.getVipType();
-        if (vipType == 0 || user.getVipStatus() != 1) {
+        BiliUser.Vip vip = BilibiliUserContext.get().getVip();
+        if (vip.getType() == 0 || vip.getStatus() != 1) {
             log.info("该账号非大会员，取消执行领取大会员权益 ❌");
             return;
         }

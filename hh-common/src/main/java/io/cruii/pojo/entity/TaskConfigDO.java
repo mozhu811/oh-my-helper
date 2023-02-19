@@ -1,4 +1,4 @@
-package io.cruii.pojo.po;
+package io.cruii.pojo.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -15,16 +15,16 @@ import java.io.Serializable;
  */
 @Data
 @TableName(value = "task_config", autoResultMap = true)
-public class TaskConfig implements Serializable {
+public class TaskConfigDO implements Serializable {
 
     private static final long serialVersionUID = 6151419899088396002L;
 
-    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
      * B站uid
      */
+    @TableId(type = IdType.INPUT)
     private String dedeuserid;
 
     /**

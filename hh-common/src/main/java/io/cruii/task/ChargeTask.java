@@ -3,8 +3,8 @@ package io.cruii.task;
 import cn.hutool.json.JSONObject;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.context.BilibiliUserContext;
-import io.cruii.pojo.po.BilibiliUser;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.model.BiliUser;
+import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Objects;
@@ -17,7 +17,7 @@ import java.util.Objects;
 public class ChargeTask extends AbstractTask {
     private static final String AUTHOR_MID = "287969457";
 
-    private final TaskConfig config;
+    private final TaskConfigDO config;
 
     public ChargeTask(BilibiliDelegate delegate) {
         super(delegate);
@@ -26,9 +26,9 @@ public class ChargeTask extends AbstractTask {
 
     @Override
     public void run() throws Exception {
-        BilibiliUser user = BilibiliUserContext.get();
+        BiliUser biliUser = BilibiliUserContext.get();
 
-        Integer vipType = user.getVipType();
+        Integer vipType = biliUser.getVip().getType();
         if (vipType == 0 || vipType == 1) {
             log.info("账号非年费大会员，停止执行充电任务 ❌");
             return;
@@ -53,8 +53,8 @@ public class ChargeTask extends AbstractTask {
             targetId = AUTHOR_MID;
         }
 
-        BilibiliUser targetUser = delegate.getUser(targetId);
-        if (targetUser == null) {
+        JSONObject userSpaceInfo = delegate.getSpaceAccInfo(targetId);
+        if (userSpaceInfo.getStr("mid") == null) {
             log.info("充电对象未找到，将为作者[{}]进行充电", AUTHOR_MID);
             targetId = AUTHOR_MID;
         }

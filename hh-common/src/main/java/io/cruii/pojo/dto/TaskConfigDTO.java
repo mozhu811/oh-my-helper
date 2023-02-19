@@ -2,31 +2,15 @@ package io.cruii.pojo.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * @author cruii
  * Created on 2021/9/14
  */
 @Data
-public class TaskConfigDTO {
-    /**
-     * 自增id
-     */
-    private Long id;
-
-    /**
-     * B站uid
-     */
-    private String dedeuserid;
-
-    /**
-     * 会话标识
-     */
-    private String sessdata;
-
-    /**
-     * csrf校验
-     */
-    private String biliJct;
+public class TaskConfigDTO implements Serializable {
+    private static final long serialVersionUID = 4344616448330555244L;
 
     /**
      * 每日投币数量,默认 5 ,为 0 时则不投币
@@ -80,10 +64,7 @@ public class TaskConfigDTO {
      */
     private String userAgent;
 
-    /**
-     * 是否跳过每日任务，默认true
-     */
-    private Boolean skipTask;
+    private PushConfigDTO pushConfig;
 
     /**
      * 关注开发者

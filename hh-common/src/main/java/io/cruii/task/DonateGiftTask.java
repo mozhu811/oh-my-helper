@@ -4,7 +4,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.component.BilibiliDelegate;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
@@ -17,13 +17,13 @@ import java.util.stream.Collectors;
 @Log4j2
 public class DonateGiftTask extends AbstractTask {
     private static final String AUTHOR_MID = "287969457";
-    private static final String AUTHOR_ROOM_ID = "11526309";
+    private static final Integer AUTHOR_ROOM_ID = 11526309;
 
     private String userId;
 
-    private String roomId;
+    private Integer roomId;
 
-    private final TaskConfig config;
+    private final TaskConfigDO config;
 
     public DonateGiftTask(BilibiliDelegate delegate) {
         super(delegate);
@@ -89,7 +89,7 @@ public class DonateGiftTask extends AbstractTask {
         }
         JSONObject resp = delegate.getLiveRoomInfo(userId);
         if (resp.getInt(CODE) == 0) {
-            roomId = resp.getByPath("data.roomid", String.class);
+            roomId = resp.getByPath("data.live_room.roomid", Integer.class);
             return;
         }
         log.error("获取直播间信息失败，将为作者直播间[{}]送出礼物", AUTHOR_ROOM_ID);

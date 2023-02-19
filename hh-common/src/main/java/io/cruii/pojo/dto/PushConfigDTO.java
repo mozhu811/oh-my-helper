@@ -11,11 +11,7 @@ import java.io.Serializable;
 @Data
 public class PushConfigDTO implements Serializable {
 
-    private static final long serialVersionUID = 4443639092404716539L;
-
-    private Long id;
-
-    private String dedeuserid;
+    private static final long serialVersionUID = 8628766559103661462L;
 
     private String tgBotToken;
 

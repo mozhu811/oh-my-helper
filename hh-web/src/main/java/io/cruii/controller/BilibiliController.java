@@ -8,23 +8,27 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.zxing.WriterException;
+import io.cruii.component.BilibiliDelegate;
 import io.cruii.constant.BilibiliAPI;
 import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.exception.BilibiliUserNotFoundException;
-import io.cruii.pojo.dto.BilibiliUserDTO;
-import io.cruii.pojo.vo.BilibiliLoginVO;
-import io.cruii.pojo.vo.BilibiliUserVO;
+import io.cruii.model.BiliQrcode;
+import io.cruii.pojo.dto.BiliTaskUserDTO;
+import io.cruii.pojo.vo.BiliLoginVO;
+import io.cruii.pojo.vo.BiliTaskUserVO;
+import io.cruii.pojo.vo.OmhUserVO;
 import io.cruii.pojo.vo.QrCodeVO;
 import io.cruii.service.BilibiliUserService;
 import io.cruii.service.TaskConfigService;
+import io.cruii.util.OkHttpUtil;
 import io.cruii.util.QrCodeGenerator;
 import lombok.extern.log4j.Log4j2;
-import ma.glasnost.orika.MapperFactory;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpCookie;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -43,12 +47,10 @@ public class BilibiliController {
     private final BilibiliUserService userService;
     private final TaskConfigService taskConfigService;
 
-    private final MapperFactory mapperFactory;
     public BilibiliController(BilibiliUserService userService,
-                              TaskConfigService taskConfigService, MapperFactory mapperFactory) {
+                              TaskConfigService taskConfigService) {
         this.userService = userService;
         this.taskConfigService = taskConfigService;
-        this.mapperFactory = mapperFactory;
     }
 
     private static Map<String, Object> getUrlParams(String param) {
@@ -67,11 +69,14 @@ public class BilibiliController {
     }
 
     @GetMapping("user")
-    public BilibiliUserVO getBilibiliUser(@RequestParam String dedeuserid, @RequestParam String sessdata) {
+    public OmhUserVO getBilibiliUser(@RequestParam String dedeuserid,
+                                     @RequestParam String sessdata) {
+        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, null);
+        delegate.getSpaceAccInfo(dedeuserid);
         HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
         sessdataCookie.setDomain(".bilibili.com");
         JSONObject data;
-        try(HttpResponse response = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV).cookie(sessdataCookie).execute()) {
+        try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV).cookie(sessdataCookie).execute()) {
             String body = response.body();
             JSONObject resp = JSONUtil.parseObj(body);
             if (resp.getInt("code") == -101) {
@@ -86,27 +91,20 @@ public class BilibiliController {
         if (mid == null || !mid.equals(dedeuserid)) {
             throw new BilibiliUserNotFoundException(dedeuserid);
         }
-
-        String face = data.getStr("face");
-        try (HttpResponse response = HttpRequest.get(face).execute()) {
-            InputStream inputStream = response.bodyStream();
-            return new BilibiliUserVO()
-                    .setDedeuserid(dedeuserid)
-                    .setAvatar("data:image/jpeg;base64," + Base64.encode(inputStream))
-                    .setUsername(data.getStr("uname"))
-                    .setConfigId(taskConfigService.getTask(dedeuserid) == null ? null : taskConfigService.getTask(dedeuserid).getId()).setLevel(data.getJSONObject("level_info").getInt("current_level"));
-        }
-
+        return new OmhUserVO()
+                .setUserId(mid)
+                .setNickname(data.getStr("uname"))
+                .setBiliTaskConfigId(taskConfigService.getTask(dedeuserid).getId());
     }
 
     @PutMapping("user")
     @ResponseStatus(HttpStatus.CREATED)
-    public void updateUser(@RequestBody BilibiliUserVO bilibiliUserVO) {
-        userService.save(mapperFactory.getMapperFacade().map(bilibiliUserVO, BilibiliUserDTO.class));
+    public void updateUser(@RequestBody BiliTaskUserDTO biliTaskUserDTO) {
+        userService.save(biliTaskUserDTO);
     }
 
     @GetMapping("users")
-    public Page<BilibiliUserVO> listUsers(@RequestParam Integer page, @RequestParam Integer size) {
+    public Page<BiliTaskUserVO> listUsers(@RequestParam Integer page, @RequestParam Integer size) {
         if (page <= 0) {
             page = 1;
         }
@@ -119,32 +117,31 @@ public class BilibiliController {
 
     @GetMapping("qrCode")
     public QrCodeVO getLoginQrCode() {
-        try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_URL).execute()) {
-            log.debug(response);
-            if (response.getStatus() == 200) {
-                JSONObject jsonBody = JSONUtil.parseObj(response.body());
-                if (jsonBody.getInt("code") == 0) {
-                    JSONObject data = jsonBody.getJSONObject("data");
-                    String qrCodeUrl = data.getStr("url");
-                    String qrCodeKey = data.getStr("qrcode_key");
+        Request request = new Request.Builder()
+                .url(BilibiliAPI.GET_QR_CODE_LOGIN_URL)
+                .get().build();
 
-                    QrCodeVO qrCodeVO = new QrCodeVO();
-                    qrCodeVO.setQrCodeUrl(qrCodeUrl);
-                    qrCodeVO.setQrCodeKey(qrCodeKey);
-
-                    byte[] bytes = QrCodeGenerator.generateQrCode(qrCodeUrl, 180, true);
-                    qrCodeVO.setQrCodeImg("data:image/png;base64," + Base64.encode(bytes));
-                    return qrCodeVO;
-                }
+        try (Response qrCodeResponse = OkHttpUtil.executeWithRetry(request)){
+            if (qrCodeResponse.isSuccessful()) {
+                okhttp3.ResponseBody body = qrCodeResponse.body();
+                assert body != null;
+                BiliQrcode biliQrcode = JSONUtil.parseObj(body.string()).getJSONObject("data")
+                        .toBean(BiliQrcode.class);
+                byte[] qrcodeBytes = QrCodeGenerator.generateQrCode(biliQrcode.getUrl(), 180, true);
+                QrCodeVO qrCodeVO = new QrCodeVO();
+                qrCodeVO.setQrCodeUrl(biliQrcode.getUrl());
+                qrCodeVO.setQrCodeKey(biliQrcode.getQrcodeKey());
+                qrCodeVO.setQrCodeImg("data:image/png;base64," + Base64.encode(qrcodeBytes));
+                return qrCodeVO;
             }
-        } catch (WriterException | IOException e) {
-            throw new RuntimeException("获取B站二维码登录链接异常", e);
+        } catch (IOException | WriterException e) {
+            throw new RuntimeException("获取B站二维码异常", e);
         }
-        throw new RuntimeException("获取B站二维码登录链接异常");
+        throw new RuntimeException("获取B站二维码异常");
     }
 
     @GetMapping("login")
-    public BilibiliLoginVO login(@RequestParam String qrCodeKey) {
+    public BiliLoginVO login(@RequestParam String qrCodeKey) {
         try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_INFO_URL).body("qrcode_key=" + qrCodeKey).execute()) {
         /*
         当密钥正确时但未扫描时code为86101
@@ -152,17 +149,11 @@ public class BilibiliController {
         扫描成功手机端确认登录后，code为0，并向浏览器写入cookie
         二维码失效时code为86038
          */
-            log.debug(response);
             JSONObject jsonBody = JSONUtil.parseObj(response.body());
-            /*
-                {"code":0,"message":"0","ttl":1,
-                "data":{"url":"https://passport.biligame.com/crossDomain?DedeUserID=287969457\u0026DedeUserID__ckMd5=e6f2d9a03ca037bd\u0026Expires=1681227537\u0026SESSDATA=605d4f97,1681227537,eac30*a1\u0026bili_jct=94896bdce596eff2d226d531d2b0bd85\u0026gourl=https%3A%2F%2Fwww.bilibili.com",
-                "refresh_token":"f92c6c0217805359b0c40d614462c8a1","timestamp":1665675537415,"code":0,"message":""}}
-             */
             JSONObject data = jsonBody.getJSONObject("data");
             int code = data.getInt("code");
 
-            BilibiliLoginVO bilibiliLoginVO = new BilibiliLoginVO();
+            BiliLoginVO biliLoginVO = new BiliLoginVO();
             if (code == 0) {
                 String decodeUrl = URLUtil.decode(data.getStr("url"));
                 String sessdata;
@@ -174,28 +165,21 @@ public class BilibiliController {
                 }
                 String biliJct = response.getCookieValue("bili_jct");
                 String dedeuserid = response.getCookieValue("DedeUserID");
-                log.info("{}-{}-{}", biliJct, dedeuserid, sessdata);
-            /*
-            如果在新用户没有创建任务时就保存信息，则造成前端会显示未创建任务的用户信息
-            这样不符合逻辑。
-            所以，只有在老用户登录时才更新cookie，新用户直接返回即可。
-             */
-                if (taskConfigService.isExist(dedeuserid)) {
-                    // 存在用户时更新cookie
-                    userService.save(dedeuserid, sessdata, biliJct);
-                    taskConfigService.updateCookie(dedeuserid, sessdata, biliJct);
-                }
 
-                bilibiliLoginVO.setBiliJct(biliJct);
-                bilibiliLoginVO.setDedeuserid(Integer.parseInt(dedeuserid));
-                bilibiliLoginVO.setSessdata(sessdata);
-                bilibiliLoginVO.setCode(0);
+                // 存在用户时更新cookie
+                userService.save(dedeuserid, sessdata, biliJct);
+                taskConfigService.updateCookie(dedeuserid, sessdata, biliJct);
 
-                return bilibiliLoginVO;
+                biliLoginVO.setBiliJct(biliJct);
+                biliLoginVO.setDedeuserid(Integer.parseInt(dedeuserid));
+                biliLoginVO.setSessdata(sessdata);
+                biliLoginVO.setCode(0);
+
+                return biliLoginVO;
             }
 
-            bilibiliLoginVO.setCode(code);
-            return bilibiliLoginVO;
+            biliLoginVO.setCode(code);
+            return biliLoginVO;
         }
     }
 }

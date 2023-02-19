@@ -1,7 +1,7 @@
 package io.cruii.push.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.cruii.pojo.po.PushConfig;
+import io.cruii.pojo.entity.PushConfigDO;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -9,5 +9,5 @@ import org.apache.ibatis.annotations.Mapper;
  * Created on 2022/4/6
  */
 @Mapper
-public interface PushConfigMapper extends BaseMapper<PushConfig> {
+public interface PushConfigMapper extends BaseMapper<PushConfigDO> {
 }

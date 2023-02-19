@@ -3,8 +3,7 @@ package io.cruii.task;
 import cn.hutool.json.JSONObject;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.context.BilibiliUserContext;
-import io.cruii.pojo.po.BilibiliUser;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.log4j.Log4j2;
 
 import java.math.BigDecimal;
@@ -21,7 +20,7 @@ import java.util.stream.Collectors;
  */
 @Log4j2
 public class DonateCoinTask extends VideoTask {
-    private final TaskConfig config;
+    private final TaskConfigDO config;
     private int counter = 0;
 
     private int coinNum;
@@ -43,8 +42,7 @@ public class DonateCoinTask extends VideoTask {
             counter = 0;
         }
 
-        BilibiliUser user = BilibiliUserContext.get();
-        if (user.getLevel() >= 6) {
+        if (BilibiliUserContext.get().getLevel() >= 6) {
             log.info("账号已到达6级，取消执行投币任务");
             return;
         }

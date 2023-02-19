@@ -9,7 +9,7 @@ import java.io.Serializable;
  * Created on 2021/7/6
  */
 @Data
-public class BilibiliLoginVO implements Serializable {
+public class BiliLoginVO implements Serializable {
     private static final long serialVersionUID = 4526030632788216062L;
 
     /**

@@ -2,8 +2,8 @@ package io.cruii.handler;
 
 import cn.hutool.json.JSONUtil;
 import io.cruii.mapper.BilibiliUserMapper;
-import io.cruii.pojo.po.BilibiliUser;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.pojo.entity.BiliTaskUserDO;
+import io.cruii.pojo.entity.TaskConfigDO;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -56,7 +56,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         log.debug("Received message: {}", msg);
         if (JSONUtil.isTypeJSON(((String) msg))) {
-            BilibiliUser retUser = JSONUtil.toBean(((String) msg), BilibiliUser.class);
+            BiliTaskUserDO retUser = JSONUtil.toBean(((String) msg), BiliTaskUserDO.class);
             log.debug("Update user: {}", retUser.getDedeuserid());
             bilibiliUserMapper.updateById(retUser);
         }
@@ -81,7 +81,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     public void sendMsg(Object msg) {
         String jsonConfig = JSONUtil.toJsonStr(msg) + "\n";
         byte[] taskConfig = jsonConfig.getBytes();
-        log.debug(">>> Sending message, dedeuserid: {} <<<", ((TaskConfig) msg).getDedeuserid());
+        log.debug(">>> Sending message, dedeuserid: {} <<<", ((TaskConfigDO) msg).getDedeuserid());
         CHANNELS.forEach(c -> c.writeAndFlush(Unpooled.copiedBuffer(taskConfig)));
     }
 }

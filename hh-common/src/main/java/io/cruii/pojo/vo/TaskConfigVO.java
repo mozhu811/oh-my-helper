@@ -1,5 +1,6 @@
 package io.cruii.pojo.vo;
 
+import io.cruii.pojo.dto.PushConfigDTO;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -10,17 +11,9 @@ import java.io.Serializable;
  */
 @Data
 public class TaskConfigVO implements Serializable {
-    private static final long serialVersionUID = 4344616448330555244L;
 
-    /**
-     * 自增id
-     */
+    private static final long serialVersionUID = 2978635197933862763L;
     private Long id;
-
-    /**
-     * B站id
-     */
-    private String dedeuserid;
 
     /**
      * 每日投币数量,默认 5 ,为 0 时则不投币
@@ -68,13 +61,6 @@ public class TaskConfigVO implements Serializable {
      * 0：优先给热榜视频投币，1：优先给关注的 up 投币
      */
     private Integer donateCoinStrategy;
-
-    /**
-     * 浏览器 UA
-     */
-    private String userAgent;
-
-    private PushConfigVO pushConfig;
 
     /**
      * 关注开发者

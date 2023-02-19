@@ -3,8 +3,8 @@ package io.cruii.execution.component;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import io.cruii.execution.config.NettyConfiguration;
-import io.cruii.pojo.po.BilibiliUser;
-import io.cruii.pojo.po.TaskConfig;
+import io.cruii.model.BiliUser;
+import io.cruii.pojo.entity.TaskConfigDO;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
@@ -114,7 +114,7 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
 
     private final TaskRunner taskRunner = SpringUtil.getApplicationContext().getBean(TaskRunner.class);
 
-    private static final List<String> UNDONE_USER = new ArrayList<>();
+    private static final List<String> UNFINISHED_USER = new ArrayList<>();
 
 
     private static volatile ScheduledExecutorService scheduledExecutor;
@@ -159,14 +159,14 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         log.debug("[exe] Received message: {}", msg);
-        TaskConfig taskConfig = JSONUtil.toBean(((String) msg), TaskConfig.class);
-        if (!UNDONE_USER.contains(taskConfig.getDedeuserid())) {
-            UNDONE_USER.add(taskConfig.getDedeuserid());
-            BilibiliUser ret = taskRunner.run(taskConfig);
+        TaskConfigDO taskConfigDO = JSONUtil.toBean(((String) msg), TaskConfigDO.class);
+        if (!UNFINISHED_USER.contains(taskConfigDO.getDedeuserid())) {
+            UNFINISHED_USER.add(taskConfigDO.getDedeuserid());
+            BiliUser ret = taskRunner.run(taskConfigDO);
             if (ret != null) {
                 ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(ret) + "\n").getBytes(StandardCharsets.UTF_8)));
             }
-            UNDONE_USER.remove(taskConfig.getDedeuserid());
+            UNFINISHED_USER.remove(taskConfigDO.getDedeuserid());
         }
     }
 
@@ -199,7 +199,6 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
             log.debug(">>> Reconnecting to the server. <<<");
             boolean connected = nettyClient.connect();
             if (connected) {
-                scheduledExecutor.shutdown();
                 log.info("Netty server connected.");
             } else {
                 reconnection(ctx);
