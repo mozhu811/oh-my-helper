@@ -24,9 +24,15 @@ public interface BilibiliAPI {
 
     /**
      * 获取用户空间详细信息
+     * 不需要登录
      */
     String GET_USER_SPACE_INFO = "https://api.bilibili.com/x/space/acc/info";
 
+    /**
+     * 获取用户空间详细信息
+     * 需要登录
+     */
+    String GET_USER_SPACE_DETAILS_INFO = "https://api.bilibili.com/x/space/myinfo";
     /**
      * 查询硬币变化情况
      */
@@ -149,11 +155,25 @@ public interface BilibiliAPI {
 
     /**
      * 领取大会员漫画奖励
+     * {
+     *     "code": 0,
+     *     "msg": "",
+     *     "data": {
+     *         "amount": 0,
+     *         "id": 0
+     *     }
+     * }
+     *
+     * {
+     *     "code": 1,
+     *     "msg": "已经领取过该奖励或者未达到领取条件哦~"
+     * }
      */
     String GET_MANGA_VIP_REWARD = "https://manga.bilibili.com/twirp/user.v1.User/GetVipReward";
 
     /**
      * 阅读漫画
+     * {"code":0, "msg":"", "data":{}}
      */
     String READ_MANGA = "https://manga.bilibili.com/twirp/bookshelf.v1.Bookshelf/AddHistory?device=pc&platform=web";
 
@@ -171,13 +191,35 @@ public interface BilibiliAPI {
 
     String JURY_VOTE = "https://api.bilibili.com/x/credit/v2/jury/vote";
 
+    String VIP_SIGN = "https://api.bilibili.com/pgc/activity/score/task/sign";
+
+    /**
+     * 大会员接任务
+     *
+     * {"code":0,"data":{},"message":"success"}
+     */
     String VIP_QUEST_RECEIVE = "https://api.biliapi.com/pgc/activity/score/task/receive";
 
-    String VIP_QUEST_INFO ="https://api.biliapi.com/x/vip_point/task/combine";
+    /**
+     * 大会员任务信息
+     *
+     * @see io.cruii.model.BigVipTaskCombine
+     */
+    String VIP_QUEST_INFO = "https://api.biliapi.com/x/vip_point/task/combine";
 
-    String VIP_QUEST_VIEW_COMPLETE="https://api.bilibili.com/pgc/activity/deliver/task/complete";
+    /**
+     * 完成大会员任务
+     *
+     * {"code":0,"message":"success"}
+     */
+    String VIP_QUEST_VIEW_COMPLETE = "https://api.bilibili.com/pgc/activity/deliver/task/complete";
 
-    String VIP_QUEST_COMPLETE ="https://api.bilibili.com/pgc/activity/score/task/complete";
+    /**
+     * 完成大会员每日任务
+     *
+     * {"code":0,"message":"success"}
+     */
+    String VIP_QUEST_COMPLETE = "https://api.bilibili.com/pgc/activity/score/task/complete";
 
     String GET_QUESTIONS = "https://api.bilibili.com/x/esports/guess/collection/question";
 
