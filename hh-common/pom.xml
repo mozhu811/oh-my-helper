@@ -41,11 +41,6 @@
         </dependency>
 
         <dependency>
-            <groupId>ma.glasnost.orika</groupId>
-            <artifactId>orika-core</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.qcloud</groupId>
             <artifactId>cos_api</artifactId>
         </dependency>
