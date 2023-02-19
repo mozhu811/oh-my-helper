@@ -1,5 +1,6 @@
 package io.cruii.util;
 
+import cn.hutool.core.io.FileUtil;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import okio.Buffer;
@@ -15,8 +16,9 @@ import java.nio.charset.StandardCharsets;
  * @author cruii
  * Created on 2023/2/2
  */
+@Slf4j
 public class OkHttpUtil {
-    private static final int MAX_RETRY = 3;
+    private static final int MAX_RETRY = 10;
 
     private OkHttpUtil() {
     }
@@ -34,21 +36,18 @@ public class OkHttpUtil {
     }
 
     public static Response executeWithRetry(Request request) throws IOException {
-        int retryCount = 0;
+        int count = 0;
         while (true) {
             try {
-                Call call = getClient().newCall(request);
-                Response response = call.execute();
-                if (!response.isSuccessful() && retryCount < MAX_RETRY) {
-                    retryCount++;
-                    continue;
-                }
-                return response;
-            } catch (IOException e) {
-                if (retryCount >= MAX_RETRY) {
+                log.debug("第{}次请求: {}", count, request.url());
+                OkHttpClient okHttpClient = getClient();
+                Call call = okHttpClient.newCall(request);
+                return call.execute();
+            } catch (Exception e) {
+                if (count > MAX_RETRY) {
                     throw e;
                 }
-                retryCount++;
+                count++;
             }
         }
     }
@@ -76,7 +75,9 @@ class CustomRequestInterceptor implements Interceptor {
             try (Buffer respBuffer = source.getBuffer().clone();) {
                 String resp = respBuffer.readString(StandardCharsets.UTF_8);
                 log.debug("响应代码: {}", response.code());
-                log.debug("响应结果: {}", resp);
+                if (!FileUtil.extName(request.url().toString()).equals("jpg")) {
+                    log.debug("响应结果: {}", resp);
+                }
             }
         }
         log.debug("==============");
