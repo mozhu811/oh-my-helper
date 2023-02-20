@@ -97,12 +97,6 @@ public class BilibiliController {
                 .setBiliTaskConfigId(taskConfigService.getTask(dedeuserid).getId());
     }
 
-    @PutMapping("user")
-    @ResponseStatus(HttpStatus.CREATED)
-    public void updateUser(@RequestBody BiliTaskUserDTO biliTaskUserDTO) {
-        userService.save(biliTaskUserDTO);
-    }
-
     @GetMapping("users")
     public Page<BiliTaskUserVO> listUsers(@RequestParam Integer page, @RequestParam Integer size) {
         if (page <= 0) {
