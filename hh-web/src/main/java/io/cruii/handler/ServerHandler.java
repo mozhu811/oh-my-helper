@@ -2,8 +2,9 @@ package io.cruii.handler;
 
 import cn.hutool.json.JSONUtil;
 import io.cruii.mapper.BilibiliUserMapper;
-import io.cruii.pojo.entity.BiliTaskUserDO;
+import io.cruii.pojo.dto.BiliTaskUserDTO;
 import io.cruii.pojo.entity.TaskConfigDO;
+import io.cruii.service.BilibiliUserService;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -28,6 +29,13 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     private static final List<Channel> CHANNELS = new ArrayList<>();
 
     private BilibiliUserMapper bilibiliUserMapper;
+
+    private BilibiliUserService bilibiliUserService;
+
+    @Autowired
+    public void setBilibiliUserService(BilibiliUserService bilibiliUserService) {
+        this.bilibiliUserService = bilibiliUserService;
+    }
 
     @Autowired
     public void setBilibiliUserMapper(BilibiliUserMapper bilibiliUserMapper) {
@@ -56,9 +64,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         log.debug("Received message: {}", msg);
         if (JSONUtil.isTypeJSON(((String) msg))) {
-            BiliTaskUserDO retUser = JSONUtil.toBean(((String) msg), BiliTaskUserDO.class);
-            log.debug("Update user: {}", retUser.getDedeuserid());
-            bilibiliUserMapper.updateById(retUser);
+            BiliTaskUserDTO biliTaskUserDTO = JSONUtil.toBean(((String) msg), BiliTaskUserDTO.class);
+            bilibiliUserService.save(biliTaskUserDTO);
         }
     }
 
