@@ -1,6 +1,7 @@
 package io.cruii.pojo.dto;
 
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.time.LocalDateTime;
 
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
  * Created on 2021/9/30
  */
 @Data
+@Accessors(chain = true)
 public class BiliTaskUserDTO {
 
     private String dedeuserid;
@@ -25,11 +27,7 @@ public class BiliTaskUserDTO {
 
     private Integer upgradeDays;
 
-    private String medals;
-
     private Integer vipStatus;
-
-    private String sign;
 
     private LocalDateTime lastRunTime;
 

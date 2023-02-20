@@ -2,6 +2,7 @@ package io.cruii.task;
 
 import cn.hutool.json.JSONObject;
 import io.cruii.component.BilibiliDelegate;
+import io.cruii.model.BiliDailyReward;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -17,17 +18,17 @@ public class WatchVideoTask extends VideoTask {
 
     @Override
     public void run() {
-        JSONObject resp = delegate.getExpRewardStatus();
+        BiliDailyReward rewardStatus = delegate.getExpRewardStatus();
         // 从热榜中随机选取一个视频
         String bvid = trend.get(random.nextInt(trend.size()));
 
-        if (Boolean.FALSE.equals(resp.getByPath("data.watch", Boolean.class))) {
+        if (Boolean.FALSE.equals(rewardStatus.getWatch())) {
             playVideo(bvid);
         } else {
             log.info("今日观看视频任务已完成 ✔️");
         }
 
-        if (Boolean.FALSE.equals(resp.getByPath("data.share", Boolean.class))) {
+        if (Boolean.FALSE.equals(rewardStatus.getShare())) {
             shareVideo(bvid);
         } else {
             log.info("今日分享视频任务已完成 ✔️");

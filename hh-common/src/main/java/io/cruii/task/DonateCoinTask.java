@@ -56,9 +56,8 @@ public class DonateCoinTask extends VideoTask {
             return;
         }
 
-        JSONObject coinExpToday = delegate.getCoinExpToday();
-        Integer curCoinExp = coinExpToday.getInt("data", 0);
-        if (curCoinExp / 10 - config.getDonateCoins() >= 0) {
+        int coinExpToday = delegate.getCoinExpToday();
+        if (coinExpToday / 10 - config.getDonateCoins() >= 0) {
             log.info("今日投币任务已完成，取消执行投币任务");
             return;
         }
@@ -89,9 +88,8 @@ public class DonateCoinTask extends VideoTask {
      * @return 所需硬币数
      */
     private int calDiff() {
-        JSONObject coinExpToday = delegate.getCoinExpToday();
-        Integer data = coinExpToday.getInt("data", 0);
-        return config.getDonateCoins() - data / 10;
+        int coinExpToday = delegate.getCoinExpToday();
+        return config.getDonateCoins() - coinExpToday / 10;
     }
 
     /**

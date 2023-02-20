@@ -9,8 +9,10 @@ import cn.hutool.json.JSONUtil;
 import io.cruii.constant.BilibiliAPI;
 import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.exception.RequestException;
+import io.cruii.model.BiliDailyReward;
 import io.cruii.model.MedalWall;
 import io.cruii.model.BiliUser;
+import io.cruii.model.SpaceAccInfo;
 import io.cruii.pojo.entity.TaskConfigDO;
 import io.cruii.util.CosUtil;
 import io.cruii.util.OkHttpUtil;
@@ -61,8 +63,6 @@ public class BilibiliDelegate {
 
         int code = resp.getInt("code");
         if (code != 0) {
-            //log.warn("账号Cookie已失效, {}, {}", config.getDedeuserid(), config.getSessdata());
-            //return getUserDetails(config.getDedeuserid());
             throw new BilibiliCookieExpiredException(config.getDedeuserid());
         }
 
@@ -74,7 +74,7 @@ public class BilibiliDelegate {
      *
      * @param userId B站uid
      */
-    public JSONObject getSpaceAccInfo(String userId) {
+    public SpaceAccInfo getSpaceAccInfo(String userId) {
         Map<String, String> params = new HashMap<>();
         params.put("mid", userId);
         JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_INFO, params);
@@ -84,7 +84,7 @@ public class BilibiliDelegate {
             log.error("用户[{}]信息获取异常", userId);
             return null;
         }
-        return baseInfo;
+        return baseInfo.toBean(SpaceAccInfo.class);
     }
 
     /**
@@ -144,14 +144,18 @@ public class BilibiliDelegate {
      *
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject getExpRewardStatus() {
+    public BiliDailyReward getExpRewardStatus() {
         Map<String, String> params = new HashMap<>();
         params.put("csrf", config.getBiliJct());
 
         Headers.Builder headerBuilder = new Headers.Builder();
         headerBuilder.add(HttpHeaders.REFERER, "https://account.bilibili.com/")
                 .add("Origin", "https://account.bilibili.com/");
-        return doGet(BilibiliAPI.GET_EXP_REWARD_STATUS, params, headerBuilder.build());
+        JSONObject resp = doGet(BilibiliAPI.GET_EXP_REWARD_STATUS, params, headerBuilder.build());
+        if (resp.getInt("code") != 0) {
+            throw new RuntimeException(resp.getStr("message"));
+        }
+        return resp.getJSONObject("data").toBean(BiliDailyReward.class);
     }
 
     /**
@@ -247,8 +251,9 @@ public class BilibiliDelegate {
      *
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject getCoinExpToday() {
-        return doGet(BilibiliAPI.GET_COIN_EXP_TODAY);
+    public int getCoinExpToday() {
+        JSONObject resp = doGet(BilibiliAPI.GET_COIN_EXP_TODAY);
+        return resp.getInt("data", 0);
     }
 
     /**

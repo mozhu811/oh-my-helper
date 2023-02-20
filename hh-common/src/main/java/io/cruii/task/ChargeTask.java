@@ -4,6 +4,7 @@ import cn.hutool.json.JSONObject;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.context.BilibiliUserContext;
 import io.cruii.model.BiliUser;
+import io.cruii.model.SpaceAccInfo;
 import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.log4j.Log4j2;
 
@@ -53,8 +54,8 @@ public class ChargeTask extends AbstractTask {
             targetId = AUTHOR_MID;
         }
 
-        JSONObject userSpaceInfo = delegate.getSpaceAccInfo(targetId);
-        if (userSpaceInfo.getStr("mid") == null) {
+        SpaceAccInfo spaceAccInfo = delegate.getSpaceAccInfo(targetId);
+        if (spaceAccInfo == null) {
             log.info("充电对象未找到，将为作者[{}]进行充电", AUTHOR_MID);
             targetId = AUTHOR_MID;
         }
