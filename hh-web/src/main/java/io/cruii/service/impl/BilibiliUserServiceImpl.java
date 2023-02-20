@@ -1,20 +1,21 @@
 package io.cruii.service.impl;
 
 import cn.hutool.core.text.CharSequenceUtil;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.cruii.component.BiliUserStructMapper;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.mapper.BilibiliUserMapper;
 import io.cruii.mapper.TaskConfigMapper;
-import io.cruii.model.MedalWall;
 import io.cruii.model.BiliUser;
+import io.cruii.model.MedalWall;
+import io.cruii.model.SpaceAccInfo;
 import io.cruii.pojo.dto.BiliTaskUserDTO;
 import io.cruii.pojo.entity.BiliTaskUserDO;
+import io.cruii.pojo.entity.TaskConfigDO;
 import io.cruii.pojo.vo.BiliTaskUserVO;
 import io.cruii.service.BilibiliUserService;
+import io.cruii.util.MedalWall2StrUtil;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
@@ -47,7 +48,6 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
 
         // 从B站获取最新用户信息
         BiliUser biliUser = delegate.getUserDetails();
-        MedalWall medalWall = delegate.getMedalWall();
 
         BiliTaskUserDO biliUserDO = new BiliTaskUserDO();
         biliUserDO.setDedeuserid(String.valueOf(biliUser.getMid()))
@@ -62,23 +62,7 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
                 .setVipStatus(biliUser.getVip().getStatus())
                 .setIsLogin(true);
 
-        List<MedalWall.Medal> medals = medalWall.getList();
-        String medalWallStr = JSONUtil.toJsonStr(
-                medals.stream()
-                        .map(MedalWall.Medal::getMedalInfo)
-                        .sorted((m1, m2) -> m2.getLevel() - m1.getLevel())
-                        .limit(2L)
-                        .map(mi -> {
-                            JSONObject obj = JSONUtil.createObj();
-                            obj.set("name", mi.getMedalName())
-                                    .set("level", mi.getLevel())
-                                    .set("colorStart", mi.getMedalColorStart())
-                                    .set("colorEnd", mi.getMedalColorEnd())
-                                    .set("colorBorder", mi.getMedalColorBorder());
-                            return obj;
-                        }).collect(Collectors.toList())
-        );
-        biliUserDO.setMedals(medalWallStr);
+        biliUserDO.setMedals(MedalWall2StrUtil.medalWall2JsonStr(delegate.getMedalWall()));
 
         // 是否已存在
         boolean exist = bilibiliUserMapper
@@ -95,7 +79,15 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
 
     @Override
     public void save(BiliTaskUserDTO userDTO) {
+        TaskConfigDO taskConfigDO = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfigDO.class)
+                .eq(TaskConfigDO::getDedeuserid, userDTO.getDedeuserid()));
+        BilibiliDelegate delegate = new BilibiliDelegate(taskConfigDO.getDedeuserid(), taskConfigDO.getSessdata(), taskConfigDO.getBiliJct());
+        MedalWall medalWall = delegate.getMedalWall();
+        String medalWall2JsonStr = MedalWall2StrUtil.medalWall2JsonStr(medalWall);
+        SpaceAccInfo spaceAccInfo = delegate.getSpaceAccInfo(userDTO.getDedeuserid());
         BiliTaskUserDO biliTaskUserDO = biliUserStructMapper.toDO(userDTO);
+        biliTaskUserDO.setMedals(medalWall2JsonStr)
+                .setSign(spaceAccInfo.getSign());
         boolean exists = bilibiliUserMapper.exists(Wrappers.lambdaQuery(BiliTaskUserDO.class)
                 .eq(BiliTaskUserDO::getDedeuserid, userDTO.getDedeuserid()));
         if (!exists) {
