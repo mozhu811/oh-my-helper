@@ -4,6 +4,8 @@ import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import io.cruii.execution.config.NettyConfiguration;
 import io.cruii.model.BiliUser;
+import io.cruii.model.custom.BiliUserAndDays;
+import io.cruii.pojo.dto.BiliTaskUserDTO;
 import io.cruii.pojo.entity.TaskConfigDO;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -24,8 +26,9 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -114,8 +117,7 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
 
     private final TaskRunner taskRunner = SpringUtil.getApplicationContext().getBean(TaskRunner.class);
 
-    private static final List<String> UNFINISHED_USER = new ArrayList<>();
-
+    private static final Map<String, Boolean> UNFINISHED_USER = new ConcurrentHashMap<>();
 
     private static volatile ScheduledExecutorService scheduledExecutor;
 
@@ -160,11 +162,24 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         log.debug("[exe] Received message: {}", msg);
         TaskConfigDO taskConfigDO = JSONUtil.toBean(((String) msg), TaskConfigDO.class);
-        if (!UNFINISHED_USER.contains(taskConfigDO.getDedeuserid())) {
-            UNFINISHED_USER.add(taskConfigDO.getDedeuserid());
-            BiliUser ret = taskRunner.run(taskConfigDO);
+        if (UNFINISHED_USER.putIfAbsent(taskConfigDO.getDedeuserid(), true) == null) {
+            BiliUserAndDays ret = taskRunner.run(taskConfigDO);
             if (ret != null) {
-                ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(ret) + "\n").getBytes(StandardCharsets.UTF_8)));
+                BiliUser biliUser = ret.getBiliUser();
+                int upgradeDays = ret.getUpgradeDays();
+                BiliTaskUserDTO biliTaskUserDTO = new BiliTaskUserDTO();
+                biliTaskUserDTO
+                        .setDedeuserid(String.valueOf(biliUser.getMid()))
+                        .setUsername(biliUser.getName())
+                        .setLevel(biliUser.getLevel())
+                        .setCoins(String.valueOf(biliUser.getCoins()))
+                        .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
+                        .setDiffExp(biliUser.getLevelExp().getNextExp() - biliUser.getLevelExp().getCurrentExp())
+                        .setUpgradeDays(upgradeDays)
+                        .setVipStatus(biliUser.getVip().getStatus())
+                        .setLastRunTime(LocalDateTime.now())
+                        .setIsLogin(true);
+                ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(biliTaskUserDTO) + "\n").getBytes(StandardCharsets.UTF_8)));
             }
             UNFINISHED_USER.remove(taskConfigDO.getDedeuserid());
         }
