@@ -20,8 +20,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -75,7 +73,7 @@ public class TaskRunner {
     }
     public BiliUserAndDays run(TaskConfigDO taskConfigDO) {
         AtomicReference<BiliUserAndDays> ret = new AtomicReference<>();
-        Future<String> future = taskExecutor.submit(() -> {
+        taskExecutor.execute(() -> {
             try {
                 BilibiliDelegate delegate = new BilibiliDelegate(taskConfigDO);
                 Optional<BiliUser> user = Optional.ofNullable(delegate.getUserDetails());
@@ -86,28 +84,15 @@ public class TaskRunner {
                     ret.set(result);
                     BilibiliUserContext.remove();
                 });
-                return MDC.get("traceId");
+                // 加入到推送队列
+                PUSH_QUEUE.put(taskConfigDO.getDedeuserid() + ":" + MDC.get("traceId"));
             } catch (Exception e) {
                 Thread.currentThread().interrupt();
                 log.error("执行任务发生异常", e);
             } finally {
                 MDC.clear();
             }
-            return null;
         });
-
-        // 推送
-        try {
-            String traceId = future.get();
-            if (traceId != null) {
-                // 加入到推送队列
-                PUSH_QUEUE.put(taskConfigDO.getDedeuserid() + ":" + traceId);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
 
         return ret.get();
     }
