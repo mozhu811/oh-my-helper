@@ -23,8 +23,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -71,43 +69,26 @@ public class NettyClient implements CommandLineRunner {
     }
 
     public boolean connect() {
+        if (clientChannel != null && clientChannel.isActive()) {
+            return false;
+        }
+
         // 绑定端口并同步等待
-        try {
-            ChannelFuture channelFuture = bootstrap.connect(nettyConfig.getHost(), nettyConfig.getPort());
-            boolean notTimeout = channelFuture.awaitUninterruptibly(30, TimeUnit.SECONDS);
-            clientChannel = channelFuture.channel();
-            if (notTimeout) {
-                if (clientChannel != null && clientChannel.isActive()) {
-                    log.info("netty client started !!! {} connect to server", clientChannel.localAddress());
-                    return true;
-                }
-                Throwable cause = channelFuture.cause();
-                if (cause != null) {
-                    exceptionHandler(cause);
-                }
+
+        ChannelFuture channelFuture = bootstrap.connect(nettyConfig.getHost(), nettyConfig.getPort());
+        channelFuture.addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                clientChannel = channelFuture.channel();
+                log.info("Connect to server successfully!");
             } else {
-                log.warn("connect remote host[{}] timeout {}s", clientChannel.remoteAddress(), 30);
+                log.error("Failed to connect to server, try connect after 10s");
+                future.channel().eventLoop().schedule(() -> {
+                    connect();
+                }, 10, TimeUnit.SECONDS);
+
             }
-        } catch (Exception e) {
-            exceptionHandler(e);
-        }
-        clientChannel.close();
+        });
         return false;
-    }
-
-
-    private void exceptionHandler(Throwable cause) {
-        if (cause instanceof ConnectException) {
-            log.error("connect error:{}", cause.getMessage());
-        } else if (cause instanceof ClosedChannelException) {
-            log.error("connect error:{}", "client has destroy");
-        } else {
-            log.error("connect error:", cause);
-        }
-    }
-
-    public Channel getChannel() {
-        return clientChannel;
     }
 }
 
