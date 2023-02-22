@@ -22,4 +22,6 @@ public interface BiliUserStructMapper {
     BiliTaskUserDO toDO(BiliTaskUserDTO biliTaskUserDTO);
 
     Page<BiliTaskUserVO> toVOPage(Page<BiliTaskUserDO> userDOPage);
+
+    BiliTaskUserVO toVO(BiliTaskUserDO biliTaskUserDO);
 }

@@ -39,7 +39,7 @@ public class OkHttpUtil {
         int count = 0;
         while (true) {
             try {
-                log.debug("第{}次请求: {}", count, request.url());
+                log.debug("第{}次请求: {}", count + 1, request.url());
                 OkHttpClient okHttpClient = getClient();
                 Call call = okHttpClient.newCall(request);
                 return call.execute();

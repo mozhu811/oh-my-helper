@@ -1,6 +1,5 @@
 package io.cruii.service.impl;
 
-import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.cruii.component.BiliUserStructMapper;
@@ -56,8 +55,7 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
                 .setLevel(biliUser.getLevel())
                 .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
                 .setNextExp(biliUser.getLevel() == 6 ? 0 : biliUser.getLevelExp().getNextExp())
-                .setSign(CharSequenceUtil.isBlank(biliUser.getSign().trim()) ?
-                        "这个人非常懒，什么也没有写~\\(≧▽≦)/~" : biliUser.getSign())
+                .setSign(biliUser.getSign())
                 .setVipType(biliUser.getVip().getType())
                 .setVipStatus(biliUser.getVip().getStatus())
                 .setIsLogin(true);
@@ -73,7 +71,7 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
             biliUserDO.setCreateTime(LocalDateTime.now());
             bilibiliUserMapper.insert(biliUserDO);
         } else {
-            bilibiliUserMapper.updateById(biliUserDO);
+            bilibiliUserMapper  .updateById(biliUserDO);
         }
     }
 

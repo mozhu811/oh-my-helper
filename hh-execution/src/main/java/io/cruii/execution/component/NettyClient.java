@@ -174,7 +174,7 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
                         .setLevel(biliUser.getLevel())
                         .setCoins(String.valueOf(biliUser.getCoins()))
                         .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
-                        .setDiffExp(biliUser.getLevelExp().getNextExp() - biliUser.getLevelExp().getCurrentExp())
+                        .setNextExp(biliUser.getLevelExp().getNextExp())
                         .setUpgradeDays(upgradeDays)
                         .setVipStatus(biliUser.getVip().getStatus())
                         .setLastRunTime(LocalDateTime.now())

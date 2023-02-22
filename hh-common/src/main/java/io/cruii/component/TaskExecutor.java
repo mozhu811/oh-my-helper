@@ -36,7 +36,6 @@ public class TaskExecutor {
         taskList.add(new MangaTask(delegate));
         taskList.add(new ReadMangaTask(delegate));
         taskList.add(new BigVipTask(delegate));
-        //taskList.add(new CalExpTask(delegate));
     }
 
     public BiliUserAndDays execute() {

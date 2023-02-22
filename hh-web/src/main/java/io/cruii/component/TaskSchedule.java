@@ -39,10 +39,10 @@ public class TaskSchedule {
      */
     @Scheduled(initialDelayString = "${task.initial-delay:60000}", fixedRateString = "${task.fixed-rate:7200000}")
     public void doTask() {
-        List<String> notRunUsers = bilibiliUserMapper.listNotRunUser().stream()
-                .filter(u -> u.getIsLogin())
+        List<String> notRunUsers = bilibiliUserMapper
+                .selectList(Wrappers.lambdaQuery(BiliTaskUserDO.class)
+                        .eq(BiliTaskUserDO::getIsLogin, true)).stream()
                 .map(BiliTaskUserDO::getDedeuserid)
-                //.filter("287969457"::equals)
                 .collect(Collectors.toList());
         if (notRunUsers.isEmpty()) {
             return;

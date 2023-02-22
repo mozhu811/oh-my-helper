@@ -24,7 +24,7 @@ public class BiliTaskUserVO implements Serializable {
 
     private Integer currentExp;
 
-    private Integer diffExp;
+    private Integer nextExp;
 
     private Integer upgradeDays;
 

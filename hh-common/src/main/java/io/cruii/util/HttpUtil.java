@@ -1,26 +1,28 @@
 package io.cruii.util;
 
-import cn.hutool.core.text.CharSequenceUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
-import org.apache.http.client.HttpRequestRetryHandler;
+import org.apache.http.auth.AuthState;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.routing.HttpRoute;
+import org.apache.http.conn.routing.HttpRoutePlanner;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpCoreContext;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.SocketException;
+import java.io.InterruptedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.List;
+import java.net.UnknownHostException;
 import java.util.Map;
 
 /**
@@ -43,28 +45,6 @@ public class HttpUtil {
     // 最大失败重试次数
     private static final int MAX_FAIL_RETRY_COUNT = 10;
 
-    //public static CloseableHttpClient buildHttpClient() {
-    //    SocketConfig socketConfig = SocketConfig.custom()
-    //            .setSoTimeout(REQUEST_TIME_OUT).setSoKeepAlive(true)
-    //            .setTcpNoDelay(true).build();
-    //    RequestConfig requestConfig = RequestConfig.custom()
-    //            .setProxy(new HttpHost("127.0.0.1", 7890))
-    //            .setSocketTimeout(REQUEST_TIME_OUT)
-    //            .setConnectTimeout(CONNECTION_TIME_OUT).build();
-    //    /*
-    //     * 每个默认的 ClientConnectionPoolManager 实现将给每个route创建不超过2个并发连接，最多20个连接总数。
-    //     */
-    //    PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
-    //    connManager.setMaxTotal(MAX_CONNECTION);
-    //    connManager.setDefaultMaxPerRoute(MAX_CONCURRENT_CONNECTIONS);
-    //    connManager.setDefaultSocketConfig(socketConfig);
-    //
-    //    return HttpClients.custom().setConnectionManager(connManager)
-    //            .setDefaultRequestConfig(requestConfig)
-    //            // 添加重试处理器
-    //            .setRetryHandler(new HttpRequestRetryHandler()).build();
-    //}
-
     public static CloseableHttpClient buildHttpClient() {
 
         SocketConfig socketConfig = SocketConfig.custom()
@@ -76,8 +56,9 @@ public class HttpUtil {
                 .setConnectTimeout(CONNECTION_TIME_OUT);
 
         // 从代理池获取ip并设置
-        List<String> split = CharSequenceUtil.split(ProxyUtil.get(), ":");
-        builder.setProxy(new HttpHost(split.get(0), Integer.parseInt(split.get(1))));
+        //Medal<String> split = CharSequenceUtil.split(ProxyUtil.get(), ":");
+        //builder.setProxy(new HttpHost(split.get(0), Integer.parseInt(split.get(1))));
+        //builder.setProxy(new HttpHost("115.229.196.244", 64256));
 
         RequestConfig requestConfig = builder.build();
 
@@ -89,8 +70,20 @@ public class HttpUtil {
         connManager.setDefaultMaxPerRoute(MAX_CONCURRENT_CONNECTIONS);
         connManager.setDefaultSocketConfig(socketConfig);
 
+        HttpRoutePlanner httpRoutePlanner = (target, request, context) -> {
+            HttpClientContext clientContext = HttpClientContext.adapt(context);
+            if (clientContext.getRequestConfig().isAuthenticationEnabled()) {
+                //String[] proxyArr = ProxyUtil.get().split(":");
+                //HttpHost proxy = new HttpHost(proxyArr[0], Integer.parseInt(proxyArr[1]));
+                HttpHost proxy = new HttpHost("114.99.7.160", 64256);
+                return new HttpRoute(target, null, proxy, true);
+            }
+            return new HttpRoute(target);
+        };
+
         return HttpClients.custom().setConnectionManager(connManager)
                 .setDefaultRequestConfig(requestConfig)
+                .setRoutePlanner(httpRoutePlanner)
                 // 添加重试处理器
                 .setRetryHandler(new HttpRequestRetryHandler()).build();
     }
@@ -120,28 +113,40 @@ public class HttpUtil {
     static class HttpRequestRetryHandler implements org.apache.http.client.HttpRequestRetryHandler {
         @Override
         public boolean retryRequest(IOException exception, int i, HttpContext context) {
+            log.debug("第{}次重试", i, exception);
+
             HttpClientContext clientContext = HttpClientContext.adapt(context);
             HttpRequest request = clientContext.getRequest();
-
-            if (exception instanceof SocketException) {
-                RequestConfig requestConfig = clientContext.getRequestConfig();
-                HttpHost old = requestConfig.getProxy();
-                Class<? extends RequestConfig> clazz = requestConfig.getClass();
-                try {
-                    Field proxy = clazz.getDeclaredField("proxy");
-                    String[] proxyArr = ProxyUtil.get().split(":");
-                    proxy.setAccessible(true);
-                    proxy.set(requestConfig, new HttpHost(proxyArr[0], Integer.parseInt(proxyArr[1])));
-                    log.debug("The HTTP proxy has been changed: {} -> {}",
-                            old.getHostName() + ":" + old.getPort(), proxyArr[0] + ":" + proxyArr[1]);
-                } catch (NoSuchFieldException | IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-                return true;
-            }
             if (i >= MAX_FAIL_RETRY_COUNT) {
                 return false;
             }
+
+
+            if (exception instanceof InterruptedIOException) {
+                // 超时
+                // 切换代理
+                HttpRoute route = (HttpRoute) clientContext.getHttpRoute();
+                if (route == null) {
+                    return false;
+                }
+                String[] proxyArr = ProxyUtil.get().split(":");
+                HttpHost proxy = new HttpHost(proxyArr[0], Integer.parseInt(proxyArr[1]));
+
+                context.setAttribute(HttpClientContext.PROXY_AUTH_STATE, new AuthState());
+                context.setAttribute(HttpCoreContext.HTTP_TARGET_HOST, proxy);
+                context.setAttribute(HttpClientContext.HTTP_ROUTE, new HttpRoute(proxy));
+                return true;
+            }
+            if (exception instanceof UnknownHostException) {
+                // 未知主机
+                return false;
+            }
+
+            if (exception instanceof SSLException) {
+                // SSL handshake exception
+                return false;
+            }
+
 
             // 如果请求被认为是幂等的，则重试
             return !(request instanceof HttpEntityEnclosingRequest);

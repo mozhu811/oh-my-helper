@@ -9,10 +9,7 @@ import cn.hutool.json.JSONUtil;
 import io.cruii.constant.BilibiliAPI;
 import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.exception.RequestException;
-import io.cruii.model.BiliDailyReward;
-import io.cruii.model.MedalWall;
-import io.cruii.model.BiliUser;
-import io.cruii.model.SpaceAccInfo;
+import io.cruii.model.*;
 import io.cruii.pojo.entity.TaskConfigDO;
 import io.cruii.util.CosUtil;
 import io.cruii.util.OkHttpUtil;
@@ -25,7 +22,9 @@ import org.springframework.util.MultiValueMap;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -78,13 +77,12 @@ public class BilibiliDelegate {
         Map<String, String> params = new HashMap<>();
         params.put("mid", userId);
         JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_INFO, params);
-        JSONObject baseInfo = resp.getJSONObject("data");
         Integer code = resp.getInt("code");
-        if (code == -404 || code == -401 || baseInfo == null) {
+        if (code != 0) {
             log.error("用户[{}]信息获取异常", userId);
-            return null;
+            throw new RuntimeException("获取用户空间信息异常: " + code);
         }
-        return baseInfo.toBean(SpaceAccInfo.class);
+        return resp.getJSONObject("data").toBean(SpaceAccInfo.class, true);
     }
 
     /**
@@ -135,8 +133,12 @@ public class BilibiliDelegate {
      *
      * @return 解析后的JSON对象 {@link JSONObject}
      */
-    public JSONObject getCoinChangeLog() {
-        return doGet(BilibiliAPI.GET_COIN_CHANGE_LOG);
+    public BiliCoinLog getCoinChangeLog() {
+        JSONObject resp = doGet(BilibiliAPI.GET_COIN_CHANGE_LOG);
+        if (resp.getInt("code") != 0) {
+            throw new RuntimeException("获取硬币日志出现错误: " + resp.getStr("msg"));
+        }
+        return resp.getJSONObject("data").toBean(BiliCoinLog.class);
     }
 
     /**

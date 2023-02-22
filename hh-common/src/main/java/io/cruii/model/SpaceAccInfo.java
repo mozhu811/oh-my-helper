@@ -3,6 +3,8 @@ package io.cruii.model;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * @author cruii
  * Created on 2023/2/17
@@ -22,7 +24,7 @@ public class SpaceAccInfo {
     private Integer jointime;
     private Integer moral;
     private Integer silence;
-    private Integer coins;
+    private Double coins;
     private Boolean fansBadge;
     private FansMedal fansMedal;
     private Official official;
@@ -36,7 +38,7 @@ public class SpaceAccInfo {
     private SysNotice sysNotice;
     private LiveRoom liveRoom;
     private String birthday;
-    private Object school;
+    private School school;
     private Profession profession;
     private Object tags;
     private Series series;
@@ -145,16 +147,36 @@ public class SpaceAccInfo {
     @NoArgsConstructor
     @Data
     public static class UserHonourInfo {
+        private Integer mid;
+        private String color;
+
+        private List<Object> tags;
     }
 
     @NoArgsConstructor
     @Data
     public static class Theme {
+        // 作用不明，此处为了hutool的反序列化而设置一个占位对象
+        // 如果没有set方法，hutool不会认为这是一个bean，导致无法反序列化
+        private Object unknown;
     }
 
     @NoArgsConstructor
     @Data
     public static class SysNotice {
+        private Integer id;
+
+        private String content;
+
+        private String url;
+
+        private Integer noticeType;
+
+        private String icon;
+
+        private String textColor;
+
+        private String bigColor;
     }
 
     @NoArgsConstructor
@@ -181,6 +203,12 @@ public class SpaceAccInfo {
             private String iconLocation;
             private String iconWeb;
         }
+    }
+
+    @NoArgsConstructor
+    @Data
+    public static class School {
+        private String name;
     }
 
     @NoArgsConstructor

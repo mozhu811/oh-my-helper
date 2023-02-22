@@ -42,10 +42,10 @@ public class DonateCoinTask extends VideoTask {
             counter = 0;
         }
 
-        if (BilibiliUserContext.get().getLevel() >= 6) {
-            log.info("账号已到达6级，取消执行投币任务");
-            return;
-        }
+        //if (BilibiliUserContext.get().getLevel() >= 6) {
+        //    log.info("账号已到达6级，取消执行投币任务");
+        //    return;
+        //}
 
         // 获取账户余额
         int current = getCoin();
@@ -129,7 +129,7 @@ public class DonateCoinTask extends VideoTask {
                         log.info("为视频[{}]投币成功 ✔️", videoTitle);
                         --coinNum;
                     } else {
-                        log.error("为视频[{}]投币失败 ❌", resp.getStr(MESSAGE));
+                        log.error("为视频[{}]投币失败: {} ❌",videoTitle, resp.getStr(MESSAGE));
                     }
                     try {
                         TimeUnit.SECONDS.sleep(3);

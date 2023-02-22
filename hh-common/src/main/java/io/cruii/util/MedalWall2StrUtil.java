@@ -21,7 +21,7 @@ public class MedalWall2StrUtil {
                 medals.stream()
                         .map(MedalWall.Medal::getMedalInfo)
                         .sorted((m1, m2) -> m2.getLevel() - m1.getLevel())
-                        .limit(2L)
+                        .limit(3L)
                         .map(mi -> {
                             JSONObject obj = JSONUtil.createObj();
                             obj.set("name", mi.getMedalName())
