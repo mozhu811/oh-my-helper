@@ -70,7 +70,7 @@ public class NettyClient implements CommandLineRunner {
 
     public boolean connect() {
         if (clientChannel != null && clientChannel.isActive()) {
-            return false;
+            return true;
         }
 
         // 绑定端口并同步等待
