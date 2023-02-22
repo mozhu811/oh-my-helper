@@ -1,7 +1,6 @@
 package io.cruii.handler;
 
 import cn.hutool.json.JSONUtil;
-import io.cruii.mapper.BilibiliUserMapper;
 import io.cruii.pojo.dto.BiliTaskUserDTO;
 import io.cruii.pojo.entity.TaskConfigDO;
 import io.cruii.service.BilibiliUserService;
@@ -28,20 +27,12 @@ import java.util.List;
 public class ServerHandler extends ChannelInboundHandlerAdapter {
     private static final List<Channel> CHANNELS = new ArrayList<>();
 
-    private BilibiliUserMapper bilibiliUserMapper;
-
     private BilibiliUserService bilibiliUserService;
 
     @Autowired
     public void setBilibiliUserService(BilibiliUserService bilibiliUserService) {
         this.bilibiliUserService = bilibiliUserService;
     }
-
-    @Autowired
-    public void setBilibiliUserMapper(BilibiliUserMapper bilibiliUserMapper) {
-        this.bilibiliUserMapper = bilibiliUserMapper;
-    }
-
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
