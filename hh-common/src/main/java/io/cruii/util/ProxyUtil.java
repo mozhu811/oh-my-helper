@@ -61,7 +61,6 @@ public class ProxyUtil {
                         .collect(Collectors.toList()));
             }
             String proxy = proxyList.get(RandomUtil.randomInt(size - 1));
-            proxyList.remove(proxy);
             log.debug("本次获取代理地址: {}", proxy);
             log.debug("当前剩余代理数: {}", proxyList.size());
 
