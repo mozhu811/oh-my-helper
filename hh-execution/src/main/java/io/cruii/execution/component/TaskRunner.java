@@ -6,7 +6,8 @@ import io.cruii.component.TaskExecutor;
 import io.cruii.context.BilibiliUserContext;
 import io.cruii.execution.feign.PushFeignService;
 import io.cruii.model.BiliUser;
-import io.cruii.model.custom.BiliUserAndDays;
+import io.cruii.model.custom.BiliTaskResult;
+import io.cruii.pojo.dto.PushMessageDTO;
 import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -64,15 +65,17 @@ public class TaskRunner {
                             .map(line -> line.split("\\|\\|")[1])
                             .collect(Collectors.joining("\n"));
                 }
-                this.pushFeignService.push(dedeuserid, content);
+                PushMessageDTO message = new PushMessageDTO();
+                message.setDedeuserid(dedeuserid);
+                message.setContent(content);
+                this.pushFeignService.push(message);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             }
         }
     }
-    public BiliUserAndDays run(TaskConfigDO taskConfigDO) {
-        AtomicReference<BiliUserAndDays> ret = new AtomicReference<>();
+    public void run(TaskConfigDO taskConfigDO, BiliTaskListener listener) {
         taskExecutor.execute(() -> {
             try {
                 BilibiliDelegate delegate = new BilibiliDelegate(taskConfigDO);
@@ -80,9 +83,9 @@ public class TaskRunner {
                 user.ifPresent(u -> {
                     BilibiliUserContext.set(u);
                     TaskExecutor executor = new TaskExecutor(delegate);
-                    BiliUserAndDays result = executor.execute();
-                    ret.set(result);
+                    BiliTaskResult result = executor.execute();
                     BilibiliUserContext.remove();
+                    listener.onCompletion(result);
                 });
                 // 加入到推送队列
                 PUSH_QUEUE.put(taskConfigDO.getDedeuserid() + ":" + MDC.get("traceId"));
@@ -93,7 +96,5 @@ public class TaskRunner {
                 MDC.clear();
             }
         });
-
-        return ret.get();
     }
 }

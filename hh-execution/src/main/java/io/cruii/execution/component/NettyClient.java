@@ -4,7 +4,7 @@ import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import io.cruii.execution.config.NettyConfiguration;
 import io.cruii.model.BiliUser;
-import io.cruii.model.custom.BiliUserAndDays;
+import io.cruii.model.custom.BiliTaskResult;
 import io.cruii.pojo.dto.BiliTaskUserDTO;
 import io.cruii.pojo.entity.TaskConfigDO;
 import io.netty.bootstrap.Bootstrap;
@@ -144,25 +144,28 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
         log.debug("[exe] Received message: {}", msg);
         TaskConfigDO taskConfigDO = JSONUtil.toBean(((String) msg), TaskConfigDO.class);
         if (UNFINISHED_USER.putIfAbsent(taskConfigDO.getDedeuserid(), true) == null) {
-            BiliUserAndDays ret = taskRunner.run(taskConfigDO);
-            if (ret != null) {
-                BiliUser biliUser = ret.getBiliUser();
-                int upgradeDays = ret.getUpgradeDays();
-                BiliTaskUserDTO biliTaskUserDTO = new BiliTaskUserDTO();
-                biliTaskUserDTO
-                        .setDedeuserid(String.valueOf(biliUser.getMid()))
-                        .setUsername(biliUser.getName())
-                        .setLevel(biliUser.getLevel())
-                        .setCoins(String.valueOf(biliUser.getCoins()))
-                        .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
-                        .setNextExp(biliUser.getLevelExp().getNextExp())
-                        .setUpgradeDays(upgradeDays)
-                        .setVipStatus(biliUser.getVip().getStatus())
-                        .setLastRunTime(LocalDateTime.now())
-                        .setIsLogin(true);
-                ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(biliTaskUserDTO) + "\n").getBytes(StandardCharsets.UTF_8)));
-            }
-            UNFINISHED_USER.remove(taskConfigDO.getDedeuserid());
+            taskRunner.run(taskConfigDO, result -> {
+                if (result != null) {
+                    BiliUser biliUser = result.getBiliUser();
+                    int upgradeDays = result.getUpgradeDays();
+                    BiliTaskUserDTO biliTaskUserDTO = new BiliTaskUserDTO();
+                    biliTaskUserDTO
+                            .setDedeuserid(String.valueOf(biliUser.getMid()))
+                            .setUsername(biliUser.getName())
+                            .setLevel(biliUser.getLevel())
+                            .setCoins(String.valueOf(biliUser.getCoins()))
+                            .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
+                            .setNextExp(biliUser.getLevelExp().getNextExp())
+                            .setUpgradeDays(upgradeDays)
+                            .setVipStatus(biliUser.getVip().getStatus())
+                            .setLastRunTime(LocalDateTime.now())
+                            .setIsLogin(true);
+                    ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(biliTaskUserDTO) + "\n").getBytes(StandardCharsets.UTF_8)));
+                }
+                UNFINISHED_USER.remove(taskConfigDO.getDedeuserid());
+                System.out.println(UNFINISHED_USER.size());
+            });
+            System.out.println(UNFINISHED_USER.size());
         }
     }
 
