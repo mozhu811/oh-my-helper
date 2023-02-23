@@ -1,0 +1,29 @@
+name: Deploy to server
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+      - name: Build with Maven
+        run: mvn clean package -Dmaven.test.skip=true
+      - name: Deploy with SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEPLOY_SERVER_IP }}
+          username: ${{ secrets.DEPLOY_SERVER_USER }}
+          password: ${{ secrets.DEPLOY_SERVER_PASSWORD }}
+          port: 22
+          script: |
+            mkdir -p /root/app/ohmyhelper/
+            rm -rf /root/app/ohmyhelper/*.jar
+            cp target/*.jar /root/app/ohmyhelper/
