@@ -14,8 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author cruii
@@ -25,7 +26,9 @@ import java.util.List;
 @Component
 @ChannelHandler.Sharable
 public class ServerHandler extends ChannelInboundHandlerAdapter {
-    private static final List<Channel> CHANNELS = new ArrayList<>();
+    private static final Set<Channel> CHANNELS = new HashSet<>();
+
+    private static final Set<String> WAIT_LIST = new HashSet<>();
 
     private BilibiliUserService bilibiliUserService;
 
@@ -39,6 +42,10 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         SocketChannel channel = (SocketChannel) ctx.channel();
         log.debug("新客户端加入: {}", channel.localAddress().getHostString());
         CHANNELS.add(ctx.channel());
+        if (!WAIT_LIST.isEmpty()) {
+            WAIT_LIST.forEach(msg ->
+                    ctx.writeAndFlush(Unpooled.copiedBuffer(msg.getBytes(StandardCharsets.UTF_8))));
+        }
     }
 
     @Override
@@ -79,7 +86,12 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     public void sendMsg(Object msg) {
         String jsonConfig = JSONUtil.toJsonStr(msg) + "\n";
         byte[] taskConfig = jsonConfig.getBytes();
-        log.debug(">>> Sending message, dedeuserid: {} <<<", ((TaskConfigDO) msg).getDedeuserid());
+        String dedeuserid = ((TaskConfigDO) msg).getDedeuserid();
+        if (CHANNELS.isEmpty()) {
+            WAIT_LIST.add(jsonConfig);
+            return;
+        }
+        log.debug(">>> Sending message, dedeuserid: {} <<<", dedeuserid);
         CHANNELS.forEach(c -> c.writeAndFlush(Unpooled.copiedBuffer(taskConfig)));
     }
 }
