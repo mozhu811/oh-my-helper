@@ -9,7 +9,6 @@
         <module>hh-web</module>
         <module>hh-execution</module>
         <module>hh-gateway</module>
-        <module>hh-test</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
