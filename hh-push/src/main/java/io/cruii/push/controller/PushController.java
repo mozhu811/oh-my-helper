@@ -1,5 +1,6 @@
 package io.cruii.push.controller;
 
+import io.cruii.pojo.dto.PushMessageDTO;
 import io.cruii.push.service.PushService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +20,7 @@ public class PushController {
 
     @PostMapping
     @ResponseStatus(code = HttpStatus.CREATED)
-    public boolean push(@RequestParam String dedeuserid, @RequestParam String content) {
-        return pushService.push(dedeuserid, content);
+    public boolean push(@RequestBody PushMessageDTO messageDTO) {
+        return pushService.push(messageDTO);
     }
 }

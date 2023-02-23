@@ -2,6 +2,7 @@ package io.cruii.push.service.impl;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import io.cruii.pojo.dto.PushMessageDTO;
 import io.cruii.pojo.entity.PushConfigDO;
 import io.cruii.push.mapper.PushConfigMapper;
 import io.cruii.push.pusher.impl.BarkPusher;
@@ -26,7 +27,9 @@ public class PushServiceImpl implements PushService {
     }
 
     @Override
-    public boolean push(String dedeuserid, String content) {
+    public boolean push(PushMessageDTO messageDTO) {
+        String dedeuserid = messageDTO.getDedeuserid();
+        String content = messageDTO.getContent();
         PushConfigDO pushConfig = pushConfigMapper.selectOne(Wrappers.lambdaQuery(PushConfigDO.class).eq(PushConfigDO::getDedeuserid, dedeuserid));
         boolean result = false;
         if (CharSequenceUtil.isNotBlank(pushConfig.getBarkDeviceKey())) {

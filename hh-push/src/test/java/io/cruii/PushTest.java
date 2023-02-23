@@ -1,9 +1,10 @@
 package io.cruii;
 
+import cn.hutool.core.lang.Assert;
+import io.cruii.pojo.dto.PushMessageDTO;
 import io.cruii.push.service.PushService;
 import lombok.extern.log4j.Log4j2;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +21,10 @@ public class PushTest {
 
     @Test
     public void testPush() {
-        boolean test = pushService.push("287969457", "test");
-        Assert.assertTrue(test);
+        PushMessageDTO pushMessageDTO = new PushMessageDTO();
+        pushMessageDTO.setDedeuserid("287969457");
+        pushMessageDTO.setContent("123test");
+        boolean res = pushService.push(pushMessageDTO);
+        Assert.isTrue(res);
     }
 }
