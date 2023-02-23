@@ -42,10 +42,10 @@ public class DonateCoinTask extends VideoTask {
             counter = 0;
         }
 
-        //if (BilibiliUserContext.get().getLevel() >= 6) {
-        //    log.info("账号已到达6级，取消执行投币任务");
-        //    return;
-        //}
+        if (BilibiliUserContext.get().getLevel() >= 6) {
+            log.info("账号已到达6级，取消执行投币任务");
+            return;
+        }
 
         // 获取账户余额
         int current = getCoin();
@@ -62,19 +62,7 @@ public class DonateCoinTask extends VideoTask {
             return;
         }
 
-        List<String> bvidList;
-        // 热榜投币
-        Collections.shuffle(trend);
-        bvidList = trend.stream().limit(coinNum).collect(Collectors.toList());
-
-        boolean done = doDonate(bvidList);
-
-        // 若未完成当日任务重复执行
-        if (!done) {
-            run();
-        } else {
-            log.info("今日投币任务已完成 ✔️");
-        }
+        doDonate();
     }
 
     @Override
@@ -111,34 +99,37 @@ public class DonateCoinTask extends VideoTask {
 
     /**
      * 执行投币
-     *
-     * @param bvidList 投币视频列表
-     * @return 是否完成投币任务
      */
-    private boolean doDonate(List<String> bvidList) {
-        bvidList.stream()
-                .filter(bvid -> {
-                    // 若视频已投币，则跳过
-                    JSONObject resp = delegate.checkDonateCoin(bvid);
-                    return resp.getByPath("data.multiply", Integer.class) < 1;
-                })
-                .forEach(bvid -> {
-                    JSONObject resp = delegate.donateCoin(bvid, 1, 1);
-                    String videoTitle = getVideoTitle(bvid);
-                    if (resp.getInt(CODE) == 0) {
-                        log.info("为视频[{}]投币成功 ✔️", videoTitle);
-                        --coinNum;
-                    } else {
-                        log.error("为视频[{}]投币失败: {} ❌",videoTitle, resp.getStr(MESSAGE));
-                    }
-                    try {
-                        TimeUnit.SECONDS.sleep(3);
-                    } catch (InterruptedException e) {
-                        log.error(e);
-                        Thread.currentThread().interrupt();
-                    }
-                });
-
-        return calDiff() <= 0;
+    private void doDonate() {
+        // 获取服务器上的投币信息，防止在任务执行期间用户也投了币导致的多投。
+        while (calDiff() > 0) {
+            initTrend();
+            List<String> bvidList;
+            // 热榜投币
+            Collections.shuffle(trend);
+            bvidList = trend.stream().limit(coinNum).collect(Collectors.toList());
+            bvidList.stream()
+                    .filter(bvid -> {
+                        // 若视频已投币，则跳过
+                        JSONObject resp = delegate.checkDonateCoin(bvid);
+                        return resp.getByPath("data.multiply", Integer.class) < 1;
+                    })
+                    .forEach(bvid -> {
+                        JSONObject resp = delegate.donateCoin(bvid, 1, 1);
+                        String videoTitle = getVideoTitle(bvid);
+                        if (resp.getInt(CODE) == 0) {
+                            log.info("为视频[{}]投币成功 ✔️", videoTitle);
+                            --coinNum;
+                        } else {
+                            log.warn("为视频[{}]投币失败: {} ❌", videoTitle, resp.getStr(MESSAGE));
+                        }
+                        try {
+                            TimeUnit.SECONDS.sleep(3);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    });
+        }
+        log.info("今日投币任务已完成 ✔️");
     }
 }
