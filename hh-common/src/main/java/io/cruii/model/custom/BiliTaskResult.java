@@ -10,7 +10,7 @@ import lombok.Getter;
  */
 @AllArgsConstructor
 @Getter
-public class BiliUserAndDays {
+public class BiliTaskResult {
     private final BiliUser biliUser;
 
     private final int upgradeDays;

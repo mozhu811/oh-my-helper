@@ -4,7 +4,7 @@ import io.cruii.context.BilibiliUserContext;
 import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.model.BiliDailyReward;
 import io.cruii.model.BiliUser;
-import io.cruii.model.custom.BiliUserAndDays;
+import io.cruii.model.custom.BiliTaskResult;
 import io.cruii.task.*;
 import lombok.extern.log4j.Log4j2;
 
@@ -38,7 +38,7 @@ public class TaskExecutor {
         taskList.add(new BigVipTask(delegate));
     }
 
-    public BiliUserAndDays execute() {
+    public BiliTaskResult execute() {
         log.info("------开始------");
         boolean expired = false;
         for (Task task : taskList) {
@@ -62,7 +62,7 @@ public class TaskExecutor {
             upgradeDays = calExp();
         }
         BiliUser biliUser = BilibiliUserContext.get();
-        return new BiliUserAndDays(biliUser, upgradeDays);
+        return new BiliTaskResult(biliUser, upgradeDays);
     }
 
     private int calExp() {
