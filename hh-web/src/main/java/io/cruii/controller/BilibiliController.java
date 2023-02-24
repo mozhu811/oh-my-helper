@@ -10,26 +10,24 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.zxing.WriterException;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.constant.BilibiliAPI;
-import io.cruii.exception.BilibiliCookieExpiredException;
-import io.cruii.exception.BilibiliUserNotFoundException;
 import io.cruii.model.BiliQrcode;
-import io.cruii.pojo.dto.BiliTaskUserDTO;
-import io.cruii.pojo.vo.BiliLoginVO;
-import io.cruii.pojo.vo.BiliTaskUserVO;
-import io.cruii.pojo.vo.OmhUserVO;
-import io.cruii.pojo.vo.QrCodeVO;
+import io.cruii.model.BiliUser;
+import io.cruii.pojo.vo.*;
 import io.cruii.service.BilibiliUserService;
 import io.cruii.service.TaskConfigService;
+import io.cruii.util.CosUtil;
 import io.cruii.util.OkHttpUtil;
 import io.cruii.util.QrCodeGenerator;
 import lombok.extern.log4j.Log4j2;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-import java.net.HttpCookie;
+import java.io.*;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -72,29 +70,28 @@ public class BilibiliController {
     public OmhUserVO getBilibiliUser(@RequestParam String dedeuserid,
                                      @RequestParam String sessdata) {
         BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, null);
-        delegate.getSpaceAccInfo(dedeuserid);
-        HttpCookie sessdataCookie = new HttpCookie("SESSDATA", sessdata);
-        sessdataCookie.setDomain(".bilibili.com");
-        JSONObject data;
-        try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_USER_INFO_NAV).cookie(sessdataCookie).execute()) {
-            String body = response.body();
-            JSONObject resp = JSONUtil.parseObj(body);
-            if (resp.getInt("code") == -101) {
-                throw new BilibiliCookieExpiredException(dedeuserid);
+        BiliUser userDetails = delegate.getUserDetails();
+        new Thread(() -> {
+            String face = userDetails.getFace();
+            byte[] bytes;
+            try {
+                bytes = imageToArray(face);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-            data = resp.getJSONObject("data");
-        }
+            File file = saveAvatar(bytes, dedeuserid);
+            CosUtil.upload(file);
+        }).start();
 
-        String mid = data.getStr("mid");
-
-        // 找不到用户
-        if (mid == null || !mid.equals(dedeuserid)) {
-            throw new BilibiliUserNotFoundException(dedeuserid);
+        TaskConfigVO taskConfigVO = taskConfigService.getTask(dedeuserid);
+        Long configId = null;
+        if (taskConfigVO != null) {
+            configId = taskConfigVO.getId();
         }
         return new OmhUserVO()
-                .setUserId(mid)
-                .setNickname(data.getStr("uname"))
-                .setBiliTaskConfigId(taskConfigService.getTask(dedeuserid).getId());
+                .setUserId(dedeuserid)
+                .setNickname(userDetails.getName())
+                .setBiliTaskConfigId(configId);
     }
 
     @GetMapping("users")
@@ -115,7 +112,7 @@ public class BilibiliController {
                 .url(BilibiliAPI.GET_QR_CODE_LOGIN_URL)
                 .get().build();
 
-        try (Response qrCodeResponse = OkHttpUtil.executeWithRetry(request)){
+        try (Response qrCodeResponse = OkHttpUtil.executeWithRetry(request)) {
             if (qrCodeResponse.isSuccessful()) {
                 okhttp3.ResponseBody body = qrCodeResponse.body();
                 assert body != null;
@@ -159,8 +156,19 @@ public class BilibiliController {
                 }
                 String biliJct = response.getCookieValue("bili_jct");
                 String dedeuserid = response.getCookieValue("DedeUserID");
-
-                // 存在用户时更新cookie
+                BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
+                String avatar = delegate.getUserDetails().getFace();
+                if (avatar != null) {
+                    new Thread(() -> {
+                        try {
+                            byte[] bytes = imageToArray(avatar);
+                            File file = saveAvatar(bytes, dedeuserid);
+                            CosUtil.upload(file);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).start();
+                }
                 userService.save(dedeuserid, sessdata, biliJct);
                 taskConfigService.updateCookie(dedeuserid, sessdata, biliJct);
 
@@ -175,5 +183,38 @@ public class BilibiliController {
             biliLoginVO.setCode(code);
             return biliLoginVO;
         }
+    }
+
+    private byte[] imageToArray(String imageUrl) throws IOException {
+        URL url = new URL(imageUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(5000);
+        InputStream inStream = conn.getInputStream();
+        byte[] buffer = new byte[1024];
+        int len = -1;
+        ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+        while ((len = inStream.read(buffer)) != -1) {
+            outStream.write(buffer, 0, len);
+        }
+        byte[] imageBytes = outStream.toByteArray();
+        outStream.close();
+        inStream.close();
+        conn.disconnect();
+        return imageBytes;
+    }
+
+    private File saveAvatar(byte[] bytes, String dedeuserid) {
+        String path = "avatars" + File.separator + dedeuserid + ".png";
+
+        File file = new File(path);
+        try (FileOutputStream outputStream = new FileOutputStream(file)) {
+            outputStream.write(bytes);
+            outputStream.close();
+            return file;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
