@@ -19,7 +19,7 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml -Dmaven.test.skip=true
       - name: Backup old files
-        run: sshpass -p ${{ secrets.DEPLOY_SERVER_PASSWORD }} ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_SERVER_IP }} "cd /root/app/ohmyhelper && for file in *.jar; do mv "$file" "${file%.jar}-backup.jar"; done"
+        run: sshpass -p ${{ secrets.DEPLOY_SERVER_PASSWORD }} ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_SERVER_IP }} "cd /root/app/ohmyhelper && ./backup.sh"
       - name: Kill process
         run: sshpass -p ${{ secrets.DEPLOY_SERVER_PASSWORD }} ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_SERVER_IP }} "cd /root/app/ohmyhelper && ./kill.sh"
       - name: Deploy with SSH
