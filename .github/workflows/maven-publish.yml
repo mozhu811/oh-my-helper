@@ -19,13 +19,10 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -Dmaven.test.skip=true
       - name: Deploy with SSH
-        uses: appleboy/ssh-action@master
+        uses: garygrossgarten/github-action-scp@release
         with:
+          local: target/*.jar
+          remote: /root/app/ohmyhelper/
           host: ${{ secrets.DEPLOY_SERVER_IP }}
           username: ${{ secrets.DEPLOY_SERVER_USER }}
           password: ${{ secrets.DEPLOY_SERVER_PASSWORD }}
-          port: 22
-          script: |
-            mkdir -p /root/app/ohmyhelper/
-            rm -rf /root/app/ohmyhelper/*.jar
-            cp target/*.jar /root/app/ohmyhelper/
