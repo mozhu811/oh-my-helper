@@ -21,7 +21,7 @@ jobs:
       - name: Deploy with SSH
         uses: garygrossgarten/github-action-scp@release
         with:
-          local: ./target/*.jar
+          local: "./hh-web/target/*.jar,./hh-execution/target/*.jar,./hh-push/target/*.jar,./hh-gateway/target/*.jar"
           remote: /root/app/ohmyhelper/
           host: ${{ secrets.DEPLOY_SERVER_IP }}
           username: ${{ secrets.DEPLOY_SERVER_USER }}
