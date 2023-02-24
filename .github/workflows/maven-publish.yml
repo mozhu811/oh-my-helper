@@ -17,11 +17,11 @@ jobs:
           java-version: 11
           cache: 'maven'
       - name: Build with Maven
-        run: mvn clean package -Dmaven.test.skip=true
+        run: mvn -B package --file pom.xml -Dmaven.test.skip=true
       - name: Deploy with SSH
         uses: garygrossgarten/github-action-scp@release
         with:
-          local: target/*.jar
+          local: ./target/*.jar
           remote: /root/app/ohmyhelper/
           host: ${{ secrets.DEPLOY_SERVER_IP }}
           username: ${{ secrets.DEPLOY_SERVER_USER }}
