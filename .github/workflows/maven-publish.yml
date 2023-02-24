@@ -19,10 +19,10 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml -Dmaven.test.skip=true
       - name: Deploy with SSH
-        uses: garygrossgarten/github-action-scp@release
+        uses: appleboy/scp-action@master
         with:
-          local: "./hh-web/target/*.jar,./hh-execution/target/*.jar,./hh-push/target/*.jar,./hh-gateway/target/*.jar"
-          remote: /root/app/ohmyhelper/
+          source: "./hh-web/target/*.jar,./hh-execution/target/*.jar,./hh-push/target/*.jar,./hh-gateway/target/*.jar"
+          target: /root/app/ohmyhelper/
           host: ${{ secrets.DEPLOY_SERVER_IP }}
           username: ${{ secrets.DEPLOY_SERVER_USER }}
           password: ${{ secrets.DEPLOY_SERVER_PASSWORD }}
