@@ -18,6 +18,10 @@ jobs:
           cache: 'maven'
       - name: Build with Maven
         run: mvn -B package --file pom.xml -Dmaven.test.skip=true
+      - name: Backup old files
+        run: sshpass -p ${{ secrets.DEPLOY_SERVER_PASSWORD }} ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_SERVER_IP }} "cd /root/app/ohmyhelper && for file in *.jar; do mv "$file" "${file%.jar}-backup.jar"; done"
+      - name: Kill process
+        run: sshpass -p ${{ secrets.DEPLOY_SERVER_PASSWORD }} ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_SERVER_IP }} "cd /root/app/ohmyhelper && ./kill.sh"
       - name: Deploy with SSH
         uses: appleboy/scp-action@master
         with:
@@ -26,3 +30,10 @@ jobs:
           host: ${{ secrets.DEPLOY_SERVER_IP }}
           username: ${{ secrets.DEPLOY_SERVER_USER }}
           password: ${{ secrets.DEPLOY_SERVER_PASSWORD }}
+          strip_components: 2
+          script: |
+            cd /root/app/ohmyhelper
+            nohup java -jar --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true hh-web-*.jar --spring.profiles.active=prod > ~/web.out 2>&1 &
+            nohup java -jar --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true hh-execution-*.jar --spring.profiles.active=prod > ~/execution.out 2>&1 &
+            nohup java -jar --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true hh-push-*.jar --spring.profiles.active=prod > ~/push.out 2>&1 &
+            nohup java -jar --add-opens java.base/jdk.internal.misc=ALL-UNNAMED -Dio.netty.tryReflectionSetAccessible=true hh-gateway-*.jar --spring.profiles.active=prod > ~/gateway.out 2>&1 &
