@@ -17,7 +17,7 @@ public class BiliLoginVO implements Serializable {
      */
     private Integer code;
 
-    private Integer dedeuserid;
+    private String dedeuserid;
 
     private String sessdata;
 

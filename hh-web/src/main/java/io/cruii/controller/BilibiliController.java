@@ -155,13 +155,12 @@ public class BilibiliController {
                         byte[] bytes = imageToArray(avatar);
                         File file = saveAvatar(bytes, dedeuserid);
                         CosUtil.upload(file);
+                        userService.save(dedeuserid, sessdata, biliJct);
+                        taskConfigService.updateCookie(dedeuserid, sessdata, biliJct);
                     }).start();
                 }
-                userService.save(dedeuserid, sessdata, biliJct);
-                taskConfigService.updateCookie(dedeuserid, sessdata, biliJct);
-
                 biliLoginVO.setBiliJct(biliJct);
-                biliLoginVO.setDedeuserid(Integer.parseInt(dedeuserid));
+                biliLoginVO.setDedeuserid(dedeuserid);
                 biliLoginVO.setSessdata(sessdata);
                 biliLoginVO.setCode(0);
 
