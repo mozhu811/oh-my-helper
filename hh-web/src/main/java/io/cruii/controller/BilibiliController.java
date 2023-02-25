@@ -4,23 +4,20 @@ import cn.hutool.core.codec.Base64;
 import cn.hutool.core.util.URLUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
-import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.zxing.WriterException;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.constant.BilibiliAPI;
+import io.cruii.model.BiliQrCodeStatus;
 import io.cruii.model.BiliQrcode;
 import io.cruii.model.BiliUser;
 import io.cruii.pojo.vo.*;
 import io.cruii.service.BilibiliUserService;
 import io.cruii.service.TaskConfigService;
 import io.cruii.util.CosUtil;
-import io.cruii.util.OkHttpUtil;
 import io.cruii.util.QrCodeGenerator;
 import lombok.extern.log4j.Log4j2;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -74,11 +71,7 @@ public class BilibiliController {
         new Thread(() -> {
             String face = userDetails.getFace();
             byte[] bytes;
-            try {
-                bytes = imageToArray(face);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            bytes = imageToArray(face);
             File file = saveAvatar(bytes, dedeuserid);
             CosUtil.upload(file);
         }).start();
@@ -108,27 +101,25 @@ public class BilibiliController {
 
     @GetMapping("qrCode")
     public QrCodeVO getLoginQrCode() {
-        Request request = new Request.Builder()
-                .url(BilibiliAPI.GET_QR_CODE_LOGIN_URL)
-                .get().build();
+        try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_URL).execute()) {
+            log.debug(response);
+            if (response.getStatus() == 200) {
+                BiliQrcode qrcode = JSONUtil.parseObj(response.body()).getJSONObject("data").toBean(BiliQrcode.class);
+                String qrCodeUrl = qrcode.getUrl();
+                String qrCodeKey = qrcode.getQrcodeKey();
 
-        try (Response qrCodeResponse = OkHttpUtil.executeWithRetry(request)) {
-            if (qrCodeResponse.isSuccessful()) {
-                okhttp3.ResponseBody body = qrCodeResponse.body();
-                assert body != null;
-                BiliQrcode biliQrcode = JSONUtil.parseObj(body.string()).getJSONObject("data")
-                        .toBean(BiliQrcode.class);
-                byte[] qrcodeBytes = QrCodeGenerator.generateQrCode(biliQrcode.getUrl(), 180, true);
                 QrCodeVO qrCodeVO = new QrCodeVO();
-                qrCodeVO.setQrCodeUrl(biliQrcode.getUrl());
-                qrCodeVO.setQrCodeKey(biliQrcode.getQrcodeKey());
-                qrCodeVO.setQrCodeImg("data:image/png;base64," + Base64.encode(qrcodeBytes));
+                qrCodeVO.setQrCodeUrl(qrCodeUrl);
+                qrCodeVO.setQrCodeKey(qrCodeKey);
+
+                byte[] bytes = QrCodeGenerator.generateQrCode(qrCodeUrl, 180, true);
+                qrCodeVO.setQrCodeImg("data:image/png;base64," + Base64.encode(bytes));
                 return qrCodeVO;
             }
-        } catch (IOException | WriterException e) {
-            throw new RuntimeException("获取B站二维码异常", e);
+        } catch (WriterException | IOException e) {
+            throw new RuntimeException("获取B站二维码登录链接异常", e);
         }
-        throw new RuntimeException("获取B站二维码异常");
+        throw new RuntimeException("获取B站二维码登录链接异常");
     }
 
     @GetMapping("login")
@@ -140,13 +131,14 @@ public class BilibiliController {
         扫描成功手机端确认登录后，code为0，并向浏览器写入cookie
         二维码失效时code为86038
          */
-            JSONObject jsonBody = JSONUtil.parseObj(response.body());
-            JSONObject data = jsonBody.getJSONObject("data");
-            int code = data.getInt("code");
+            BiliQrCodeStatus qrCodeStatus = JSONUtil.parseObj(response.body())
+                    .getJSONObject("data")
+                    .toBean(BiliQrCodeStatus.class);
+            int code = qrCodeStatus.getCode();
 
             BiliLoginVO biliLoginVO = new BiliLoginVO();
             if (code == 0) {
-                String decodeUrl = URLUtil.decode(data.getStr("url"));
+                String decodeUrl = URLUtil.decode(qrCodeStatus.getUrl());
                 String sessdata;
                 try {
                     Map<String, Object> urlParams = getUrlParams(new URL(decodeUrl).getQuery());
@@ -160,13 +152,9 @@ public class BilibiliController {
                 String avatar = delegate.getUserDetails().getFace();
                 if (avatar != null) {
                     new Thread(() -> {
-                        try {
-                            byte[] bytes = imageToArray(avatar);
-                            File file = saveAvatar(bytes, dedeuserid);
-                            CosUtil.upload(file);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                        byte[] bytes = imageToArray(avatar);
+                        File file = saveAvatar(bytes, dedeuserid);
+                        CosUtil.upload(file);
                     }).start();
                 }
                 userService.save(dedeuserid, sessdata, biliJct);
@@ -185,23 +173,26 @@ public class BilibiliController {
         }
     }
 
-    private byte[] imageToArray(String imageUrl) throws IOException {
-        URL url = new URL(imageUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(5000);
-        InputStream inStream = conn.getInputStream();
-        byte[] buffer = new byte[1024];
-        int len = -1;
-        ByteArrayOutputStream outStream = new ByteArrayOutputStream();
-        while ((len = inStream.read(buffer)) != -1) {
-            outStream.write(buffer, 0, len);
+    private byte[] imageToArray(String imageUrl) {
+        HttpURLConnection conn = null;
+        try (InputStream inStream = new URL(imageUrl).openStream();
+             ByteArrayOutputStream outStream = new ByteArrayOutputStream()) {
+            conn = (HttpURLConnection) new URL(imageUrl).openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            byte[] buffer = new byte[4096];
+            int len;
+            while ((len = inStream.read(buffer)) != -1) {
+                outStream.write(buffer, 0, len);
+            }
+            return outStream.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
-        byte[] imageBytes = outStream.toByteArray();
-        outStream.close();
-        inStream.close();
-        conn.disconnect();
-        return imageBytes;
     }
 
     private File saveAvatar(byte[] bytes, String dedeuserid) {
