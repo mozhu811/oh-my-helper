@@ -1,18 +1,11 @@
 package io.cruii.push.pusher.impl;
 
+import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import io.cruii.push.pusher.Pusher;
-import io.cruii.util.HttpUtil;
 import lombok.extern.log4j.Log4j2;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.util.EntityUtils;
 
-import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,46 +45,24 @@ public class QyWechatPusher implements Pusher {
                                                 .skip(content.split("<br>").length - 3L)
                                                 .collect(Collectors.joining("\n")) + "\n\n点击查看详细日志"))));
 
-
-        Map<String, String> params = new HashMap<>();
-        params.put("access_token", getAccessToken());
-        URI uri = HttpUtil.buildUri("https://qyapi.weixin.qq.com/cgi-bin/message/send", params);
-        StringEntity entity = new StringEntity(requestBody.toJSONString(0), "UTF-8");
-        entity.setContentType("application/json");
-        HttpPost httpPost = new HttpPost(uri);
-        httpPost.setEntity(entity);
-
-        try (CloseableHttpClient httpClient = HttpUtil.buildHttpClient();
-             CloseableHttpResponse httpResponse = httpClient.execute(httpPost)) {
-            if (httpResponse.getStatusLine().getStatusCode() == 200) {
-                log.info("企业微信推送成功");
-                EntityUtils.consume(httpResponse.getEntity());
-                return true;
-            }
-            log.error("企业微信推送失败: {}", EntityUtils.toString(httpResponse.getEntity()));
-            EntityUtils.consume(httpResponse.getEntity());
-        } catch (Exception e) {
-            log.error("企业微信推送失败", e);
+        String resp = HttpUtil.post("https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="+getAccessToken(), requestBody.toJSONString(0));
+        JSONObject wxPushResp = JSONUtil.parseObj(resp);
+        if (wxPushResp.getInt("errcode") == 0) {
+            log.info("企业微信推送成功");
+            return true;
         }
+        log.error("企业微信推送失败: {}", wxPushResp);
         return false;
     }
 
     private String getAccessToken() {
-        Map<String, String> params = new HashMap<>();
+        Map<String, Object> params = new HashMap<>();
         params.put("corpid", corpId);
         params.put("corpsecret", corpSecret);
-        URI uri = HttpUtil.buildUri("https://qyapi.weixin.qq.com/cgi-bin/gettoken", params);
-        HttpGet httpGet = new HttpGet(uri);
 
-        try (CloseableHttpResponse httpResponse = HttpUtil.buildHttpClient().execute(httpGet)) {
-            if (httpResponse.getStatusLine().getStatusCode() == 200) {
-                String body = EntityUtils.toString(httpResponse.getEntity());
-                String accessToken = JSONUtil.parseObj(body).getStr("access_token");
-                EntityUtils.consume(httpResponse.getEntity());
-                return accessToken;
-            }
-        } catch (Exception e) {
-            log.error("获取企业微信access_token失败", e);
+        JSONObject accessTokenResp = JSONUtil.parseObj(HttpUtil.get("https://qyapi.weixin.qq.com/cgi-bin/gettoken", params));
+        if (accessTokenResp.getInt("errcode") == 0) {
+            return accessTokenResp.getStr("access_token");
         }
         throw new RuntimeException("获取企业微信access_token失败");
     }
