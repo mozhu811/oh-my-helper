@@ -62,7 +62,7 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
 
         biliUserDO.setMedals(MedalWall2StrUtil.medalWall2JsonStr(delegate.getMedalWall()));
 
-        // 是否已存在
+        // 是否存在用户信息
         boolean exist = bilibiliUserMapper
                 .exists(Wrappers.lambdaQuery(BiliTaskUserDO.class)
                         .eq(BiliTaskUserDO::getDedeuserid, dedeuserid));
@@ -73,6 +73,32 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
         } else {
             bilibiliUserMapper  .updateById(biliUserDO);
         }
+
+        // 是否存在任务配置
+        boolean existConfig = taskConfigMapper.exists(Wrappers.lambdaQuery(TaskConfigDO.class).eq(TaskConfigDO::getDedeuserid, dedeuserid));
+        if (!existConfig) {
+            // 初始化任务配置
+            initTask(dedeuserid, sessdata, biliJct);
+
+        }
+    }
+
+    private void initTask(String dedeuserid, String sessdata, String biliJct) {
+        TaskConfigDO taskConfigDO = new TaskConfigDO();
+        taskConfigDO.setDedeuserid(dedeuserid);
+        taskConfigDO.setSessdata(sessdata);
+        taskConfigDO.setBiliJct(biliJct);
+        taskConfigDO.setAutoCharge(true);
+        taskConfigDO.setAutoChargeTarget(dedeuserid);
+        taskConfigDO.setDevicePlatform("ios");
+        taskConfigDO.setDonateCoins(5);
+        taskConfigDO.setDonateCoinStrategy(0);
+        taskConfigDO.setDonateGift(true);
+        taskConfigDO.setDonateGiftTarget(dedeuserid);
+        taskConfigDO.setReserveCoins(100);
+        taskConfigDO.setFollowDeveloper(true);
+
+        taskConfigMapper.insert(taskConfigDO);
     }
 
     @Override
