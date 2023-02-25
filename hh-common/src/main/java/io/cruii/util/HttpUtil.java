@@ -10,7 +10,6 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.conn.routing.HttpRoute;
-import org.apache.http.conn.routing.HttpRoutePlanner;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -20,6 +19,7 @@ import org.apache.http.protocol.HttpCoreContext;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
@@ -55,13 +55,8 @@ public class HttpUtil {
                 .setSocketTimeout(REQUEST_TIME_OUT)
                 .setConnectTimeout(CONNECTION_TIME_OUT);
 
-        // 从代理池获取ip并设置
-        //Medal<String> split = CharSequenceUtil.split(ProxyUtil.get(), ":");
-        //builder.setProxy(new HttpHost(split.get(0), Integer.parseInt(split.get(1))));
-        //builder.setProxy(new HttpHost("115.229.196.244", 64256));
-
+        builder.setProxy(new HttpHost("127.0.0.1", 7890));
         RequestConfig requestConfig = builder.build();
-
         /*
          * 每个默认的 ClientConnectionPoolManager 实现将给每个route创建不超过2个并发连接，最多20个连接总数。
          */
@@ -70,20 +65,9 @@ public class HttpUtil {
         connManager.setDefaultMaxPerRoute(MAX_CONCURRENT_CONNECTIONS);
         connManager.setDefaultSocketConfig(socketConfig);
 
-        HttpRoutePlanner httpRoutePlanner = (target, request, context) -> {
-            HttpClientContext clientContext = HttpClientContext.adapt(context);
-            if (clientContext.getRequestConfig().isAuthenticationEnabled()) {
-                //String[] proxyArr = ProxyUtil.get().split(":");
-                //HttpHost proxy = new HttpHost(proxyArr[0], Integer.parseInt(proxyArr[1]));
-                HttpHost proxy = new HttpHost("114.99.7.160", 64256);
-                return new HttpRoute(target, null, proxy, true);
-            }
-            return new HttpRoute(target);
-        };
 
         return HttpClients.custom().setConnectionManager(connManager)
                 .setDefaultRequestConfig(requestConfig)
-                .setRoutePlanner(httpRoutePlanner)
                 // 添加重试处理器
                 .setRetryHandler(new HttpRequestRetryHandler()).build();
     }
@@ -129,12 +113,12 @@ public class HttpUtil {
                 if (route == null) {
                     return false;
                 }
-                String[] proxyArr = ProxyUtil.get().split(":");
-                HttpHost proxy = new HttpHost(proxyArr[0], Integer.parseInt(proxyArr[1]));
+
+                Proxy proxy = ProxyUtil.get();
 
                 context.setAttribute(HttpClientContext.PROXY_AUTH_STATE, new AuthState());
                 context.setAttribute(HttpCoreContext.HTTP_TARGET_HOST, proxy);
-                context.setAttribute(HttpClientContext.HTTP_ROUTE, new HttpRoute(proxy));
+                context.setAttribute(HttpClientContext.HTTP_ROUTE, proxy);
                 return true;
             }
             if (exception instanceof UnknownHostException) {
