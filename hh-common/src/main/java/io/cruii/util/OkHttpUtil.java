@@ -8,8 +8,6 @@ import okio.BufferedSource;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -23,24 +21,26 @@ public class OkHttpUtil {
     private OkHttpUtil() {
     }
 
-    private static OkHttpClient getClient() {
-        return new OkHttpClient.Builder()
-                .addInterceptor(new CustomRequestInterceptor())
-                .proxy(getNextProxy())
-                .build();
-    }
+    private static OkHttpClient getClient(boolean useProxy) {
+        OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .addInterceptor(new CustomRequestInterceptor());
 
-    private static Proxy getNextProxy() {
-        String[] proxyArr = ProxyUtil.get().split(":");
-        return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyArr[0], Integer.parseInt(proxyArr[1])));
+        if (useProxy) {
+            builder.proxy(ProxyUtil.get());
+        }
+
+        return builder.build();
     }
 
     public static Response executeWithRetry(Request request) throws IOException {
+        return executeWithRetry(request, true);
+    }
+    public static Response executeWithRetry(Request request, boolean safeMode) throws IOException {
         int count = 0;
         while (true) {
             try {
                 log.debug("第{}次请求: {}", count + 1, request.url());
-                OkHttpClient okHttpClient = getClient();
+                OkHttpClient okHttpClient = getClient(safeMode);
                 Call call = okHttpClient.newCall(request);
                 return call.execute();
             } catch (Exception e) {
@@ -51,6 +51,7 @@ public class OkHttpUtil {
             }
         }
     }
+
 }
 
 @Slf4j

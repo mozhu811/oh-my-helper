@@ -38,13 +38,20 @@ public class BilibiliDelegate {
     @Getter
     private final TaskConfigDO config;
 
+    private boolean safeMode = false;
+
     public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct) {
+        this(dedeuserid, sessdata, biliJct, true);
+    }
+
+    public BilibiliDelegate(String dedeuserid, String sessdata, String biliJct, boolean safeMode) {
         TaskConfigDO taskConfigDO = new TaskConfigDO();
         taskConfigDO.setDedeuserid(dedeuserid);
         taskConfigDO.setSessdata(sessdata);
         taskConfigDO.setBiliJct(biliJct);
         taskConfigDO.setUserAgent(UA);
         this.config = taskConfigDO;
+        this.safeMode = safeMode;
     }
 
     public BilibiliDelegate(TaskConfigDO config) {
@@ -657,19 +664,21 @@ public class BilibiliDelegate {
 
     private JSONObject call(Request request) {
         String uri = request.url().uri().toString();
-        try {
-            TimeUnit.SECONDS.sleep(3);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("请求API[{}]失败", uri, e);
-            throw new RequestException(uri, e);
+        if (safeMode) {
+            try {
+                TimeUnit.SECONDS.sleep(3);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RequestException(uri, e);
+            }
         }
 
-        try (Response response = OkHttpUtil.executeWithRetry(request)) {
+        try (Response response = OkHttpUtil.executeWithRetry(request, safeMode)) {
             if (response.body() != null) {
                 String body = response.body().string();
                 return JSONUtil.parseObj(body);
             }
+            log.error("请求API[{}]失败", uri);
             throw new RuntimeException("请求失败:" + response.code());
         } catch (Exception e) {
             throw new RuntimeException(e);

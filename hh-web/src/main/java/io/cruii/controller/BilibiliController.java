@@ -69,7 +69,7 @@ public class BilibiliController {
     @GetMapping("user")
     public OmhUserVO getBilibiliUser(@RequestParam String dedeuserid,
                                      @RequestParam String sessdata) {
-        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, null);
+        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, null, false);
         BiliUser userDetails = delegate.getUserDetails();
         new Thread(() -> {
             String face = userDetails.getFace();
