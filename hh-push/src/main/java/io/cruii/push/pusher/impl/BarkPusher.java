@@ -37,7 +37,7 @@ public class BarkPusher implements Pusher {
                         MediaType.parse("application/json")))
                 .build();
 
-        try (Response response = OkHttpUtil.executeWithRetry(request)) {
+        try (Response response = OkHttpUtil.executeWithRetry(request, false)) {
             if (response.isSuccessful()) {
                 log.info("Bark推送成功");
                 return true;
