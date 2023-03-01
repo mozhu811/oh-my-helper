@@ -5,11 +5,15 @@ import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.http.HttpProtocol;
+import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.region.Region;
 import io.cruii.config.TencentCloudConfig;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 
 /**
  * @author cruii
@@ -49,6 +53,34 @@ public class CosUtil {
             cosClient.putObject(putObjectRequest);
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            cosClient.shutdown();
+        }
+    }
+
+    public static synchronized void upload(InputStream inputStream, String dedeuserid) {
+        try{
+            setup();
+            ObjectMetadata objectMetadata = new ObjectMetadata();
+            objectMetadata.setContentLength(inputStream.available());
+            String key = tencentCloudConfig.getFolder() + "/" + dedeuserid + ".png";
+            PutObjectRequest putObjectRequest = new PutObjectRequest(tencentCloudConfig.getBucketName(), key, inputStream, objectMetadata);
+            cosClient.putObject(putObjectRequest);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            cosClient.shutdown();
+        }
+    }
+
+    public static synchronized void upload(String url, String dedeuserid) {
+        try (InputStream inputStream = new URL(url).openStream()) {
+            setup();
+            String key = tencentCloudConfig.getFolder() + "/" + dedeuserid + ".png";
+            PutObjectRequest putObjectRequest = new PutObjectRequest(tencentCloudConfig.getBucketName(), key, inputStream, null);
+            cosClient.putObject(putObjectRequest);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         } finally {
             cosClient.shutdown();
         }
