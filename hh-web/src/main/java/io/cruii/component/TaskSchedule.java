@@ -25,6 +25,7 @@ public class TaskSchedule {
     private final TaskConfigMapper taskConfigMapper;
 
     private final BilibiliUserMapper bilibiliUserMapper;
+
     private final ServerHandler serverHandler;
 
     public TaskSchedule(TaskConfigMapper taskConfigMapper, BilibiliUserMapper bilibiliUserMapper, ServerHandler serverHandler) {
@@ -40,13 +41,14 @@ public class TaskSchedule {
     @Scheduled(initialDelayString = "${task.initial-delay:60000}", fixedRateString = "${task.fixed-rate:7200000}")
     public void doTask() {
         List<String> notRunUsers = bilibiliUserMapper
-                .selectList(Wrappers.lambdaQuery(BiliTaskUserDO.class)
-                        .eq(BiliTaskUserDO::getIsLogin, true)).stream()
+                .listNotRunUser().stream()
+                .filter(BiliTaskUserDO::getIsLogin)
                 .map(BiliTaskUserDO::getDedeuserid)
                 .collect(Collectors.toList());
         if (notRunUsers.isEmpty()) {
             return;
         }
+        log.debug("Not run users : {}", notRunUsers);
         List<TaskConfigDO> taskConfigDOS = taskConfigMapper.selectList(Wrappers.lambdaQuery(TaskConfigDO.class).in(TaskConfigDO::getDedeuserid, notRunUsers));
         taskConfigDOS
                 .forEach(taskConfig -> {
