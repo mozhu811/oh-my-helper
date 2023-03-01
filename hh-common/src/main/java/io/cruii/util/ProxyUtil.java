@@ -50,7 +50,6 @@ public class ProxyUtil {
             LOCK.lock();
             int size = proxyList.size();
             if (proxyList.isEmpty()) {
-                log.debug("获取代理地址");
                 String body = HttpRequest.get(proxyApi).execute().body();
                 JSONObject resp = JSONUtil.parseObj(body);
                 JSONArray data = resp.getJSONArray("data");
@@ -61,21 +60,24 @@ public class ProxyUtil {
                         .collect(Collectors.toList()));
             }
             Proxy proxy = proxyList.get(RandomUtil.randomInt(size - 1));
-            log.debug("本次获取代理地址: {}", proxy);
-            log.debug("当前剩余代理数: {}", proxyList.size());
 
             if (testProxy(proxy)) {
+                log.debug("本次获取代理地址: {}", proxy);
                 return proxy;
             } else {
                 log.debug("代理 {} 不可用，切换代理", proxy);
                 proxyList.remove(proxy);
                 return get();
             }
+        } catch (Exception e) {
+            log.error("获取代理地址异常: {}", e.getMessage());
+            return null;
         } finally {
             LOCK.unlock();
         }
 
     }
+
     private static boolean testProxy(Proxy proxy) {
         HttpURLConnection connection = null;
         try {

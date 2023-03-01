@@ -62,7 +62,8 @@ public class BilibiliDelegate {
     }
 
     /**
-     * 获取用户B站导航栏状态信息
+     * 获取用户B站详细信息
+     * 需要登陆
      */
     public BiliUser getUserDetails() {
         JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_DETAILS_INFO);
@@ -143,7 +144,7 @@ public class BilibiliDelegate {
     public BiliCoinLog getCoinChangeLog() {
         JSONObject resp = doGet(BilibiliAPI.GET_COIN_CHANGE_LOG);
         if (resp.getInt("code") != 0) {
-            throw new RuntimeException("获取硬币日志出现错误: " + resp.getStr("msg"));
+            throw new RuntimeException("获取硬币日志出现错误: " + resp.getStr("message"));
         }
         return resp.getJSONObject("data").toBean(BiliCoinLog.class);
     }
