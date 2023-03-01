@@ -1,6 +1,7 @@
 package io.cruii.controller;
 
 import cn.hutool.core.codec.Base64;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.URLUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -68,13 +69,14 @@ public class BilibiliController {
                                      @RequestParam String sessdata) {
         BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, null, false);
         BiliUser userDetails = delegate.getUserDetails();
-        new Thread(() -> {
-            String face = userDetails.getFace();
-            byte[] bytes;
-            bytes = imageToArray(face);
-            File file = saveAvatar(bytes, dedeuserid);
-            CosUtil.upload(file);
-        }).start();
+        try{
+            String avatar = delegate.getUserDetails().getFace();
+            if (avatar != null) {
+                CosUtil.upload(avatar, dedeuserid);
+            }
+        } catch (Exception e) {
+            log.error("Download user avatar failed. {}", e.getMessage());
+        }
 
         TaskConfigVO taskConfigVO = taskConfigService.getTask(dedeuserid);
         Long configId = null;
@@ -123,7 +125,7 @@ public class BilibiliController {
     }
 
     @GetMapping("login")
-    public BiliLoginVO login(@RequestParam String qrCodeKey) {
+    public BiliLoginVO login(@RequestParam String qrCodeKey) throws MalformedURLException {
         try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_INFO_URL).body("qrcode_key=" + qrCodeKey).execute()) {
         /*
         当密钥正确时但未扫描时code为86101
@@ -140,25 +142,27 @@ public class BilibiliController {
             if (code == 0) {
                 String decodeUrl = URLUtil.decode(qrCodeStatus.getUrl());
                 String sessdata;
-                try {
-                    Map<String, Object> urlParams = getUrlParams(new URL(decodeUrl).getQuery());
-                    sessdata = ((String) urlParams.get("SESSDATA"));
-                } catch (MalformedURLException e) {
-                    throw new RuntimeException(e);
-                }
+                Map<String, Object> urlParams = getUrlParams(new URL(decodeUrl).getQuery());
+                sessdata = ((String) urlParams.get("SESSDATA"));
                 String biliJct = response.getCookieValue("bili_jct");
                 String dedeuserid = response.getCookieValue("DedeUserID");
-                BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
-                String avatar = delegate.getUserDetails().getFace();
-                if (avatar != null) {
-                    new Thread(() -> {
-                        byte[] bytes = imageToArray(avatar);
-                        File file = saveAvatar(bytes, dedeuserid);
-                        CosUtil.upload(file);
-                        userService.save(dedeuserid, sessdata, biliJct);
-                        taskConfigService.updateCookie(dedeuserid, sessdata, biliJct);
-                    }).start();
+
+                new Thread(() -> {
+                    userService.save(dedeuserid, sessdata, biliJct);
+                    taskConfigService.updateCookie(dedeuserid, sessdata, biliJct);
+                }).start();
+
+
+                try{
+                    BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct, false);
+                    String avatar = delegate.getUserDetails().getFace();
+                    if (avatar != null) {
+                        CosUtil.upload(avatar, dedeuserid);
+                    }
+                } catch (Exception e) {
+                    log.error("Download user avatar failed. {}", e.getMessage());
                 }
+
                 biliLoginVO.setBiliJct(biliJct);
                 biliLoginVO.setDedeuserid(dedeuserid);
                 biliLoginVO.setSessdata(sessdata);
@@ -195,6 +199,9 @@ public class BilibiliController {
     }
 
     private File saveAvatar(byte[] bytes, String dedeuserid) {
+        if (!FileUtil.exist("avatars")) {
+            FileUtil.mkdir("avatars");
+        }
         String path = "avatars" + File.separator + dedeuserid + ".png";
 
         File file = new File(path);
