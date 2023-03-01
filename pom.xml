@@ -9,6 +9,7 @@
         <module>hh-web</module>
         <module>hh-execution</module>
         <module>hh-gateway</module>
+        <module>hh-test</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -90,7 +91,7 @@
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>5.8.8</version>
+            <version>5.8.11</version>
         </dependency>
 
         <dependency>
