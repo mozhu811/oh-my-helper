@@ -1,10 +1,8 @@
 package io.cruii.controller;
 
-import cn.hutool.json.JSONObject;
-import io.cruii.component.BilibiliDelegate;
-import io.cruii.model.BiliUser;
 import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.dto.TaskConfigDTO;
+import io.cruii.service.BilibiliUserService;
 import io.cruii.service.PushConfigService;
 import io.cruii.service.TaskConfigService;
 import lombok.extern.log4j.Log4j2;
@@ -24,10 +22,14 @@ public class ConfigController {
 
     private final PushConfigService pushConfigService;
 
+    private final BilibiliUserService biliUserService;
+
     public ConfigController(TaskConfigService taskConfigService,
-                            PushConfigService pushConfigService) {
+                            PushConfigService pushConfigService,
+                            BilibiliUserService biliUserService) {
         this.taskConfigService = taskConfigService;
         this.pushConfigService = pushConfigService;
+        this.biliUserService = biliUserService;
     }
 
     @PostMapping("task")
@@ -36,6 +38,7 @@ public class ConfigController {
                            @CookieValue("sessdata") String sessdata,
                            @CookieValue("biliJct") String biliJct,
                            @RequestBody TaskConfigDTO taskConfigDTO) {
+        biliUserService.save(dedeuserid, sessdata, biliJct);
         taskConfigService.createTask(dedeuserid, sessdata, biliJct, taskConfigDTO);
     }
 

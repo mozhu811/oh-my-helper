@@ -51,17 +51,6 @@ public class TaskConfigServiceImpl implements TaskConfigService {
 
     @Override
     public void createTask(String dedeuserid, String sessdata, String biliJct, TaskConfigDTO taskConfigDTO) {
-
-        // 保存用户信息
-        //boolean exists = bilibiliUserMapper.exists(Wrappers.lambdaQuery(BiliTaskUserDO.class).eq(BiliTaskUserDO::getDedeuserid, dedeuserid));
-        //if (!exists) {
-        //    BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
-        //    BiliUser userSpaceInfo = delegate.getUserDetails();
-        //    JSONObject medalWallResp = delegate.getMedalWall();
-        //    BiliTaskUserDO biliUserDO = BiliUserParser.parseUser(userSpaceInfo, medalWallResp);
-        //    bilibiliUserMapper.insert(biliUserDO);
-        //}
-
         TaskConfigDO taskConfigDO = taskConfigStructMapper.toDO(taskConfigDTO);
         taskConfigDO.setDedeuserid(dedeuserid);
         taskConfigDO.setSessdata(sessdata);

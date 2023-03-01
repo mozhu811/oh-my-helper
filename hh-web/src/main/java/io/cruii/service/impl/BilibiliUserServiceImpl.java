@@ -43,7 +43,7 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
 
     @Override
     public void save(String dedeuserid, String sessdata, String biliJct) {
-        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct);
+        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct, false);
 
         // 从B站获取最新用户信息
         BiliUser biliUser = delegate.getUserDetails();
@@ -71,7 +71,7 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
             biliUserDO.setCreateTime(LocalDateTime.now());
             bilibiliUserMapper.insert(biliUserDO);
         } else {
-            bilibiliUserMapper  .updateById(biliUserDO);
+            bilibiliUserMapper.updateById(biliUserDO);
         }
 
         // 是否存在任务配置
@@ -79,7 +79,6 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
         if (!existConfig) {
             // 初始化任务配置
             initTask(dedeuserid, sessdata, biliJct);
-
         }
     }
 
