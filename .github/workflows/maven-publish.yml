@@ -17,7 +17,7 @@ jobs:
           java-version: 11
           cache: 'maven'
       - name: Set up secret key
-        run: echo ${{ secrets.DB_SECRET_KEY }} >> ./hh-common/src/main/resources/config.properties
+        run: cd ./hh-common/src/main/resources && sed -i "s/secret.key=.*/secret.key=${{ secrets.DB_SECRET_KEY }}/g" config.properties
       - name: Build with Maven
         run: mvn -B package --file pom.xml -Dmaven.test.skip=true
       - name: Backup old files
