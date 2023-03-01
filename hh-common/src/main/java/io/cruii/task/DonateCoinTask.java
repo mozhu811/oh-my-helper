@@ -23,14 +23,12 @@ public class DonateCoinTask extends VideoTask {
     private final TaskConfigDO config;
     private int counter = 0;
 
-    private int coinNum;
 
     public DonateCoinTask(BilibiliDelegate delegate) {
         super(delegate);
         this.config = delegate.getConfig();
         Integer donateCoins = config.getDonateCoins();
         log.info("配置投币数为：{}", donateCoins);
-        coinNum = calDiff();
     }
 
     @Override
@@ -50,8 +48,7 @@ public class DonateCoinTask extends VideoTask {
         // 获取账户余额
         int current = getCoin();
         log.info("当前账户余额：{}", current);
-        if (current <= config.getReserveCoins() ||
-                coinNum > current) {
+        if (current <= config.getReserveCoins()) {
             log.info("当前余额不足或触发硬币保护阈值，取消执行投币任务。❌");
             return;
         }
@@ -102,12 +99,12 @@ public class DonateCoinTask extends VideoTask {
      */
     private void doDonate() {
         // 获取服务器上的投币信息，防止在任务执行期间用户也投了币导致的多投。
-        while (calDiff() > 0) {
+        while (calDiff() > 0 && getCoin() > config.getReserveCoins()) {
             initTrend();
             List<String> bvidList;
             // 热榜投币
             Collections.shuffle(trend);
-            bvidList = trend.stream().limit(coinNum).collect(Collectors.toList());
+            bvidList = trend.stream().limit(config.getDonateCoins()).collect(Collectors.toList());
             bvidList.stream()
                     .filter(bvid -> {
                         // 若视频已投币，则跳过
@@ -119,7 +116,6 @@ public class DonateCoinTask extends VideoTask {
                         String videoTitle = getVideoTitle(bvid);
                         if (resp.getInt(CODE) == 0) {
                             log.info("为视频[{}]投币成功 ✔️", videoTitle);
-                            --coinNum;
                         } else {
                             log.warn("为视频[{}]投币失败: {} ❌", videoTitle, resp.getStr(MESSAGE));
                         }
