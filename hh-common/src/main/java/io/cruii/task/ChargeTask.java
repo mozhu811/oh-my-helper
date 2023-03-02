@@ -56,7 +56,7 @@ public class ChargeTask extends AbstractTask {
 
         SpaceAccInfo spaceAccInfo = delegate.getSpaceAccInfo(targetId);
         if (spaceAccInfo == null) {
-            log.info("充电对象未找到，将为作者[{}]进行充电", AUTHOR_MID);
+            log.info("充电对象未找到或异常，将为作者[{}]进行充电", AUTHOR_MID);
             targetId = AUTHOR_MID;
         }
 

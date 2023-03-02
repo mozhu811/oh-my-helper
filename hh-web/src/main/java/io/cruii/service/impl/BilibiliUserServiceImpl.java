@@ -109,8 +109,10 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
         String medalWall2JsonStr = MedalWall2StrUtil.medalWall2JsonStr(medalWall);
         SpaceAccInfo spaceAccInfo = delegate.getSpaceAccInfo(userDTO.getDedeuserid());
         BiliTaskUserDO biliTaskUserDO = biliUserStructMapper.toDO(userDTO);
-        biliTaskUserDO.setMedals(medalWall2JsonStr)
-                .setSign(spaceAccInfo.getSign());
+        biliTaskUserDO.setMedals(medalWall2JsonStr);
+        if (spaceAccInfo != null) {
+            biliTaskUserDO.setSign(spaceAccInfo.getSign());
+        }
         boolean exists = bilibiliUserMapper.exists(Wrappers.lambdaQuery(BiliTaskUserDO.class)
                 .eq(BiliTaskUserDO::getDedeuserid, userDTO.getDedeuserid()));
         if (!exists) {

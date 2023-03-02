@@ -87,8 +87,8 @@ public class BilibiliDelegate {
         JSONObject resp = doGet(BilibiliAPI.GET_USER_SPACE_INFO, params);
         Integer code = resp.getInt("code");
         if (code != 0) {
-            log.error("用户[{}]信息获取异常", userId);
-            throw new RuntimeException("获取用户空间信息异常: " + code);
+            log.error("用户[{}]信息获取异常: {}", userId, code);
+            return null;
         }
         return resp.getJSONObject("data").toBean(SpaceAccInfo.class, true);
     }
@@ -577,6 +577,7 @@ public class BilibiliDelegate {
 
         return doPost(BilibiliAPI.VIP_SIGN, headers, RequestBody.create(new byte[0]));
     }
+
     /**
      * 获取B站用户头像文件流
      *
@@ -646,6 +647,7 @@ public class BilibiliDelegate {
         Request request = buildRequest(headers, urlBuilder, params, "GET");
         return call(request);
     }
+
     private JSONObject doPost(String url, RequestBody requestBody) {
         return doPost(url, null, null, requestBody);
     }

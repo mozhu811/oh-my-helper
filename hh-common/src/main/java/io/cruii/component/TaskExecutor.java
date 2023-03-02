@@ -27,12 +27,12 @@ public class TaskExecutor {
         taskList.add(new CheckCookieTask(delegate));
         taskList.add(new GetCoinChangeLogTask(delegate));
         taskList.add(new WatchVideoTask(delegate));
+        taskList.add(new GetVipPrivilegeTask(delegate));
         taskList.add(new DonateCoinTask(delegate));
         taskList.add(new Silver2CoinTask(delegate));
         taskList.add(new LiveCheckIn(delegate));
         taskList.add(new DonateGiftTask(delegate));
         taskList.add(new ChargeTask(delegate));
-        taskList.add(new GetVipPrivilegeTask(delegate));
         taskList.add(new MangaTask(delegate));
         taskList.add(new ReadMangaTask(delegate));
         taskList.add(new BigVipTask(delegate));
