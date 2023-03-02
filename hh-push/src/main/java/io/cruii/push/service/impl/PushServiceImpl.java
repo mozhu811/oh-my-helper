@@ -32,9 +32,13 @@ public class PushServiceImpl implements PushService {
         String dedeuserid = messageDTO.getDedeuserid();
         String content = messageDTO.getContent();
         PushConfigDO pushConfig = pushConfigMapper.selectOne(Wrappers.lambdaQuery(PushConfigDO.class).eq(PushConfigDO::getDedeuserid, dedeuserid));
+        if (pushConfig == null) {
+            log.info("该账号[{}]未配置推送", dedeuserid);
+            return false;
+        }
         Pusher pusher = generatePusher(pushConfig);
         if (pusher == null) {
-            log.info("该账号未配置推送或推送配置异常");
+            log.error("生成Pusher异常: {}", dedeuserid);
             return false;
         }
         if (pusher instanceof QyWechatPusher) {

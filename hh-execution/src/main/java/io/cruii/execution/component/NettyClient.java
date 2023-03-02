@@ -1,11 +1,13 @@
 package io.cruii.execution.component;
 
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import io.cruii.execution.config.NettyConfiguration;
+import io.cruii.execution.feign.PushFeignService;
 import io.cruii.model.BiliUser;
-import io.cruii.model.custom.BiliTaskResult;
 import io.cruii.pojo.dto.BiliTaskUserDTO;
+import io.cruii.pojo.dto.PushMessageDTO;
 import io.cruii.pojo.entity.TaskConfigDO;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -19,17 +21,19 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 /**
  * @author cruii
@@ -98,7 +102,9 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
 
     private final TaskRunner taskRunner = SpringUtil.getApplicationContext().getBean(TaskRunner.class);
 
-    private static final Map<String, Boolean> UNFINISHED_USER = new ConcurrentHashMap<>();
+    private final PushFeignService pushFeignService = SpringUtil.getApplicationContext().getBean(PushFeignService.class);
+
+    private static final BlockingQueue<String> PUSH_QUEUE = new LinkedBlockingQueue<>(3000);
 
     private static volatile ScheduledExecutorService scheduledExecutor;
 
@@ -118,6 +124,7 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
 
     public ClientHandler(NettyClient nettyClient) {
         this.nettyClient = nettyClient;
+        new Thread(this::pushMessage).start();
     }
 
     /**
@@ -143,30 +150,34 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         log.debug("[exe] Received message: {}", msg);
         TaskConfigDO taskConfigDO = JSONUtil.toBean(((String) msg), TaskConfigDO.class);
-        if (UNFINISHED_USER.putIfAbsent(taskConfigDO.getDedeuserid(), true) == null) {
-            taskRunner.run(taskConfigDO, result -> {
-                if (result != null) {
-                    BiliUser biliUser = result.getBiliUser();
-                    int upgradeDays = result.getUpgradeDays();
-                    BiliTaskUserDTO biliTaskUserDTO = new BiliTaskUserDTO();
-                    biliTaskUserDTO
-                            .setDedeuserid(String.valueOf(biliUser.getMid()))
-                            .setUsername(biliUser.getName())
-                            .setLevel(biliUser.getLevel())
-                            .setCoins(String.valueOf(biliUser.getCoins()))
-                            .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
-                            .setNextExp(biliUser.getLevelExp().getNextExp())
-                            .setUpgradeDays(upgradeDays)
-                            .setVipStatus(biliUser.getVip().getStatus())
-                            .setLastRunTime(LocalDateTime.now())
-                            .setIsLogin(true);
-                    ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(biliTaskUserDTO) + "\n").getBytes(StandardCharsets.UTF_8)));
-                }
-                UNFINISHED_USER.remove(taskConfigDO.getDedeuserid());
-                System.out.println(UNFINISHED_USER.size());
-            });
-            System.out.println(UNFINISHED_USER.size());
-        }
+        String dedeuserid = taskConfigDO.getDedeuserid();
+        taskRunner.run(taskConfigDO, result -> {
+            if (result != null) {
+                BiliUser biliUser = result.getBiliUser();
+                int upgradeDays = result.getUpgradeDays();
+                BiliTaskUserDTO biliTaskUserDTO = new BiliTaskUserDTO();
+                biliTaskUserDTO
+                        .setDedeuserid(String.valueOf(biliUser.getMid()))
+                        .setUsername(biliUser.getName())
+                        .setLevel(biliUser.getLevel())
+                        .setCoins(String.valueOf(biliUser.getCoins()))
+                        .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
+                        .setNextExp(biliUser.getLevelExp().getNextExp())
+                        .setUpgradeDays(upgradeDays)
+                        .setVipStatus(biliUser.getVip().getStatus())
+                        .setLastRunTime(LocalDateTime.now())
+                        .setIsLogin(true);
+                ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(biliTaskUserDTO) + "\n").getBytes(StandardCharsets.UTF_8)));
+            }
+            // 加入到推送队列
+            try {
+                PUSH_QUEUE.put(dedeuserid + ":" + MDC.get("traceId"));
+            } catch (InterruptedException e) {
+                log.error("添加到推送队列异常: {}", dedeuserid, e);
+                Thread.currentThread().interrupt();
+            }
+        });
+
     }
 
     @Override
@@ -203,5 +214,34 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
                 reconnection(ctx);
             }
         }, 3, TimeUnit.SECONDS);
+    }
+
+    private void pushMessage() {
+        while (true) {
+            try {
+                String msg = PUSH_QUEUE.take();
+                String dedeuserid = msg.split(":")[0];
+                String traceId = msg.split(":")[1];
+
+                // 日志收集
+                String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(LocalDate.now());
+                File logFile = new File("logs/execution/all-" + date + ".log");
+                String content = null;
+                if (logFile.exists()) {
+                    List<String> logs = FileUtil.readLines(logFile, StandardCharsets.UTF_8);
+                    content = logs.stream()
+                            .filter(line -> line.contains(traceId) && (line.contains("INFO") || line.contains("ERROR")))
+                            .map(line -> line.split("\\|\\|")[1])
+                            .collect(Collectors.joining("\n"));
+                }
+                PushMessageDTO message = new PushMessageDTO();
+                message.setDedeuserid(dedeuserid);
+                message.setContent(content);
+                this.pushFeignService.push(message);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
