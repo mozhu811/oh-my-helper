@@ -37,7 +37,6 @@ public class BiliTask implements Runnable {
                 listener.onCompletion(result);
             });
         } catch (Exception e) {
-            Thread.currentThread().interrupt();
             log.error("执行任务发生异常", e);
         } finally {
             MDC.clear();

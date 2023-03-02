@@ -2,8 +2,10 @@ package io.cruii.execution.component;
 
 import io.cruii.pojo.entity.TaskConfigDO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
+
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * @author cruii
@@ -13,15 +15,21 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class TaskRunner {
 
-    private final ThreadPoolTaskExecutor taskExecutor;
+    private final ThreadPoolExecutor taskExecutor;
 
 
-    public TaskRunner(ThreadPoolTaskExecutor taskExecutor) {
+    public TaskRunner(ThreadPoolExecutor taskExecutor) {
         this.taskExecutor = taskExecutor;
     }
 
     public void run(TaskConfigDO taskConfigDO, BiliTaskListener listener) {
         BiliTask biliTask = new BiliTask(taskConfigDO, listener);
-        taskExecutor.execute(biliTask);
+        try {
+            taskExecutor.execute(biliTask);
+        } catch (RejectedExecutionException e) {
+            log.error("账号[{}]任务被拒绝，原因: {}", taskConfigDO.getDedeuserid(), e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("执行账号[{}]任务发生异常", taskConfigDO.getDedeuserid(), e);
+        }
     }
 }

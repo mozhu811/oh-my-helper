@@ -194,7 +194,7 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
         if (cause instanceof IOException) {
             log.warn("exceptionCaught:客户端[{}]和远程断开连接", ctx.channel().localAddress());
         } else {
-            log.error(cause);
+            log.error(cause.getMessage());
         }
         ctx.pipeline().remove(this);
         ctx.channel().close();
@@ -206,7 +206,6 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
         initScheduledExecutor();
 
         scheduledExecutor.schedule(() -> {
-            log.debug(">>> Reconnecting to the server. <<<");
             boolean connected = nettyClient.connect();
             if (connected) {
                 log.info("Netty server connected.");
