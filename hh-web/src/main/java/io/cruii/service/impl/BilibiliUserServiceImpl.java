@@ -106,10 +106,13 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
                 .eq(TaskConfigDO::getDedeuserid, userDTO.getDedeuserid()));
         BilibiliDelegate delegate = new BilibiliDelegate(taskConfigDO.getDedeuserid(), taskConfigDO.getSessdata(), taskConfigDO.getBiliJct());
         MedalWall medalWall = delegate.getMedalWall();
-        String medalWall2JsonStr = MedalWall2StrUtil.medalWall2JsonStr(medalWall);
-        SpaceAccInfo spaceAccInfo = delegate.getSpaceAccInfo(userDTO.getDedeuserid());
+        String medalWall2JsonStr;
         BiliTaskUserDO biliTaskUserDO = biliUserStructMapper.toDO(userDTO);
-        biliTaskUserDO.setMedals(medalWall2JsonStr);
+        if (medalWall != null) {
+            medalWall2JsonStr = MedalWall2StrUtil.medalWall2JsonStr(medalWall);
+            biliTaskUserDO.setMedals(medalWall2JsonStr);
+        }
+        SpaceAccInfo spaceAccInfo = delegate.getSpaceAccInfo(userDTO.getDedeuserid());
         if (spaceAccInfo != null) {
             biliTaskUserDO.setSign(spaceAccInfo.getSign());
         }

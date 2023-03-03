@@ -1,7 +1,9 @@
-package io.cruii.component;
+package io.cruii.execution.component;
 
+import io.cruii.component.BilibiliDelegate;
 import io.cruii.context.BilibiliUserContext;
 import io.cruii.exception.BilibiliCookieExpiredException;
+import io.cruii.execution.constant.TaskStatus;
 import io.cruii.model.BiliDailyReward;
 import io.cruii.model.BiliUser;
 import io.cruii.model.custom.BiliTaskResult;
@@ -24,7 +26,6 @@ public class TaskExecutor {
 
     public TaskExecutor(BilibiliDelegate delegate) {
         this.delegate = delegate;
-        taskList.add(new CheckCookieTask(delegate));
         taskList.add(new GetCoinChangeLogTask(delegate));
         taskList.add(new WatchVideoTask(delegate));
         taskList.add(new GetVipPrivilegeTask(delegate));
@@ -62,7 +63,7 @@ public class TaskExecutor {
             upgradeDays = calExp();
         }
         BiliUser biliUser = BilibiliUserContext.get();
-        return new BiliTaskResult(biliUser, upgradeDays);
+        return new BiliTaskResult(TaskStatus.SUCCESS, biliUser, upgradeDays);
     }
 
     private int calExp() {

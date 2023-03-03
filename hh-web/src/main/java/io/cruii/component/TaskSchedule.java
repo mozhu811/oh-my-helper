@@ -38,7 +38,7 @@ public class TaskSchedule {
      * 0 0/30 9-17 * * ?    早上9点至下午17点内每30分钟一次
      * 0 0/5 * * * ?        每隔5分钟执行一次
      */
-    @Scheduled(initialDelayString = "${task.initial-delay:60000}", fixedRateString = "${task.fixed-rate:7200000}")
+    @Scheduled(initialDelayString = "${task.initial-delay:30000}", fixedRateString = "${task.fixed-rate:7200000}")
     public void doTask() {
         List<String> notRunUsers = bilibiliUserMapper
                 .listNotRunUser().stream()
@@ -49,8 +49,8 @@ public class TaskSchedule {
             return;
         }
         log.debug("Not run users : {}", notRunUsers);
-        List<TaskConfigDO> taskConfigDOS = taskConfigMapper.selectList(Wrappers.lambdaQuery(TaskConfigDO.class).in(TaskConfigDO::getDedeuserid, notRunUsers));
-        taskConfigDOS
+        List<TaskConfigDO> taskConfigs = taskConfigMapper.selectList(Wrappers.lambdaQuery(TaskConfigDO.class).in(TaskConfigDO::getDedeuserid, notRunUsers));
+        taskConfigs
                 .forEach(taskConfig -> {
                     String sessdata = taskConfig.getSessdata();
                     sessdata = sessdata.replace(",", "%2C");

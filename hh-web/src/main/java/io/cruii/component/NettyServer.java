@@ -19,6 +19,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * @author cruii
  * Created on 2022/10/17
@@ -47,8 +49,8 @@ public class NettyServer implements CommandLineRunner {
                     protected void initChannel(SocketChannel socketChannel) {
                         // 自定义服务处理
                         socketChannel.pipeline().addLast("lineBasedFrameDecoder", new LineBasedFrameDecoder(1024));
-                        socketChannel.pipeline().addLast("stringEncoder", new StringEncoder());
-                        socketChannel.pipeline().addLast("stringDecoder", new StringDecoder());
+                        socketChannel.pipeline().addLast("stringEncoder", new StringEncoder(StandardCharsets.UTF_8));
+                        socketChannel.pipeline().addLast("stringDecoder", new StringDecoder(StandardCharsets.UTF_8));
                         socketChannel.pipeline().addLast("serverHandler", serverHandler);
                         socketChannel.pipeline().addLast("idleState", new IdleStateHandler(5, 0, 0));
                     }
@@ -60,7 +62,6 @@ public class NettyServer implements CommandLineRunner {
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
         } finally {
             workGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();

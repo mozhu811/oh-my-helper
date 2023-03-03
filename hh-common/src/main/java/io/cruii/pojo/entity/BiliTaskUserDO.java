@@ -24,27 +24,37 @@ public class BiliTaskUserDO implements Serializable{
     @TableId(type = IdType.INPUT)
     private String dedeuserid;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String username;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String coins;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Integer level;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Integer currentExp;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Integer nextExp;
 
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Integer upgradeDays;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String medals;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Integer vipType;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Integer vipStatus;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String sign;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Boolean isLogin;
 
     private LocalDateTime lastRunTime;

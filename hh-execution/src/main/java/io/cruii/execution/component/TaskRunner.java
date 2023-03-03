@@ -22,14 +22,14 @@ public class TaskRunner {
         this.taskExecutor = taskExecutor;
     }
 
-    public void run(TaskConfigDO taskConfigDO, BiliTaskListener listener) {
-        BiliTask biliTask = new BiliTask(taskConfigDO, listener);
+    public void run(TaskConfigDO taskConfig, BiliTaskListener listener) {
         try {
+            BiliTask biliTask = new BiliTask(taskConfig, listener);
             taskExecutor.execute(biliTask);
         } catch (RejectedExecutionException e) {
-            log.error("账号[{}]任务被拒绝，原因: {}", taskConfigDO.getDedeuserid(), e.getMessage(), e);
+            log.error("账号[{}]任务被拒绝，原因: {}", taskConfig.getDedeuserid(), e.getMessage(), e);
         } catch (Exception e) {
-            log.error("执行账号[{}]任务发生异常", taskConfigDO.getDedeuserid(), e);
+            log.error("执行账号[{}]任务发生未知异常", taskConfig.getDedeuserid(), e);
         }
     }
 }

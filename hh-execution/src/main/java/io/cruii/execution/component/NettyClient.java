@@ -3,9 +3,11 @@ package io.cruii.execution.component;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
+import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.execution.config.NettyConfiguration;
 import io.cruii.execution.feign.PushFeignService;
 import io.cruii.model.BiliUser;
+import io.cruii.model.SpaceAccInfo;
 import io.cruii.pojo.dto.BiliTaskUserDTO;
 import io.cruii.pojo.dto.PushMessageDTO;
 import io.cruii.pojo.entity.TaskConfigDO;
@@ -63,8 +65,8 @@ public class NettyClient implements CommandLineRunner {
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
                         // 自定义处理程序
                         socketChannel.pipeline().addLast("lineBasedFrameDecoder", new LineBasedFrameDecoder(1024));
-                        socketChannel.pipeline().addLast("stringEncoder", new StringEncoder());
-                        socketChannel.pipeline().addLast("stringDecoder", new StringDecoder());
+                        socketChannel.pipeline().addLast("stringEncoder", new StringEncoder(StandardCharsets.UTF_8));
+                        socketChannel.pipeline().addLast("stringDecoder", new StringDecoder(StandardCharsets.UTF_8));
                         socketChannel.pipeline().addLast("clientHandler", new ClientHandler(NettyClient.this));
                         socketChannel.pipeline().addLast("idleState", new IdleStateHandler(0, 0, 5));
                     }
@@ -86,9 +88,7 @@ public class NettyClient implements CommandLineRunner {
                 log.info("Connect to server successfully!");
             } else {
                 log.error("Failed to connect to server, try connect after 10s");
-                future.channel().eventLoop().schedule(() -> {
-                    connect();
-                }, 10, TimeUnit.SECONDS);
+                future.channel().eventLoop().schedule(this::connect, 10, TimeUnit.SECONDS);
 
             }
         });
@@ -132,7 +132,7 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
      */
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ctx.writeAndFlush(Unpooled.copiedBuffer("hello netty.\n".getBytes(StandardCharsets.UTF_8)));
+        ctx.writeAndFlush(Unpooled.copiedBuffer("你好 netty.\n".getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -153,20 +153,36 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
         String dedeuserid = taskConfigDO.getDedeuserid();
         taskRunner.run(taskConfigDO, result -> {
             if (result != null) {
-                BiliUser biliUser = result.getBiliUser();
-                int upgradeDays = result.getUpgradeDays();
                 BiliTaskUserDTO biliTaskUserDTO = new BiliTaskUserDTO();
-                biliTaskUserDTO
-                        .setDedeuserid(String.valueOf(biliUser.getMid()))
-                        .setUsername(biliUser.getName())
-                        .setLevel(biliUser.getLevel())
-                        .setCoins(String.valueOf(biliUser.getCoins()))
-                        .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
-                        .setNextExp(biliUser.getLevelExp().getNextExp())
-                        .setUpgradeDays(upgradeDays)
-                        .setVipStatus(biliUser.getVip().getStatus())
-                        .setLastRunTime(LocalDateTime.now())
-                        .setIsLogin(true);
+                Object user = result.getBiliUser();
+                if (user instanceof BiliUser) {
+                    BiliUser biliUser = (BiliUser) user;
+                    int upgradeDays = result.getUpgradeDays();
+                    biliTaskUserDTO
+                            .setDedeuserid(String.valueOf(biliUser.getMid()))
+                            .setUsername(biliUser.getName())
+                            .setLevel(biliUser.getLevel())
+                            .setCoins(String.valueOf(biliUser.getCoins()))
+                            .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
+                            .setNextExp(biliUser.getLevelExp().getNextExp())
+                            .setUpgradeDays(upgradeDays)
+                            .setVipStatus(biliUser.getVip().getStatus())
+                            .setLastRunTime(LocalDateTime.now())
+                            .setIsLogin(true);
+                } else if (user instanceof SpaceAccInfo) {
+                    SpaceAccInfo spaceAccInfo = (SpaceAccInfo) user;
+                    biliTaskUserDTO
+                            .setDedeuserid(String.valueOf(spaceAccInfo.getMid()))
+                            .setUsername(spaceAccInfo.getName())
+                            .setLevel(spaceAccInfo.getLevel())
+                            .setCoins(String.valueOf(spaceAccInfo.getCoins()))
+                            .setCurrentExp(null)
+                            .setNextExp(null)
+                            .setUpgradeDays(null)
+                            .setVipStatus(spaceAccInfo.getVip().getStatus())
+                            .setLastRunTime(LocalDateTime.now())
+                            .setIsLogin(false);
+                }
                 ctx.channel().writeAndFlush(Unpooled.copiedBuffer((JSONUtil.toJsonStr(biliTaskUserDTO) + "\n").getBytes(StandardCharsets.UTF_8)));
             }
             // 加入到推送队列
@@ -193,6 +209,9 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (cause instanceof IOException) {
             log.warn("exceptionCaught:客户端[{}]和远程断开连接", ctx.channel().localAddress());
+        } else if (cause instanceof BilibiliCookieExpiredException) {
+            log.error(cause.getMessage());
+            return;
         } else {
             log.error(cause.getMessage());
         }
@@ -239,7 +258,7 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
                 this.pushFeignService.push(message);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
+                break;
             }
         }
     }

@@ -1,24 +1,21 @@
 package io.cruii.execution.component;
 
-import io.cruii.util.ThreadMdcUtil;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.MDC;
 
 import java.util.HashSet;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author cruii
  * Created on 2021/9/24
  */
 public final class BiliTaskExecutor extends ThreadPoolExecutor {
+
     private final HashSet<String> submittedTasks;
 
-    public BiliTaskExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, @NotNull TimeUnit unit, @NotNull BlockingQueue<Runnable> workQueue) {
-        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
+    public BiliTaskExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, @NotNull TimeUnit unit, @NotNull BlockingQueue<Runnable> workQueue, String threadNamePrefix) {
+        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, new CustomThreadFactory(threadNamePrefix));
         submittedTasks = new HashSet<>();
     }
 
@@ -34,7 +31,7 @@ public final class BiliTaskExecutor extends ThreadPoolExecutor {
                 submittedTasks.add(dedeuserid);
             }
         }
-        super.execute(ThreadMdcUtil.wrap(command, MDC.getCopyOfContextMap()));
+        super.execute(command);
     }
 
     @Override
@@ -47,5 +44,21 @@ public final class BiliTaskExecutor extends ThreadPoolExecutor {
             }
         }
         super.afterExecute(r, t);
+    }
+
+    private static class CustomThreadFactory implements ThreadFactory {
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
+        private final String namePrefix;
+
+        public CustomThreadFactory(String namePrefix) {
+            this.namePrefix = namePrefix;
+        }
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, namePrefix + threadNumber.getAndIncrement());
+            t.setDaemon(true);
+            return t;
+        }
     }
 }

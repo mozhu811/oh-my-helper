@@ -1,6 +1,5 @@
 package io.cruii.model.custom;
 
-import io.cruii.model.BiliUser;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -11,7 +10,13 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public class BiliTaskResult {
-    private final BiliUser biliUser;
+    /**
+     * 0 - fail
+     * 1 - success
+     */
+    private int status;
 
-    private final int upgradeDays;
+    private final Object biliUser;
+
+    private final Integer upgradeDays;
 }

@@ -19,7 +19,7 @@ public class TaskThreadPoolConfig {
     @Bean
     public ThreadPoolExecutor taskExecutor() {
         ThreadPoolExecutor executor = new BiliTaskExecutor(1,1, 10 , TimeUnit.MINUTES,
-                new LinkedBlockingQueue<>(3000));
+                new LinkedBlockingQueue<>(3000), "bili-task-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         return executor;
     }
