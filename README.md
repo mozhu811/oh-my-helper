@@ -14,7 +14,7 @@
 </div>
 
 🚀 Bilibili Helper Hub，Bilibili每日任务托管平台。  
-😎 项目前端地址: [BILIBILI-HELPER-HUB-FRONTEND](https://github.com/Cruii/bilibili-helper-hub-frontend)  
+😎 项目前端地址: [oh-my-helper-frontend](https://github.com/Cruii/bilibili-helper-hub-frontend)  
 😺 本人搭建的平台地址：[OhMyHelper](https://ohmyhelper.com/bilibili/)
 ## Why 
 GitHub上已经有许多优秀的B站相关项目，但都需要一定的动手能力。该项目的目标是为那些完全零基础的朋友提供一个能享受到相同便利的项目。  
