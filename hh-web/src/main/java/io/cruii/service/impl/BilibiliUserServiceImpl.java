@@ -56,8 +56,9 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
                 .setCurrentExp(biliUser.getLevelExp().getCurrentExp())
                 .setNextExp(biliUser.getLevel() == 6 ? 0 : biliUser.getLevelExp().getNextExp())
                 .setSign(biliUser.getSign())
-                .setVipType(biliUser.getVip().getType())
                 .setVipStatus(biliUser.getVip().getStatus())
+                .setVipType(biliUser.getVip().getType())
+                .setVipLabelTheme(biliUser.getVip().getLabel().getLabelTheme())
                 .setIsLogin(true);
 
         biliUserDO.setMedals(MedalWall2StrUtil.medalWall2JsonStr(delegate.getMedalWall()));

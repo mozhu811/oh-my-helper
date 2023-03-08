@@ -29,6 +29,10 @@ public class BiliTaskUserDTO {
 
     private Integer vipStatus;
 
+    private Integer vipType;
+
+    private String vipLabelTheme;
+
     private LocalDateTime lastRunTime;
 
     private Boolean isLogin;
