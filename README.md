@@ -22,7 +22,6 @@ GitHub上已经有许多优秀的B站相关项目，但都需要一定的动手�
 该项目域名已改为[ohmyhelper.com](https://ohmyhelper.com)，正如其名，目标是完成一个有趣的工具性的站点。  
 如果你有好的想法建议，可以提issues也可以发送邮件或在[OhMyHelper](https://ohmyhelper.com/bilibili/)的对话框与我联系。  
 
-_优秀的作品往往是创作者的自嗨，进而量变成为质变_
 ## Notice
 本项目中proxy.properties文件需要自行更换为自己的API地址，且由于接口返回值的不同，请自行修改ProxyUtil.java文件中解析代理的部分代码逻辑  
 在我个人部署的平台中[OhMyHelper](https://ohmyhelper.com/bilibili/) ，我个人已经购买并配置了代理，每次任务会切换不同的IP  
