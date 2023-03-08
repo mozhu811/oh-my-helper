@@ -32,6 +32,8 @@ public class BiliTaskUserVO implements Serializable {
 
     private Integer vipStatus;
 
+    private String vipLabelTheme;
+
     private String sign;
 
     private Boolean isLogin;

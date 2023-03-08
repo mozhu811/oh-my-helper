@@ -167,6 +167,8 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
                             .setNextExp(biliUser.getLevelExp().getNextExp())
                             .setUpgradeDays(upgradeDays)
                             .setVipStatus(biliUser.getVip().getStatus())
+                            .setVipType(biliUser.getVip().getType())
+                            .setVipLabelTheme(biliUser.getVip().getLabel().getLabelTheme())
                             .setLastRunTime(LocalDateTime.now())
                             .setIsLogin(true);
                 } else if (user instanceof SpaceAccInfo) {
@@ -180,6 +182,8 @@ class ClientHandler extends ChannelInboundHandlerAdapter {
                             .setNextExp(null)
                             .setUpgradeDays(null)
                             .setVipStatus(spaceAccInfo.getVip().getStatus())
+                            .setVipType(spaceAccInfo.getVip().getType())
+                            .setVipLabelTheme(spaceAccInfo.getVip().getLabel().getLabelTheme())
                             .setLastRunTime(LocalDateTime.now())
                             .setIsLogin(false);
                 }

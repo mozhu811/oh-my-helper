@@ -40,9 +40,11 @@ public class BiliTaskUserDO implements Serializable{
 
     private String medals;
 
+    private Integer vipStatus;
+
     private Integer vipType;
 
-    private Integer vipStatus;
+    private String vipLabelTheme;
 
     private String sign;
 
