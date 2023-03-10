@@ -1,6 +1,7 @@
 package io.cruii.component;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import io.cruii.feign.PushFeignService;
 import io.cruii.handler.ServerHandler;
 import io.cruii.mapper.BilibiliUserMapper;
 import io.cruii.mapper.TaskConfigMapper;
@@ -28,17 +29,21 @@ public class TaskSchedule {
 
     private final ServerHandler serverHandler;
 
-    public TaskSchedule(TaskConfigMapper taskConfigMapper, BilibiliUserMapper bilibiliUserMapper, ServerHandler serverHandler) {
+    private final PushFeignService pushFeignService;
+    public TaskSchedule(TaskConfigMapper taskConfigMapper, BilibiliUserMapper bilibiliUserMapper, ServerHandler serverHandler,
+                        PushFeignService pushFeignService) {
         this.taskConfigMapper = taskConfigMapper;
         this.bilibiliUserMapper = bilibiliUserMapper;
         this.serverHandler = serverHandler;
+        this.pushFeignService = pushFeignService;
     }
 
     /**
      * 0 0/30 9-17 * * ?    早上9点至下午17点内每30分钟一次
      * 0 0/5 * * * ?        每隔5分钟执行一次
      */
-    @Scheduled(initialDelayString = "${task.initial-delay:30000}", fixedRateString = "${task.fixed-rate:7200000}")
+    //@Scheduled(initialDelayString = "${task.initial-delay:30000}", fixedRateString = "${task.fixed-rate:7200000}")
+    @Scheduled(cron = "0 0 9-23/1 * * ?")
     public void doTask() {
         List<String> notRunUsers = bilibiliUserMapper
                 .listNotRunUser().stream()
@@ -59,4 +64,13 @@ public class TaskSchedule {
                     serverHandler.sendMsg(taskConfig);
                 });
     }
+
+    @Scheduled(cron = "${notify-expired-expression:0 0 9 * * ?}")
+    public void notifyExpired() {
+        List<String> expiredBiliIdList = bilibiliUserMapper.selectList(Wrappers.lambdaQuery(BiliTaskUserDO.class).eq(BiliTaskUserDO::getIsLogin, false))
+                .stream().map(BiliTaskUserDO::getDedeuserid)
+                .collect(Collectors.toList());
+        this.pushFeignService.notifyExpired(expiredBiliIdList);
+    }
+
 }

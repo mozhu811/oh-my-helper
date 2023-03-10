@@ -5,7 +5,7 @@ import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import io.cruii.exception.BilibiliCookieExpiredException;
 import io.cruii.execution.config.NettyConfiguration;
-import io.cruii.execution.feign.PushFeignService;
+import io.cruii.feign.PushFeignService;
 import io.cruii.model.BiliUser;
 import io.cruii.model.SpaceAccInfo;
 import io.cruii.pojo.dto.BiliTaskUserDTO;

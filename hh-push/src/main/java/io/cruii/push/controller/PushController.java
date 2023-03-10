@@ -5,6 +5,8 @@ import io.cruii.push.service.PushService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * @author cruii
  * Created on 2022/4/6
@@ -22,5 +24,10 @@ public class PushController {
     @ResponseStatus(code = HttpStatus.CREATED)
     public boolean push(@RequestBody PushMessageDTO messageDTO) {
         return pushService.push(messageDTO);
+    }
+
+    @PostMapping("expired")
+    public void notifyExpired(@RequestBody List<String> expiredIdList) {
+        pushService.notifyExpired(expiredIdList);
     }
 }

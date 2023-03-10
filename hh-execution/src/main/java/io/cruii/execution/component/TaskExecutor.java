@@ -40,6 +40,10 @@ public class TaskExecutor {
     }
 
     public BiliTaskResult execute() {
+        log.info("当前版本: {}", "2.0.6");
+        log.info("更新日期: {}", "2023/03/09");
+        log.info("服务地址: {}", "https://ohmyhelper.com/bilibili");
+        log.info("项目源码: {}", "https://github.com/Cruii/oh-my-helper");
         log.info("------开始------");
         boolean expired = false;
         for (Task task : taskList) {

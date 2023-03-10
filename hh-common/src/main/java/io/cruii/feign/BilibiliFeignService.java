@@ -1,4 +1,4 @@
-package io.cruii.execution.feign;
+package io.cruii.feign;
 
 import io.cruii.pojo.vo.BiliTaskUserVO;
 import org.springframework.cloud.openfeign.FeignClient;

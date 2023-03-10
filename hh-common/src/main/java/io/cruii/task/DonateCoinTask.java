@@ -27,12 +27,11 @@ public class DonateCoinTask extends VideoTask {
     public DonateCoinTask(BilibiliDelegate delegate) {
         super(delegate);
         this.config = delegate.getConfig();
-        Integer donateCoins = config.getDonateCoins();
-        log.info("配置投币数为：{}", donateCoins);
     }
 
     @Override
     public void run() {
+        log.info("配置投币数为：{}", config.getDonateCoins());
         // 防止全部都投过币而导致任务卡死
         counter++;
         if (counter > 3) {
