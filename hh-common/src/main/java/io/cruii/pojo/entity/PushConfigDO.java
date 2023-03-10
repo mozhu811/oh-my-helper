@@ -17,7 +17,6 @@ public class PushConfigDO implements Serializable {
     private Long id;
 
     @TableId(type = IdType.INPUT)
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String dedeuserid;
 
     @TableField(updateStrategy = FieldStrategy.IGNORED)
@@ -43,4 +42,7 @@ public class PushConfigDO implements Serializable {
 
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String barkDeviceKey;
+
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private String feiShuCustomBot;
 }

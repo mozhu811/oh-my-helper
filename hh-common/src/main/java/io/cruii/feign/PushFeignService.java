@@ -1,9 +1,11 @@
-package io.cruii.execution.feign;
+package io.cruii.feign;
 
 import io.cruii.pojo.dto.PushMessageDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+
+import java.util.List;
 
 /**
  * @author cruii
@@ -13,4 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface PushFeignService {
     @PostMapping()
     boolean push(@RequestBody PushMessageDTO message);
+
+    @PostMapping("expired")
+    boolean notifyExpired(@RequestBody List<String> expiredIdList);
 }

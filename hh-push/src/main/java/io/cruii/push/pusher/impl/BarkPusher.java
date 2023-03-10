@@ -26,6 +26,11 @@ public class BarkPusher implements Pusher {
     }
 
     @Override
+    public boolean notifyExpired(String id) {
+        return push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
+    }
+
+    @Override
     public boolean push(String content) {
         JSONObject body = JSONUtil.createObj();
         body.set("body", content)

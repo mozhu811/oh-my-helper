@@ -6,13 +6,12 @@ import io.cruii.pojo.dto.PushMessageDTO;
 import io.cruii.pojo.entity.PushConfigDO;
 import io.cruii.push.mapper.PushConfigMapper;
 import io.cruii.push.pusher.Pusher;
-import io.cruii.push.pusher.impl.BarkPusher;
-import io.cruii.push.pusher.impl.QyWechatPusher;
-import io.cruii.push.pusher.impl.ServerChanPusher;
-import io.cruii.push.pusher.impl.TelegramBotPusher;
+import io.cruii.push.pusher.impl.*;
 import io.cruii.push.service.PushService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @author cruii
@@ -52,6 +51,19 @@ public class PushServiceImpl implements PushService {
         return result;
     }
 
+    @Override
+    public void notifyExpired(List<String> idList) {
+        idList.forEach(id -> {
+            PushConfigDO pushConfigDO = pushConfigMapper.selectById(id);
+            Pusher pusher = generatePusher(pushConfigDO);
+            if (pusher == null) {
+                log.error("生成Pusher异常: {}", id);
+                return;
+            }
+            pusher.notifyExpired(id);
+        });
+    }
+
     private Pusher generatePusher(PushConfigDO pushConfig) {
         if (CharSequenceUtil.isNotBlank(pushConfig.getBarkDeviceKey())) {
             return new BarkPusher(pushConfig.getBarkDeviceKey());
@@ -61,6 +73,8 @@ public class PushServiceImpl implements PushService {
             return new TelegramBotPusher(pushConfig.getTgBotToken(), pushConfig.getTgBotChatId());
         } else if (CharSequenceUtil.isNotBlank(pushConfig.getScKey())) {
             return new ServerChanPusher(pushConfig.getScKey());
+        } else if (CharSequenceUtil.isNotBlank(pushConfig.getFeiShuCustomBot())) {
+            return new FeiShuCustomBotPusher(pushConfig.getFeiShuCustomBot());
         }
         return null;
     }
