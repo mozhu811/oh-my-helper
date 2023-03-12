@@ -17,9 +17,9 @@ jobs:
           java-version: 11
           cache: 'maven'
       - name: Set up secret key
-        run: cd ./hh-common/src/main/resources && sed -i "s/secret.key=.*/secret.key=${{ secrets.DB_SECRET_KEY }}/g" config.properties
+        run: cd ./omh-common/src/main/resources && sed -i "s/secret.key=.*/secret.key=${{ secrets.DB_SECRET_KEY }}/g" config.properties
       - name: Set up deploy date
-        run: cd ./hh-common/src/main/resources && sed -i 's/release.date=.*/release.date='$(date +"%Y-%m-%d")'/g' version.properties
+        run: cd ./omh-common/src/main/resources && sed -i 's/release.date=.*/release.date='$(date +"%Y-%m-%d")'/g' version.properties
       - name: Build with Maven
         run: mvn -B package --file pom.xml -Dmaven.test.skip=true
       - name: Backup old files
@@ -29,7 +29,7 @@ jobs:
       - name: Deploy with SSH
         uses: appleboy/scp-action@master
         with:
-          source: "./hh-web/target/*.jar,./hh-execution/target/*.jar,./hh-push/target/*.jar,./hh-gateway/target/*.jar"
+          source: "./omh-web/target/*.jar,./omh-execution/target/*.jar,./omh-push/target/*.jar,./omh-gateway/target/*.jar"
           target: /root/app/ohmyhelper/
           host: ${{ secrets.DEPLOY_SERVER_IP }}
           username: ${{ secrets.DEPLOY_SERVER_USER }}
