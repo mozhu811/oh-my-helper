@@ -25,7 +25,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         id: auto_release
         with:
-            repo_token: "${{ secrets.GH_TOKEN }}"
+            token: "${{ secrets.GH_TOKEN }}"
             tag_name: "v${{ env.RELEASE_VERSION }}"
             name: "v${{ env.RELEASE_VERSION }}"
             draft: false
