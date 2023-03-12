@@ -1,8 +1,5 @@
 name: Deploy to server
 
-on:
-  release:
-    types: [published]
 
 jobs:
   deploy:
