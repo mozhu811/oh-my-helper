@@ -18,6 +18,8 @@ jobs:
           cache: 'maven'
       - name: Set up secret key
         run: cd ./hh-common/src/main/resources && sed -i "s/secret.key=.*/secret.key=${{ secrets.DB_SECRET_KEY }}/g" config.properties
+      - name: Set up deploy date
+        run: cd ./hh-common/src/main/resources && sed -i 's/release.date=.*/release.date='$(date +"%Y-%m-%d")'/g' version.properties
       - name: Build with Maven
         run: mvn -B package --file pom.xml -Dmaven.test.skip=true
       - name: Backup old files
