@@ -4,7 +4,9 @@ on:
   push:
     paths:
       - '**/*src/**/version.properties'
-
+  release:
+    types: [created]
+    
 jobs:
   release:
     permissions: write-all
@@ -21,12 +23,16 @@ jobs:
       - name: Set Release version env variable
         run: |
           echo "RELEASE_VERSION=$(mvn help:evaluate -Dexpression='project.version' -q -DforceStdout)" >> $GITHUB_ENV
-      - uses: "marvinpinto/action-automatic-releases@latest"
+      - uses: softprops/action-gh-release@v1
+        id: auto_release
         with:
             repo_token: "${{ secrets.GH_TOKEN }}"
-            automatic_release_tag: "v${{ env.RELEASE_VERSION }}"
+            tag_name: "v${{ env.RELEASE_VERSION }}"
+            name: "v${{ env.RELEASE_VERSION }}"
+            draft: false
             prerelease: false
-            title: "v${{ env.RELEASE_VERSION }}"
+            generate_release_notes: true
+            fail_on_unmatched_files: true
       - name: Set up secret key
         run: cd ./omh-common/src/main/resources && sed -i "s/secret.key=.*/secret.key=${{ secrets.DB_SECRET_KEY }}/g" config.properties
       - name: Set up deploy date
