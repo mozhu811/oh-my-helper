@@ -27,3 +27,24 @@ jobs:
             automatic_release_tag: "v${{ env.RELEASE_VERSION }}"
             prerelease: false
             title: "v${{ env.RELEASE_VERSION }}"
+      - name: Set up secret key
+        run: cd ./omh-common/src/main/resources && sed -i "s/secret.key=.*/secret.key=${{ secrets.DB_SECRET_KEY }}/g" config.properties
+      - name: Set up deploy date
+        run: cd ./omh-common/src/main/resources && sed -i 's/release.date=.*/release.date='$(date +"%Y-%m-%d")'/g' version.properties
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml -Dmaven.test.skip=true
+      - name: Backup old files
+        run: sshpass -p ${{ secrets.DEPLOY_SERVER_PASSWORD }} ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_SERVER_IP }} "cd /root/app/ohmyhelper && ./backup.sh"
+      - name: Kill process
+        run: sshpass -p ${{ secrets.DEPLOY_SERVER_PASSWORD }} ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_SERVER_IP }} "cd /root/app/ohmyhelper && ./kill.sh"
+      - name: Deploy with SSH
+        uses: appleboy/scp-action@master
+        with:
+          source: "./omh-web/target/*.jar,./omh-execution/target/*.jar,./omh-push/target/*.jar,./omh-gateway/target/*.jar"
+          target: /root/app/ohmyhelper/
+          host: ${{ secrets.DEPLOY_SERVER_IP }}
+          username: ${{ secrets.DEPLOY_SERVER_USER }}
+          password: ${{ secrets.DEPLOY_SERVER_PASSWORD }}
+          strip_components: 2
+      - name: Run application
+        run: sshpass -p ${{ secrets.DEPLOY_SERVER_PASSWORD }} ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_SERVER_IP }} "cd /root/app/ohmyhelper && ./startup.sh"
