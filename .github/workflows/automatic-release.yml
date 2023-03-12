@@ -4,8 +4,6 @@ on:
   push:
     paths:
       - '**/*src/**/version.properties'
-  release:
-    types: [created]
     
 jobs:
   release:
