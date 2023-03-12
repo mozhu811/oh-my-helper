@@ -1,5 +1,6 @@
 package io.cruii.execution.component;
 
+import cn.hutool.core.io.resource.ResourceUtil;
 import io.cruii.component.BilibiliDelegate;
 import io.cruii.context.BilibiliUserContext;
 import io.cruii.exception.BilibiliCookieExpiredException;
@@ -10,8 +11,10 @@ import io.cruii.model.custom.BiliTaskResult;
 import io.cruii.task.*;
 import lombok.extern.log4j.Log4j2;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,6 +26,17 @@ public class TaskExecutor {
     private final List<Task> taskList = new ArrayList<>();
 
     private final BilibiliDelegate delegate;
+
+    private static final Properties PROP;
+
+    static {
+        try {
+            PROP = new Properties();
+            PROP.load(ResourceUtil.getStream("version.properties"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public TaskExecutor(BilibiliDelegate delegate) {
         this.delegate = delegate;
@@ -40,8 +54,8 @@ public class TaskExecutor {
     }
 
     public BiliTaskResult execute() {
-        log.info("当前版本: {}", "2.0.6");
-        log.info("更新日期: {}", "2023/03/09");
+        log.info("当前版本: {}", PROP.getProperty("version"));
+        log.info("更新日期: {}", PROP.getProperty("release.date"));
         log.info("服务地址: {}", "https://ohmyhelper.com/bilibili");
         log.info("项目源码: {}", "https://github.com/Cruii/oh-my-helper");
         log.info("------开始------");

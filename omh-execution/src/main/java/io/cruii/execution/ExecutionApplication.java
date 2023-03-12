@@ -10,7 +10,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  * Created on 2022/4/2
  */
 @SpringBootApplication(scanBasePackages = {"io.cruii"}, exclude = DataSourceAutoConfiguration.class)
-@EnableFeignClients
+@EnableFeignClients(basePackages = "io.cruii")
 public class ExecutionApplication {
     public static void main(String[] args) {
         SpringApplication.run(ExecutionApplication.class, args);
