@@ -23,9 +23,7 @@ GitHub上已经有许多优秀的B站相关项目，但都需要一定的动手�
 如果你有好的想法建议，可以提issues也可以发送邮件或在[OhMyHelper](https://ohmyhelper.com/bilibili/)的对话框与我联系。  
 
 ## Notice
-本项目中proxy.properties文件需要自行更换为自己的API地址，且由于接口返回值的不同，请自行修改ProxyUtil.java文件中解析代理的部分代码逻辑  
-在我个人部署的平台中[OhMyHelper](https://ohmyhelper.com/bilibili/) ，我个人已经购买并配置了代理，每次任务会切换不同的IP  
-购买服务器以及代理池是一笔不小的开销，如果该项目能够帮助到您或您觉得还不错可以对开发者进行[打赏捐赠](https://github.com/Cruii/oh-my-helper#sponsor) ，用于减少开销。获得的打赏捐赠将全部用于托管平台的开销。打赏捐赠的同时，希望您能在备注中填写您的B站UID即数字ID。  
+本项目中proxy.properties文件需要自行更换为自己的API地址，且由于接口返回值的不同，请自行修改ProxyUtil.java文件中解析代理的部分代码逻辑 
 
 **该项目会加密存储您的B站Cookie以及用户信息，并承诺不会用于该项目以外的用途。**  
 
