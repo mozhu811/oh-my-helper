@@ -1,22 +1,19 @@
 package io.cruii.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import io.cruii.component.PushConfigStructMapper;
+import io.cruii.component.BilibiliDelegate;
 import io.cruii.component.TaskConfigStructMapper;
-import io.cruii.mapper.BilibiliUserMapper;
-import io.cruii.mapper.PushConfigMapper;
 import io.cruii.mapper.TaskConfigMapper;
-import io.cruii.pojo.dto.PushConfigDTO;
 import io.cruii.pojo.dto.TaskConfigDTO;
-import io.cruii.pojo.entity.PushConfigDO;
 import io.cruii.pojo.entity.TaskConfigDO;
 import io.cruii.pojo.vo.TaskConfigVO;
+import io.cruii.service.BilibiliUserService;
 import io.cruii.service.TaskConfigService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.Optional;
 
 /**
  * @author cruii
@@ -27,53 +24,38 @@ import java.util.List;
 @Transactional(rollbackFor = Exception.class)
 public class TaskConfigServiceImpl implements TaskConfigService {
 
+    private final BilibiliUserService bilibiliUserService;
+
     private final TaskConfigMapper taskConfigMapper;
-
-    private final PushConfigMapper pushConfigMapper;
-
-    private final BilibiliUserMapper bilibiliUserMapper;
 
     private final TaskConfigStructMapper taskConfigStructMapper;
 
-    private final PushConfigStructMapper pushConfigStructMapper;
 
-    public TaskConfigServiceImpl(TaskConfigMapper taskConfigMapper,
-                                 PushConfigMapper pushConfigMapper,
-                                 BilibiliUserMapper bilibiliUserMapper,
-                                 TaskConfigStructMapper taskConfigStructMapper,
-                                 PushConfigStructMapper pushConfigStructMapper) {
+    public TaskConfigServiceImpl(BilibiliUserService bilibiliUserService,
+                                 TaskConfigMapper taskConfigMapper,
+                                 TaskConfigStructMapper taskConfigStructMapper) {
+        this.bilibiliUserService = bilibiliUserService;
         this.taskConfigMapper = taskConfigMapper;
-        this.pushConfigMapper = pushConfigMapper;
-        this.bilibiliUserMapper = bilibiliUserMapper;
         this.taskConfigStructMapper = taskConfigStructMapper;
-        this.pushConfigStructMapper = pushConfigStructMapper;
     }
 
     @Override
-    public void createTask(String dedeuserid, String sessdata, String biliJct, TaskConfigDTO taskConfigDTO) {
+    public TaskConfigVO saveOrUpdate(String dedeuserid, String sessdata, String biliJct, TaskConfigDTO taskConfigDTO) {
         TaskConfigDO taskConfigDO = taskConfigStructMapper.toDO(taskConfigDTO);
         taskConfigDO.setDedeuserid(dedeuserid);
         taskConfigDO.setSessdata(sessdata);
         taskConfigDO.setBiliJct(biliJct);
-        // 保存用户任务配置信息
-        if (taskConfigMapper.exists(Wrappers.lambdaQuery(TaskConfigDO.class).eq(TaskConfigDO::getDedeuserid, dedeuserid))) {
-            taskConfigMapper.updateById(taskConfigDO);
-        } else {
-            taskConfigMapper.insert(taskConfigDO);
-        }
 
-        // 保存推送配置信息
-        PushConfigDTO pushConfigDTO = taskConfigDTO.getPushConfig();
-        PushConfigDO pushConfigDO = pushConfigStructMapper.toDO(pushConfigDTO);
-        pushConfigDO.setDedeuserid(dedeuserid);
-
-        if (pushConfigMapper.exists(Wrappers.lambdaQuery(PushConfigDO.class).eq(PushConfigDO::getDedeuserid, dedeuserid))) {
-            pushConfigMapper.updateById(pushConfigDO);
-        } else {
-            pushConfigMapper.insert(pushConfigDO);
-        }
-
+        Optional<TaskConfigDO> exist = Optional.ofNullable(taskConfigMapper.selectOne(
+                        Wrappers.<TaskConfigDO>lambdaQuery().eq(TaskConfigDO::getDedeuserid, dedeuserid)))
+                .map(e -> {
+                    taskConfigDO.setId(e.getId());
+                    return e;
+                });
+        exist.ifPresentOrElse(taskConfigMapper::updateById, () -> taskConfigMapper.insert(taskConfigDO));
+        return taskConfigStructMapper.toVO(taskConfigDO);
     }
+
 
     @Override
     public boolean isExist(String dedeuserid) {
@@ -81,41 +63,38 @@ public class TaskConfigServiceImpl implements TaskConfigService {
     }
 
     @Override
-    public void removeTask(String dedeuserid) {
-        taskConfigMapper.deleteById(dedeuserid);
-        bilibiliUserMapper.deleteById(dedeuserid);
+    public void remove(String dedeuserid, String sessdata, String biliJct) {
+        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct, false);
+        // Verify cookie
+        Optional.ofNullable(delegate.getUserDetails())
+                .ifPresent(userDetails -> {
+                    bilibiliUserService.delete(dedeuserid);
+                    taskConfigMapper.deleteById(dedeuserid);
+                });
     }
 
     @Override
-    public TaskConfigVO getTask(String dedeuserId, String sessdata, String biliJct) {
-        TaskConfigDO taskConfigDO = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfigDO.class)
-                .eq(TaskConfigDO::getDedeuserid, dedeuserId)
-                .eq(TaskConfigDO::getSessdata, sessdata)
-                .eq(TaskConfigDO::getBiliJct, biliJct));
-        return taskConfigStructMapper.toVO(taskConfigDO);
+    public TaskConfigVO get(String dedeuserId, String sessdata, String biliJct) {
+        sessdata = sessdata.replace(",", "%2C").replace("*", "%2A");
+
+        String finalSessdata = sessdata;
+        return Optional.ofNullable(taskConfigMapper.selectOne(
+                        Wrappers.<TaskConfigDO>lambdaQuery().eq(TaskConfigDO::getDedeuserid, dedeuserId)))
+                .filter(taskConfigDO -> finalSessdata.equals(taskConfigDO.getSessdata()))
+                .filter(taskConfigDO -> biliJct.equals(taskConfigDO.getBiliJct()))
+                .map(taskConfigStructMapper::toVO)
+                .orElseThrow(() -> new RuntimeException("非法请求"));
     }
 
-    @Override
-    public TaskConfigVO getTask(String dedeuserId) {
-        TaskConfigDO taskConfigDO = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfigDO.class)
-                .eq(TaskConfigDO::getDedeuserid, dedeuserId));
-        return taskConfigStructMapper.toVO(taskConfigDO);
-    }
 
     @Override
     public void updateCookie(String dedeuserid, String sessdata, String biliJct) {
-        TaskConfigDO taskConfigDO = taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfigDO.class)
-                .eq(TaskConfigDO::getDedeuserid, dedeuserid));
-        if (taskConfigDO != null) {
-            taskConfigDO.setSessdata(sessdata);
-            taskConfigDO.setBiliJct(biliJct);
-            taskConfigMapper.updateById(taskConfigDO);
-        }
-    }
-
-    @Override
-    public List<TaskConfigDO> getTask(List<String> dedeuseridList) {
-        return taskConfigMapper.selectList(Wrappers.lambdaQuery(TaskConfigDO.class)
-                .in(TaskConfigDO::getDedeuserid, dedeuseridList));
+        Optional.ofNullable(taskConfigMapper.selectOne(Wrappers.lambdaQuery(TaskConfigDO.class)
+                        .eq(TaskConfigDO::getDedeuserid, dedeuserid)))
+                .ifPresent(taskConfigDO -> {
+                    taskConfigDO.setSessdata(sessdata);
+                    taskConfigDO.setBiliJct(biliJct);
+                    taskConfigMapper.updateById(taskConfigDO);
+                });
     }
 }

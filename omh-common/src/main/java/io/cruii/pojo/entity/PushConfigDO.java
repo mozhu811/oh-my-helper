@@ -1,6 +1,8 @@
 package io.cruii.pojo.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -19,30 +21,23 @@ public class PushConfigDO implements Serializable {
     @TableId(type = IdType.INPUT)
     private String dedeuserid;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String tgBotToken;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String tgBotChatId;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String scKey;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String corpId;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String corpSecret;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String agentId;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String mediaId;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String barkDeviceKey;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String feiShuCustomBot;
+
+    private Integer active;
 }

@@ -1,4 +1,4 @@
-package io.cruii.handler;
+package io.cruii.component.handler;
 
 import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.crypto.SecureUtil;

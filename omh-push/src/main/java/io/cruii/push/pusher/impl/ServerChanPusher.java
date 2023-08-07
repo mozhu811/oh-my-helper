@@ -1,5 +1,6 @@
 package io.cruii.push.pusher.impl;
 
+import io.cruii.model.pusher.ServerChanPusherConfig;
 import io.cruii.push.pusher.Pusher;
 import io.cruii.util.HttpUtil;
 import lombok.extern.log4j.Log4j2;
@@ -28,16 +29,20 @@ public class ServerChanPusher implements Pusher {
         this.scKey = scKey;
     }
 
+    public ServerChanPusher(ServerChanPusherConfig config) {
+        this.scKey = config.getScKey();
+    }
+
     @Override
-    public boolean notifyExpired(String id) {
-        return push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
+    public void notifyExpired(String id) {
+        push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
     }
 
     @Override
     public boolean push(String content) {
         URI uri = HttpUtil.buildUri("https://sctapi.ftqq.com/" + scKey + ".send");
         List<NameValuePair> formData = new ArrayList<>();
-        formData.add(new BasicNameValuePair("title", "Bilibili Helper Hub任务日志"));
+        formData.add(new BasicNameValuePair("title", "OH MY HELPER 消息推送"));
         formData.add(new BasicNameValuePair("desp", content.replace("\n", "\n\n")));
         UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formData, StandardCharsets.UTF_8);
         HttpPost httpPost = new HttpPost(uri);

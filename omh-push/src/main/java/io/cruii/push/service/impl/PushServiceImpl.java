@@ -31,7 +31,8 @@ public class PushServiceImpl implements PushService {
         String dedeuserid = messageDTO.getDedeuserid();
         String content = messageDTO.getContent();
         PushConfigDO pushConfig = pushConfigMapper.selectOne(Wrappers.lambdaQuery(PushConfigDO.class).eq(PushConfigDO::getDedeuserid, dedeuserid));
-        if (pushConfig == null) {
+        Integer activeChannel = pushConfig.getActive();
+        if (pushConfig == null || activeChannel == -1) {
             log.info("该账号[{}]未配置推送", dedeuserid);
             return false;
         }

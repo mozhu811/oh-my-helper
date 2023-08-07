@@ -1,5 +1,6 @@
 package io.cruii.push.pusher.impl;
 
+import io.cruii.model.pusher.TelegramBotPusherConfig;
 import io.cruii.push.pusher.Pusher;
 import io.cruii.util.HttpUtil;
 import lombok.extern.log4j.Log4j2;
@@ -31,9 +32,14 @@ public class TelegramBotPusher implements Pusher {
         this.chatId = chatId;
     }
 
+    public TelegramBotPusher(TelegramBotPusherConfig config) {
+        this.token = config.getTgBotToken();
+        this.chatId = config.getTgChatId();
+    }
+
     @Override
-    public boolean notifyExpired(String id) {
-        return push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
+    public void notifyExpired(String id) {
+        push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
     }
 
     @Override

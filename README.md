@@ -13,7 +13,7 @@
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FCruii%2Foh-my-helper.svg?type=for-the-badge)](https://app.fossa.com/projects/git%2Bgithub.com%2FCruii%2Foh-my-helper?ref=badge_shield)
 </div>
 
-🚀 Bilibili Helper Hub，Bilibili每日任务托管平台。  
+🚀 oh-my-helper，Bilibili每日任务托管平台。  
 😎 项目前端地址: [oh-my-helper-frontend](https://github.com/Cruii/bilibili-helper-hub-frontend)  
 😺 本人搭建的平台地址：[OhMyHelper](https://ohmyhelper.com/bilibili/)
 ## Why 

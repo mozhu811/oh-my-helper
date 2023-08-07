@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import io.cruii.handler.EncryptHandler;
+import io.cruii.component.handler.EncryptHandler;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -19,12 +19,12 @@ public class TaskConfigDO implements Serializable {
 
     private static final long serialVersionUID = 6151419899088396002L;
 
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
      * B站uid
      */
-    @TableId(type = IdType.INPUT)
     private String dedeuserid;
 
     /**
