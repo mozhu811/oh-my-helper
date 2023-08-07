@@ -23,7 +23,7 @@ public class FeiShuCustomBotPusher implements Pusher {
     }
 
     @Override
-    public boolean notifyExpired(String id) {
+    public void notifyExpired(String id) {
         JSONArray elements = JSONUtil.createArray()
                 .set(JSONUtil.createObj().set("tag", "div")
                         .set("text", JSONUtil.createObj()
@@ -44,7 +44,7 @@ public class FeiShuCustomBotPusher implements Pusher {
                 .set("pc_url", "")
                 .set("android_url", "")
                 .set("ios_url", "");
-        return push0(elements, cardLink);
+        push0(elements, cardLink);
     }
 
     @Override

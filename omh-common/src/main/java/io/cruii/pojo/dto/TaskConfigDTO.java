@@ -64,8 +64,6 @@ public class TaskConfigDTO implements Serializable {
      */
     private String userAgent;
 
-    private PushConfigDTO pushConfig;
-
     /**
      * 关注开发者
      */

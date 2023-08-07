@@ -26,8 +26,8 @@ public class BarkPusher implements Pusher {
     }
 
     @Override
-    public boolean notifyExpired(String id) {
-        return push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
+    public void notifyExpired(String id) {
+        push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
     }
 
     @Override
@@ -35,7 +35,7 @@ public class BarkPusher implements Pusher {
         JSONObject body = JSONUtil.createObj();
         body.set("body", content)
                 .set("device_key", deviceKey)
-                .set("title", "Bilibili Helper Hub任务日志");
+                .set("title", "OH MY HELPER 消息推送");
         Request request = new Request.Builder()
                 .url("https://api.day.app/push")
                 .post(RequestBody.create(body.toJSONString(0).getBytes(StandardCharsets.UTF_8),

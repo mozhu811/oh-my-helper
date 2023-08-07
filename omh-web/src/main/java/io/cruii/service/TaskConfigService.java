@@ -2,10 +2,7 @@ package io.cruii.service;
 
 
 import io.cruii.pojo.dto.TaskConfigDTO;
-import io.cruii.pojo.entity.TaskConfigDO;
 import io.cruii.pojo.vo.TaskConfigVO;
-
-import java.util.List;
 
 /**
  * @author cruii
@@ -21,15 +18,11 @@ public interface TaskConfigService {
      */
     boolean isExist(String dedeuserid);
 
-    void removeTask(String dedeuserid);
+    void remove(String dedeuserid, String sessdata, String biliJct);
 
-    TaskConfigVO getTask(String dedeuserId, String sessdata, String biliJct);
-
-    TaskConfigVO getTask(String dedeuserId);
+    TaskConfigVO get(String dedeuserId, String sessdata, String biliJct);
 
     void updateCookie(String dedeuserid, String sessdata, String biliJct);
 
-    List<TaskConfigDO> getTask(List<String> dedeuseridList);
-
-    void createTask(String dedeuserid, String sessdata, String biliJct, TaskConfigDTO taskConfigDTO);
+    TaskConfigVO saveOrUpdate(String dedeuserid, String sessdata, String biliJct, TaskConfigDTO taskConfigDTO);
 }

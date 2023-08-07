@@ -13,13 +13,18 @@ import io.cruii.pojo.dto.BiliTaskUserDTO;
 import io.cruii.pojo.entity.BiliTaskUserDO;
 import io.cruii.pojo.entity.TaskConfigDO;
 import io.cruii.pojo.vo.BiliTaskUserVO;
+import io.cruii.pojo.vo.OmhUserVO;
+import io.cruii.pojo.vo.TaskConfigVO;
 import io.cruii.service.BilibiliUserService;
+import io.cruii.service.TaskConfigService;
+import io.cruii.util.CosUtil;
 import io.cruii.util.MedalWall2StrUtil;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -33,12 +38,15 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
     private final TaskConfigMapper taskConfigMapper;
     private final BiliUserStructMapper biliUserStructMapper;
 
+    private final TaskConfigService taskConfigService;
     public BilibiliUserServiceImpl(BilibiliUserMapper bilibiliUserMapper,
                                    TaskConfigMapper taskConfigMapper,
-                                   BiliUserStructMapper biliUserStructMapper) {
+                                   BiliUserStructMapper biliUserStructMapper,
+                                   TaskConfigService taskConfigService) {
         this.bilibiliUserMapper = bilibiliUserMapper;
         this.taskConfigMapper = taskConfigMapper;
         this.biliUserStructMapper = biliUserStructMapper;
+        this.taskConfigService = taskConfigService;
     }
 
     @Override
@@ -145,5 +153,31 @@ public class BilibiliUserServiceImpl implements BilibiliUserService {
     @Override
     public List<String> listNotRunUserId() {
         return bilibiliUserMapper.listNotRunUser().stream().map(BiliTaskUserDO::getDedeuserid).collect(Collectors.toList());
+    }
+
+    @Override
+    public void delete(String dedeuserid) {
+        bilibiliUserMapper.delete(Wrappers.lambdaQuery(BiliTaskUserDO.class).eq(BiliTaskUserDO::getDedeuserid, dedeuserid));
+    }
+
+    @Override
+    public OmhUserVO getUser(String dedeuserid, String sessdata, String biliJct) {
+        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, null, false);
+        BiliUser userDetails = delegate.getUserDetails();
+        try {
+            String avatar = userDetails.getFace();
+            Optional.ofNullable(avatar).ifPresent(ava -> CosUtil.upload(ava, dedeuserid));
+        } catch (Exception e) {
+            log.error("Download user avatar failed. {}", e.getMessage());
+        }
+
+        Long configId = Optional.ofNullable(taskConfigService.get(dedeuserid, sessdata, biliJct))
+                .map(TaskConfigVO::getId)
+                .orElse(null);
+
+        return new OmhUserVO()
+                .setUserId(dedeuserid)
+                .setNickname(userDetails.getName())
+                .setBiliTaskConfigId(configId);
     }
 }

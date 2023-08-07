@@ -4,6 +4,7 @@ package io.cruii.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.cruii.pojo.dto.BiliTaskUserDTO;
 import io.cruii.pojo.vo.BiliTaskUserVO;
+import io.cruii.pojo.vo.OmhUserVO;
 
 import java.util.List;
 
@@ -21,4 +22,8 @@ public interface BilibiliUserService {
     Page<BiliTaskUserVO> list(Integer page, Integer size);
 
     List<String> listNotRunUserId();
+
+    void delete(String dedeuserid);
+
+    OmhUserVO getUser(String dedeuserid, String sessdata, String biliJct);
 }

@@ -22,7 +22,8 @@ public class QyWechatPusher implements Pusher {
     private final String agentId;
     private final String mediaId;
 
-    public QyWechatPusher(String corpId, String corpSecret, String agentId, String mediaId) {
+    public QyWechatPusher(String corpId, String corpSecret,
+                          String agentId, String mediaId) {
         this.corpId = corpId;
         this.corpSecret = corpSecret;
         this.agentId = agentId;
@@ -30,8 +31,8 @@ public class QyWechatPusher implements Pusher {
     }
 
     @Override
-    public boolean notifyExpired(String id) {
-        return push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
+    public void notifyExpired(String id) {
+        push("账号[" + id + "]登录失败，请访问 https://ohmyhelper.com/bilibili/ 重新扫码登陆更新Cookie");
     }
 
     @Override
@@ -42,15 +43,15 @@ public class QyWechatPusher implements Pusher {
                 .set("agentid", agentId)
                 .set("mpnews", JSONUtil.createObj()
                         .set("articles", JSONUtil.createArray()
-                                .put(JSONUtil.createObj().set("title", "Bilibili Helper Hub任务日志")
+                                .put(JSONUtil.createObj().set("title", "OH MY HELPER 消息推送")
                                         .set("thumb_media_id", mediaId)
                                         .set("author", "Bilibili Helper Hub")
                                         .set("content", content)
                                         .set("digest", Arrays.stream(content.split("<br>"))
-                                                .skip(content.split("<br>").length - 3L)
+                                                .skip(content.split("<br>").length > 3 ? content.split("<br>").length - 3L : 0)
                                                 .collect(Collectors.joining("\n")) + "\n\n点击查看详细日志"))));
 
-        String resp = HttpUtil.post("https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="+getAccessToken(), requestBody.toJSONString(0));
+        String resp = HttpUtil.post("https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=" + getAccessToken(), requestBody.toJSONString(0));
         JSONObject wxPushResp = JSONUtil.parseObj(resp);
         if (wxPushResp.getInt("errcode") == 0) {
             log.info("企业微信推送成功");

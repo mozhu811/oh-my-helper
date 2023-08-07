@@ -1,12 +1,14 @@
 package io.cruii.controller;
 
-import io.cruii.pojo.dto.PushConfigDTO;
+import io.cruii.model.pusher.PusherConfigDTO;
+import io.cruii.model.pusher.PusherConfigVO;
 import io.cruii.pojo.dto.TaskConfigDTO;
-import io.cruii.service.BilibiliUserService;
+import io.cruii.pojo.vo.TaskConfigVO;
 import io.cruii.service.PushConfigService;
 import io.cruii.service.TaskConfigService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -22,14 +24,10 @@ public class ConfigController {
 
     private final PushConfigService pushConfigService;
 
-    private final BilibiliUserService biliUserService;
-
     public ConfigController(TaskConfigService taskConfigService,
-                            PushConfigService pushConfigService,
-                            BilibiliUserService biliUserService) {
+                            PushConfigService pushConfigService) {
         this.taskConfigService = taskConfigService;
         this.pushConfigService = pushConfigService;
-        this.biliUserService = biliUserService;
     }
 
     @PostMapping("task")
@@ -37,15 +35,29 @@ public class ConfigController {
     public void createTask(@CookieValue("dedeuserid") String dedeuserid,
                            @CookieValue("sessdata") String sessdata,
                            @CookieValue("biliJct") String biliJct,
-                           @RequestBody TaskConfigDTO taskConfigDTO) {
-        biliUserService.save(dedeuserid, sessdata, biliJct);
-        taskConfigService.createTask(dedeuserid, sessdata, biliJct, taskConfigDTO);
+                           @Validated @RequestBody TaskConfigDTO taskConfigDTO) {
+        taskConfigService.saveOrUpdate(dedeuserid, sessdata, biliJct, taskConfigDTO);
     }
 
     @PostMapping("push")
     @ResponseStatus(HttpStatus.CREATED)
-    public void saveConfig(PushConfigDTO pushConfigDTO) {
-        pushConfigService.save(pushConfigDTO);
+    public PusherConfigVO createPusherConfig(@CookieValue("dedeuserid") String dedeuserid,
+                                             @Validated @RequestBody PusherConfigDTO pusherConfigDTO) {
+        return pushConfigService.saveOrUpdate(dedeuserid, pusherConfigDTO);
+    }
+
+    @GetMapping("task")
+    public TaskConfigVO getTaskConfig(@CookieValue("dedeuserid") String dedeuserid,
+                                      @CookieValue("sessdata") String sessdata,
+                                      @CookieValue("biliJct") String biliJct) {
+        return taskConfigService.get(dedeuserid, sessdata, biliJct);
+    }
+
+    @GetMapping("push")
+    public PusherConfigVO getPushConfig(@CookieValue("dedeuserid") String dedeuserid,
+                                        @CookieValue("sessdata") String sessdata,
+                                        @CookieValue("biliJct") String biliJct) {
+        return pushConfigService.get(dedeuserid, sessdata, biliJct);
     }
 
     @DeleteMapping("task")
@@ -53,7 +65,6 @@ public class ConfigController {
     public void removeTask(@CookieValue("sessdata") String sessdata,
                            @CookieValue("biliJct") String biliJct,
                            @RequestParam String dedeuserid) {
-        // todo 验证信息
-        taskConfigService.removeTask(dedeuserid);
+        taskConfigService.remove(dedeuserid, sessdata, biliJct);
     }
 }

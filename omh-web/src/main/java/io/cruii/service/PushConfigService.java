@@ -1,7 +1,10 @@
 package io.cruii.service;
 
-import io.cruii.pojo.dto.PushConfigDTO;
+import io.cruii.model.pusher.PusherConfigDTO;
+import io.cruii.model.pusher.PusherConfigVO;
 
 public interface PushConfigService {
-    PushConfigDTO save(PushConfigDTO pushConfigDTO);
+    PusherConfigVO saveOrUpdate(String userId, PusherConfigDTO pusherConfig);
+
+    PusherConfigVO get(String dedeuserid, String sessdata, String biliJct);
 }

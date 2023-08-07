@@ -12,6 +12,7 @@ import java.io.Serializable;
 public class TaskConfigVO implements Serializable {
 
     private static final long serialVersionUID = 2978635197933862763L;
+
     private Long id;
 
     /**

@@ -1,7 +1,6 @@
 package io.cruii.controller;
 
 import cn.hutool.core.codec.Base64;
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.URLUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -12,20 +11,18 @@ import io.cruii.component.BilibiliDelegate;
 import io.cruii.constant.BilibiliAPI;
 import io.cruii.model.BiliQrCodeStatus;
 import io.cruii.model.BiliQrcode;
-import io.cruii.model.BiliUser;
-import io.cruii.pojo.vo.*;
+import io.cruii.pojo.vo.BiliLoginVO;
+import io.cruii.pojo.vo.BiliTaskUserVO;
+import io.cruii.pojo.vo.OmhUserVO;
+import io.cruii.pojo.vo.QrCodeVO;
 import io.cruii.service.BilibiliUserService;
 import io.cruii.service.TaskConfigService;
 import io.cruii.util.CosUtil;
 import io.cruii.util.QrCodeGenerator;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.io.*;
-import java.net.HttpURLConnection;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -49,44 +46,11 @@ public class BilibiliController {
         this.taskConfigService = taskConfigService;
     }
 
-    private static Map<String, Object> getUrlParams(String param) {
-        Map<String, Object> map = new HashMap<>(0);
-        if (param.isEmpty()) {
-            return map;
-        }
-        String[] params = param.split("&");
-        for (String s : params) {
-            String[] p = s.split("=");
-            if (p.length == 2) {
-                map.put(p[0], p[1]);
-            }
-        }
-        return map;
-    }
-
     @GetMapping("user")
-    public OmhUserVO getBilibiliUser(@RequestParam String dedeuserid,
-                                     @RequestParam String sessdata) {
-        BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, null, false);
-        BiliUser userDetails = delegate.getUserDetails();
-        try{
-            String avatar = delegate.getUserDetails().getFace();
-            if (avatar != null) {
-                CosUtil.upload(avatar, dedeuserid);
-            }
-        } catch (Exception e) {
-            log.error("Download user avatar failed. {}", e.getMessage());
-        }
-
-        TaskConfigVO taskConfigVO = taskConfigService.getTask(dedeuserid);
-        Long configId = null;
-        if (taskConfigVO != null) {
-            configId = taskConfigVO.getId();
-        }
-        return new OmhUserVO()
-                .setUserId(dedeuserid)
-                .setNickname(userDetails.getName())
-                .setBiliTaskConfigId(configId);
+    public OmhUserVO getBilibiliUser(@CookieValue String dedeuserid,
+                                     @CookieValue String sessdata,
+                                     @CookieValue String biliJct) {
+        return userService.getUser(dedeuserid, sessdata, biliJct);
     }
 
     @GetMapping("users")
@@ -95,8 +59,8 @@ public class BilibiliController {
             page = 1;
         }
 
-        if (size < 30) {
-            size = 30;
+        if (size < 24) {
+            size = 24;
         }
         return userService.list(page, size);
     }
@@ -104,7 +68,6 @@ public class BilibiliController {
     @GetMapping("qrCode")
     public QrCodeVO getLoginQrCode() {
         try (HttpResponse response = HttpRequest.get(BilibiliAPI.GET_QR_CODE_LOGIN_URL).execute()) {
-            log.debug(response);
             if (response.getStatus() == 200) {
                 BiliQrcode qrcode = JSONUtil.parseObj(response.body()).getJSONObject("data").toBean(BiliQrcode.class);
                 String qrCodeUrl = qrcode.getUrl();
@@ -141,11 +104,11 @@ public class BilibiliController {
             BiliLoginVO biliLoginVO = new BiliLoginVO();
             if (code == 0) {
                 String decodeUrl = URLUtil.decode(qrCodeStatus.getUrl());
-                String sessdata;
                 Map<String, Object> urlParams = getUrlParams(new URL(decodeUrl).getQuery());
-                sessdata = ((String) urlParams.get("SESSDATA"));
-                String biliJct = response.getCookieValue("bili_jct");
-                String dedeuserid = response.getCookieValue("DedeUserID");
+                // 将sessdata中的,和*替换为%2C和%2A
+                final String sessdata = ((String) urlParams.get("SESSDATA")).replace(",", "%2C").replace("*", "%2A");
+                final String biliJct = response.getCookieValue("bili_jct");
+                final String dedeuserid = response.getCookieValue("DedeUserID");
 
                 new Thread(() -> {
                     userService.save(dedeuserid, sessdata, biliJct);
@@ -153,7 +116,7 @@ public class BilibiliController {
                 }).start();
 
 
-                try{
+                try {
                     BilibiliDelegate delegate = new BilibiliDelegate(dedeuserid, sessdata, biliJct, false);
                     String avatar = delegate.getUserDetails().getFace();
                     if (avatar != null) {
@@ -176,42 +139,18 @@ public class BilibiliController {
         }
     }
 
-    private byte[] imageToArray(String imageUrl) {
-        HttpURLConnection conn = null;
-        try (InputStream inStream = new URL(imageUrl).openStream();
-             ByteArrayOutputStream outStream = new ByteArrayOutputStream()) {
-            conn = (HttpURLConnection) new URL(imageUrl).openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            byte[] buffer = new byte[4096];
-            int len;
-            while ((len = inStream.read(buffer)) != -1) {
-                outStream.write(buffer, 0, len);
-            }
-            return outStream.toByteArray();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
+    private static Map<String, Object> getUrlParams(String param) {
+        Map<String, Object> map = new HashMap<>(0);
+        if (param.isEmpty()) {
+            return map;
+        }
+        String[] params = param.split("&");
+        for (String s : params) {
+            String[] p = s.split("=");
+            if (p.length == 2) {
+                map.put(p[0], p[1]);
             }
         }
-    }
-
-    private File saveAvatar(byte[] bytes, String dedeuserid) {
-        if (!FileUtil.exist("avatars")) {
-            FileUtil.mkdir("avatars");
-        }
-        String path = "avatars" + File.separator + dedeuserid + ".png";
-
-        File file = new File(path);
-        try (FileOutputStream outputStream = new FileOutputStream(file)) {
-            outputStream.write(bytes);
-            outputStream.close();
-            return file;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return map;
     }
 }
